@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcade Hub — Mini Games</title>
+<style>
+  :root {
+    --bg: #07080d;
+    --bg2: #0d0f17;
+    --surface: #141826;
+    --surface2: #1a1f30;
+    --border: #232a3f;
+    --border-hi: #2f3854;
+    --text: #e6ebf5;
+    --muted: #8892a8;
+    --neon-1: #00ffe5;
+    --neon-2: #ff2e9a;
+    --neon-3: #a259ff;
+    --neon-4: #ffd84d;
+    --gold: #ffd84d;
+    --silver: #c0c8d6;
+    --bronze: #d68b4a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(ellipse at top left, rgba(0,255,229,0.08), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(255,46,154,0.08), transparent 50%),
+      linear-gradient(180deg, #07080d 0%, #0a0c14 100%);
+    color: var(--text);
+    font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,229,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,229,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand-mark {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--neon-1), var(--neon-2), var(--neon-3));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    box-shadow: 0 0 24px rgba(0,255,229,0.35);
+    position: relative;
+  }
+  .brand-mark::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 10px;
+    background: var(--bg);
+    z-index: 0;
+  }
+  .brand-mark span {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(135deg, var(--neon-1), var(--neon-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 900;
+  }
+
+  .brand h1 {
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--neon-1), var(--neon-2), var(--neon-3));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .brand .tagline {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .player-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 12px;
+  }
+  .player-box label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .player-box input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    outline: none;
+    width: 140px;
+  }
+  .player-box input::placeholder { color: var(--muted); }
+  .player-box .saved-pill {
+    font-size: 9px;
+    letter-spacing: 1px;
+    background: rgba(0,255,229,0.12);
+    color: var(--neon-1);
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(0,255,229,0.3);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .player-box .saved-pill.show { opacity: 1; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 24px;
+    width: fit-content;
+  }
+  .tab {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 10px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    background: linear-gradient(135deg, var(--neon-1), var(--neon-3));
+    color: #07080d;
+    box-shadow: 0 0 20px rgba(0,255,229,0.35);
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeUp 0.3s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Game grid ── */
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
+  }
+
+  .game-card {
+    background: linear-gradient(145deg, var(--surface), var(--surface2));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .game-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--neon-1);
+    box-shadow: 0 12px 32px rgba(0,255,229,0.15);
+  }
+
+  .game-thumb {
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .game-thumb::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(0,0,0,0.4) 100%);
+  }
+  .game-thumb .emoji {
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 0 12px rgba(0,0,0,0.5));
+  }
+
+  .game-body {
+    padding: 16px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .game-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: 0.3px;
+  }
+  .game-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  .play-btn {
+    background: linear-gradient(135deg, var(--neon-1), var(--neon-3));
+    color: #07080d;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .play-btn:hover { box-shadow: 0 0 18px rgba(0,255,229,0.4); transform: scale(1.02); }
+  .play-btn:active { transform: scale(0.98); }
+
+  .auto-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--neon-1);
+    font-weight: 700;
+  }
+  .auto-indicator::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--neon-1);
+    box-shadow: 0 0 8px var(--neon-1);
+    animation: pulseDot 1.8s ease infinite;
+  }
+  @keyframes pulseDot {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+  }
+  .game-card .best-score {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+  }
+  .game-card .best-score strong { color: var(--neon-4); font-weight: 700; }
+
+  /* ── Iframe overlay ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .overlay.open {
+    display: flex;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .overlay-frame {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 1280px;
+    background: var(--bg2);
+    border: 1px solid var(--neon-1);
+    border-radius: 16px;
+    box-shadow: 0 0 60px rgba(0,255,229,0.25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .overlay-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .overlay-title {
+    font-weight: 800;
+    color: var(--neon-1);
+    letter-spacing: 1px;
+    font-size: 14px;
+    flex: 1;
+  }
+  .overlay-watch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--neon-4);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .overlay-watch::before {
+    content: '●';
+    color: var(--neon-1);
+    animation: pulseDot 1.8s ease infinite;
+  }
+  .overlay-btn {
+    background: transparent;
+    border: 1px solid var(--border-hi);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .overlay-btn:hover { color: var(--text); border-color: var(--text); }
+  .overlay-btn.close {
+    border-color: var(--neon-2);
+    color: var(--neon-2);
+  }
+  .overlay-btn.close:hover { background: rgba(255,46,154,0.12); }
+
+  .overlay iframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #fff;
+  }
+
+  /* ── Leaderboard ── */
+  .lb-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .lb-filter {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .lb-filter select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+  }
+  .lb-filter select:focus { border-color: var(--neon-1); }
+
+  .clear-btn {
+    background: transparent;
+    border: 1px solid #ff4d6d;
+    color: #ff4d6d;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .clear-btn:hover { background: rgba(255,77,109,0.1); }
+
+  .lb-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .lb-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .lb-table th {
+    text-align: left;
+    padding: 14px 18px;
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+  }
+  .lb-table td {
+    padding: 12px 18px;
+    border-bottom: 1px solid rgba(35,42,63,0.5);
+    font-size: 14px;
+  }
+  .lb-table tr:last-child td { border-bottom: none; }
+  .lb-table tr:hover td { background: rgba(0,255,229,0.03); }
+
+  .rank-cell {
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+    width: 60px;
+  }
+  .rank-cell .trophy { font-size: 18px; }
+  .rank-1 { color: var(--gold); }
+  .rank-2 { color: var(--silver); }
+  .rank-3 { color: var(--bronze); }
+
+  .player-cell {
+    font-weight: 700;
+    color: var(--text);
+  }
+  .game-cell {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .score-cell {
+    font-family: 'Courier New', monospace;
+    font-weight: 800;
+    color: var(--neon-1);
+    font-size: 15px;
+  }
+  .score-cell .raw {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  .date-cell {
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .empty-row td {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px;
+    font-style: italic;
+  }
+
+  /* Info banner */
+  .info-banner {
+    background: linear-gradient(90deg, rgba(0,255,229,0.07), rgba(162,89,255,0.07));
+    border: 1px solid rgba(0,255,229,0.2);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .info-banner strong { color: var(--neon-1); }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface);
+    border: 1px solid var(--neon-1);
+    color: var(--text);
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0,255,229,0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 2000;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #toast.warn { border-color: var(--neon-4); box-shadow: 0 8px 24px rgba(255,216,77,0.2); }
+
+  @media (max-width: 600px) {
+    .lb-table th:nth-child(5),
+    .lb-table td:nth-child(5) { display: none; }
+    .brand h1 { font-size: 18px; }
+    .player-box input { width: 100px; }
+    .game-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark"><span>★</span></div>
+      <div>
+        <h1>Arcade Hub</h1>
+        <div class="tagline">13 Games · 1 Leaderboard · Auto Capture</div>
+      </div>
+    </div>
+    <div class="player-box">
+      <label>Player</label>
+      <input id="player-input" type="text" placeholder="Enter your name…" maxlength="20" autocomplete="off">
+      <span class="saved-pill" id="saved-pill">Saved</span>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-panel="games">Games</button>
+    <button class="tab" data-panel="leaderboard">Leaderboard</button>
+    <button class="tab" data-panel="totals">Total Score</button>
+  </div>
+
+  <!-- Games panel -->
+  <div class="panel active" id="panel-games">
+    <div class="info-banner">
+      <span>⚡</span>
+      <span>
+        <strong>Auto-capture is live.</strong>
+        Play any game — your score is detected and posted to the leaderboard automatically.
+        Make sure your player name is set above first.
+      </span>
+    </div>
+    <div class="game-grid" id="game-grid"></div>
+  </div>
+
+  <!-- Leaderboard panel -->
+  <div class="panel" id="panel-leaderboard">
+    <div class="lb-controls">
+      <div class="lb-filter">
+        <select id="filter-game">
+          <option value="all">All Games</option>
+        </select>
+      </div>
+      <button class="clear-btn" id="clear-all">Clear All Scores</button>
+    </div>
+    <div class="lb-table-wrap">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Game</th>
+            <th>Score</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="lb-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Totals panel -->
+  <div class="panel" id="panel-totals">
+    <div class="lb-controls">
+      <div style="color:var(--muted);font-size:13px;letter-spacing:1px;">
+        Combined scores across every game in the hub
+      </div>
+    </div>
+    <div class="lb-table-wrap">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Games Played</th>
+            <th>Total Score</th>
+            <th>Last Played</th>
+          </tr>
+        </thead>
+        <tbody id="totals-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Game overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-frame">
+    <div class="overlay-bar">
+      <div class="overlay-title" id="overlay-title">Game</div>
+      <div class="overlay-watch" id="overlay-watch">Watching Score</div>
+      <button class="overlay-btn" id="overlay-reload">Reload</button>
+      <button class="overlay-btn close" id="overlay-close">✕ Close</button>
+    </div>
+    <iframe id="overlay-iframe" src="about:blank" allow="autoplay; clipboard-write"></iframe>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ════════════════════════════════════════════════════════════════════
+   GAME REGISTRY
+   Each game declares how to extract its "latest score" from
+   localStorage (or DOM for non-persisting games). The hub polls these
+   while the iframe is open and auto-posts new entries to the
+   leaderboard.
+
+   - extract(): returns { points, sig, label } or null
+     - points: numeric score for the unified leaderboard (higher = better)
+     - sig:    unique identifier of this entry (used to detect new ones)
+     - label:  human-readable score string ("7/10", "142ms", "Grade A")
+   - mode:
+     - 'session' : poll localStorage during play; any new entry posts
+     - 'dom'     : poll iframe DOM; post on close (used for Dual Drift)
+   ════════════════════════════════════════════════════════════════════ */
+
+function safeJson(raw, fallback) {
+  try { return raw ? JSON.parse(raw) : fallback; }
+  catch { return fallback; }
+}
+
+const GAMES = [
+  {
+    id: 'british', file: 'british_word_game.html', name: 'BLIMEY!',
+    emoji: '👑', bg: 'linear-gradient(135deg,#e040fb,#ff69b4)',
+    desc: 'British English word game — guess the slang.',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('britishWordGameHistory'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      return { points: (e.score || 0) * 10, sig: e.date, label: `${e.score}/10` };
+    }
+  },
+  {
+    id: 'code', file: 'Code-Breaker.html', name: 'Code Breaker',
+    emoji: '🔢', bg: 'linear-gradient(135deg,#00bcd4,#3f51b5)',
+    desc: 'Crack the hidden code through deduction.',
+    mode: 'session',
+    extract: () => {
+      const data = safeJson(localStorage.getItem('cipher_save_v1'), null);
+      const hist = data && Array.isArray(data.history) ? data.history : [];
+      if (!hist.length) return null;
+      const e = hist[0];
+      return { points: e.score || 0, sig: e.date, label: `${e.score} pts` };
+    }
+  },
+  {
+    id: 'codex', file: 'curiosity-codex.html', name: 'Curiosity Codex',
+    emoji: '📖', bg: 'linear-gradient(135deg,#4a9eff,#1e3358)',
+    desc: 'Discover bizarre historical oddities.',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('codex_v2'), []);
+      if (!arr.length || !arr[0].reaction) return null;
+      const e = arr[0];
+      const reacted = arr.filter(x => x.reaction).length;
+      return { points: reacted * 10, sig: e.ts, label: `${reacted} reactions` };
+    }
+  },
+  {
+    id: 'defuse', file: 'Defuse_pro (1).html', name: 'Defuse Pro',
+    emoji: '💣', bg: 'linear-gradient(135deg,#ff5252,#b71c1c)',
+    desc: 'Cut the right wire before time runs out.',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('defuse_pro_v2'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      return { points: e.score || 0, sig: e.date, label: `${e.grade || ''} · ${e.score} pts` };
+    }
+  },
+  {
+    id: 'drift', file: 'dual_driftt.html', name: 'Dual Drift',
+    emoji: '🚀', bg: 'linear-gradient(135deg,#5b8cff,#ff9966)',
+    desc: 'Pilot two ships at once — dodge obstacles.',
+    mode: 'dom',
+    extract: (iframeDoc) => {
+      if (!iframeDoc) return null;
+      const el = iframeDoc.getElementById('bestVal');
+      if (!el) return null;
+      const score = parseInt(el.textContent, 10) || 0;
+      if (score <= 0) return null;
+      return { points: score, sig: String(score), label: `Best: ${score}` };
+    }
+  },
+  {
+    id: 'focus', file: 'focus_tracker_pro.html', name: 'Focus Tracker',
+    emoji: '⏱️', bg: 'linear-gradient(135deg,#2dd4bf,#0f766e)',
+    desc: 'Pomodoro-style productivity sessions.',
+    mode: 'session',
+    extract: () => {
+      // Dynamic key per user: focusTrackerSessions_v1_{username}
+      let latest = null;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith('focusTrackerSessions_v1_')) continue;
+        const arr = safeJson(localStorage.getItem(key), []);
+        if (arr.length && (!latest || arr[0].timestamp > latest.timestamp)) {
+          latest = arr[0];
+        }
+      }
+      if (!latest) return null;
+      return { points: latest.duration || 0, sig: latest.timestamp, label: `${latest.duration} min` };
+    }
+  },
+  {
+    id: 'wordspan', file: 'memory_word_span.html', name: 'Word Span',
+    emoji: '🧠', bg: 'linear-gradient(135deg,#7ee8a2,#5bc4f5)',
+    desc: 'Test your verbal working memory.',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('wordSpanHistory'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      // peakSpan ~3-10, accuracy 0-100. Combine to a meaningful score.
+      const points = (e.peakSpan || 0) * 10 + Math.round((e.accuracy || 0) / 10);
+      return { points, sig: e.date, label: `Span ${e.peakSpan} · ${e.accuracy}%` };
+    }
+  },
+  {
+    id: 'probability', file: 'probability_gut_check.html', name: 'Probability',
+    emoji: '🎲', bg: 'linear-gradient(135deg,#ffb43c,#bd8526)',
+    desc: 'Gut-check your odds intuition.',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('pgc_history_v1'), []);
+      if (!arr.length) return null;
+      // pgc uses push() so newest is last
+      const e = arr[arr.length - 1];
+      const points = (e.score || 0) * 10;
+      return { points, sig: e.ts, label: `${e.score}/${e.total}` };
+    }
+  },
+  {
+    id: 'reaction', file: 'reaction_time_tester (s).html', name: 'Reaction Time',
+    emoji: '⚡', bg: 'linear-gradient(135deg,#ffd54f,#ff5722)',
+    desc: 'How fast can you click on the signal?',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('f1_reaction_v1'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      const best = e.best || 999;
+      // Lower ms = higher points; cap at 1000ms → 0 pts
+      const points = Math.max(0, 1000 - best);
+      return { points, sig: e.ts, label: `${best}ms` };
+    }
+  },
+  {
+    id: 'stroop', file: 'stroop-test (1).html', name: 'Stroop Test',
+    emoji: '🎨', bg: 'linear-gradient(135deg,#ab47bc,#7e57c2)',
+    desc: 'Match the colour, not the word.',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('stroop_history_v1'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      return { points: e.accuracy || 0, sig: e.ts, label: `${e.accuracy}% (${e.correct}/${e.trials})` };
+    }
+  },
+  {
+    id: 'symbol', file: 'symbol_echo.html', name: 'Symbol Echo',
+    emoji: '◆', bg: 'linear-gradient(135deg,#c8f564,#7a9c3a)',
+    desc: 'Watch the sequence — recall in order.',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('sym_echo_v2'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      return { points: e.score || 0, sig: e.ts, label: `${e.score} pts` };
+    }
+  },
+  {
+    id: 'pattern', file: 'visual_pattern_memory.html', name: 'Pattern Memory',
+    emoji: '▦', bg: 'linear-gradient(135deg,#00e5ff,#a3ff57)',
+    desc: 'Memorise lit cells on a grid.',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('pmtest_history'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      return { points: e.score || 0, sig: e.ts, label: `Grade ${e.grade} · ${e.score} pts` };
+    }
+  },
+  {
+    id: 'wildlife', file: 'Wildlife Shot - Henry.html', name: 'Wildlife Shot',
+    emoji: '📷', bg: 'linear-gradient(135deg,#66bb6a,#2e7d32)',
+    desc: 'Personality quiz — discover your wildlife style.',
+    mode: 'session',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('wildlife_shot_history_v1'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      return { points: 100, sig: e.date, label: e.type || 'Completed' };
+    }
+  },
+];
+
+/* ════════════════════════════════════════════════════════════════════
+   STORAGE
+   ════════════════════════════════════════════════════════════════════ */
+
+const LS_PLAYER = 'hub_player_name';
+const LS_SCORES = 'hub_scores_v1';
+
+const $ = id => document.getElementById(id);
+
+function loadScores() {
+  return safeJson(localStorage.getItem(LS_SCORES), []);
+}
+function saveScores(arr) {
+  localStorage.setItem(LS_SCORES, JSON.stringify(arr));
+}
+function loadPlayer() {
+  return localStorage.getItem(LS_PLAYER) || '';
+}
+function savePlayer(name) {
+  localStorage.setItem(LS_PLAYER, name);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   TOAST
+   ════════════════════════════════════════════════════════════════════ */
+
+let toastTimer = null;
+function toast(msg, kind) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'show ' + (kind || '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 2600);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PLAYER NAME
+   ════════════════════════════════════════════════════════════════════ */
+
+const playerInput = $('player-input');
+playerInput.value = loadPlayer();
+
+let savedPillTimer = null;
+playerInput.addEventListener('input', () => {
+  const name = playerInput.value.trim();
+  savePlayer(name);
+  const pill = $('saved-pill');
+  pill.classList.add('show');
+  clearTimeout(savedPillTimer);
+  savedPillTimer = setTimeout(() => pill.classList.remove('show'), 1200);
+});
+
+/* ════════════════════════════════════════════════════════════════════
+   AUTO-CAPTURE WATCHER
+   While a game iframe is open we poll its extract() every ~1.2s.
+   On the first sample we record the baseline signature; any new
+   signature after that triggers an auto-post.
+   ════════════════════════════════════════════════════════════════════ */
+
+let activeWatcher = null;
+const POLL_INTERVAL_MS = 1200;
+
+function startWatching(game) {
+  stopWatching();
+  if (!game.extract) return;
+
+  // Establish baseline (any pre-existing score we shouldn't re-post)
+  const initial = readExtract(game);
+  const baselineSig = initial ? initial.sig : null;
+
+  activeWatcher = {
+    game,
+    baselineSig,
+    lastPostedSig: baselineSig,
+    intervalId: null
+  };
+
+  activeWatcher.intervalId = setInterval(() => {
+    if (!overlay.classList.contains('open')) {
+      stopWatching();
+      return;
+    }
+    tryCapture();
+  }, POLL_INTERVAL_MS);
+}
+
+function tryCapture() {
+  if (!activeWatcher) return false;
+  const result = readExtract(activeWatcher.game);
+  if (!result) return false;
+  if (result.sig == null) return false;
+  if (result.sig === activeWatcher.lastPostedSig) return false;
+  if (result.sig === activeWatcher.baselineSig) return false;
+
+  autoPostScore(activeWatcher.game, result);
+  activeWatcher.lastPostedSig = result.sig;
+  return true;
+}
+
+function stopWatching() {
+  if (!activeWatcher) return;
+  // One last sweep before tearing down (catches scores saved at game close)
+  tryCapture();
+  clearInterval(activeWatcher.intervalId);
+  activeWatcher = null;
+}
+
+function readExtract(game) {
+  try {
+    if (game.mode === 'dom') {
+      const doc = overlayIframe.contentDocument;
+      return game.extract(doc);
+    }
+    return game.extract();
+  } catch (e) {
+    // Cross-frame DOM access can fail transiently while the iframe loads
+    return null;
+  }
+}
+
+function autoPostScore(game, result) {
+  const name = playerInput.value.trim();
+  if (!name) {
+    toast('⚠ Set your player name to save scores', 'warn');
+    return;
+  }
+
+  const scores = loadScores();
+  scores.push({
+    player: name,
+    gameId: game.id,
+    game: game.name,
+    score: Math.round(result.points),
+    label: result.label || String(result.points),
+    ts: Date.now()
+  });
+  saveScores(scores);
+
+  toast(`✓ ${game.name}: ${result.label || result.points + ' pts'} captured`);
+  renderLeaderboard();
+  renderTotals();
+  renderGames(); // refresh "best" badges
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   GAME GRID
+   ════════════════════════════════════════════════════════════════════ */
+
+function bestForGame(gameId) {
+  const name = playerInput.value.trim().toLowerCase();
+  if (!name) return null;
+  const mine = loadScores().filter(s =>
+    s.gameId === gameId && s.player.toLowerCase() === name
+  );
+  if (!mine.length) return null;
+  return mine.reduce((a, b) => (b.score > a.score ? b : a));
+}
+
+function renderGames() {
+  const grid = $('game-grid');
+  grid.innerHTML = GAMES.map(g => {
+    const best = bestForGame(g.id);
+    const bestHtml = best
+      ? `<div class="best-score">Your best: <strong>${escapeHtml(best.label || best.score)}</strong></div>`
+      : '';
+    return `
+      <div class="game-card" data-id="${g.id}">
+        <div class="game-thumb" style="background:${g.bg}">
+          <span class="emoji">${g.emoji}</span>
+        </div>
+        <div class="game-body">
+          <div class="game-name">${escapeHtml(g.name)}</div>
+          <div class="game-desc">${escapeHtml(g.desc)}</div>
+          ${bestHtml}
+          <div class="auto-indicator">Auto-capture enabled</div>
+          <button class="play-btn" data-play="${g.id}">▶ Play</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('[data-play]').forEach(btn => {
+    btn.addEventListener('click', () => openGame(btn.dataset.play));
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   IFRAME OVERLAY
+   ════════════════════════════════════════════════════════════════════ */
+
+const overlay = $('overlay');
+const overlayIframe = $('overlay-iframe');
+const overlayTitle = $('overlay-title');
+let currentGameSrc = '';
+let currentGameId = '';
+
+function openGame(gameId) {
+  const game = GAMES.find(g => g.id === gameId);
+  if (!game) return;
+
+  if (!playerInput.value.trim()) {
+    toast('⚠ Set your player name first', 'warn');
+    playerInput.focus();
+    return;
+  }
+
+  currentGameSrc = encodeURI(game.file);
+  currentGameId = gameId;
+  overlayTitle.textContent = game.name;
+  overlayIframe.src = currentGameSrc;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Start the watcher once the iframe has loaded its scripts
+  overlayIframe.addEventListener('load', onIframeLoad, { once: true });
+}
+
+function onIframeLoad() {
+  const game = GAMES.find(g => g.id === currentGameId);
+  if (!game) return;
+  // Small delay to let the game's own init code populate localStorage
+  setTimeout(() => {
+    if (overlay.classList.contains('open')) startWatching(game);
+  }, 300);
+}
+
+function closeGame() {
+  stopWatching();
+  overlay.classList.remove('open');
+  overlayIframe.src = 'about:blank';
+  document.body.style.overflow = '';
+  currentGameId = '';
+  currentGameSrc = '';
+}
+
+$('overlay-close').addEventListener('click', closeGame);
+$('overlay-reload').addEventListener('click', () => {
+  if (currentGameSrc) {
+    stopWatching();
+    overlayIframe.src = currentGameSrc;
+    overlayIframe.addEventListener('load', onIframeLoad, { once: true });
+  }
+});
+overlay.addEventListener('click', e => {
+  if (e.target === overlay) closeGame();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && overlay.classList.contains('open')) closeGame();
+});
+
+/* ════════════════════════════════════════════════════════════════════
+   TABS
+   ════════════════════════════════════════════════════════════════════ */
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    $('panel-' + tab.dataset.panel).classList.add('active');
+    if (tab.dataset.panel === 'leaderboard') renderLeaderboard();
+    if (tab.dataset.panel === 'totals') renderTotals();
+    if (tab.dataset.panel === 'games') renderGames();
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════
+   LEADERBOARD
+   ════════════════════════════════════════════════════════════════════ */
+
+function trophyFor(rank) {
+  if (rank === 1) return '<span class="trophy">🏆</span>';
+  if (rank === 2) return '<span class="trophy">🥈</span>';
+  if (rank === 3) return '<span class="trophy">🥉</span>';
+  return '#' + rank;
+}
+
+function renderLeaderboard() {
+  const filter = $('filter-game').value;
+  const scores = loadScores();
+  let rows = scores.slice().sort((a, b) => b.score - a.score);
+  if (filter !== 'all') rows = rows.filter(r => r.gameId === filter);
+
+  const tbody = $('lb-body');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No scores posted yet — play a game and your score will appear here automatically.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.slice(0, 100).map((r, i) => {
+    const rank = i + 1;
+    const rankCls = rank <= 3 ? `rank-${rank}` : '';
+    const rawLabel = r.label && r.label !== String(r.score)
+      ? `<span class="raw">${escapeHtml(r.label)}</span>`
+      : '';
+    return `<tr>
+      <td class="rank-cell ${rankCls}">${trophyFor(rank)}</td>
+      <td class="player-cell">${escapeHtml(r.player)}</td>
+      <td class="game-cell">${escapeHtml(r.game)}</td>
+      <td class="score-cell">${formatScore(r.score)}${rawLabel}</td>
+      <td class="date-cell">${formatDate(r.ts)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTotals() {
+  const scores = loadScores();
+  const byPlayer = {};
+  scores.forEach(s => {
+    const key = s.player.toLowerCase();
+    if (!byPlayer[key]) {
+      byPlayer[key] = { player: s.player, total: 0, games: new Set(), last: 0 };
+    }
+    byPlayer[key].total += s.score;
+    byPlayer[key].games.add(s.gameId);
+    if (s.ts > byPlayer[key].last) byPlayer[key].last = s.ts;
+  });
+
+  const rows = Object.values(byPlayer).sort((a, b) => b.total - a.total);
+  const tbody = $('totals-body');
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No totals yet — play any game to start climbing the ranks.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const rank = i + 1;
+    const rankCls = rank <= 3 ? `rank-${rank}` : '';
+    return `<tr>
+      <td class="rank-cell ${rankCls}">${trophyFor(rank)}</td>
+      <td class="player-cell">${escapeHtml(r.player)}</td>
+      <td class="game-cell">${r.games.size} game${r.games.size !== 1 ? 's' : ''}</td>
+      <td class="score-cell">${formatScore(r.total)}</td>
+      <td class="date-cell">${formatDate(r.last)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   FILTER + CLEAR
+   ════════════════════════════════════════════════════════════════════ */
+
+function setupFilter() {
+  const sel = $('filter-game');
+  GAMES.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', renderLeaderboard);
+}
+
+$('clear-all').addEventListener('click', () => {
+  if (!loadScores().length) { toast('Nothing to clear'); return; }
+  if (confirm('Clear ALL leaderboard scores? Game histories inside each game stay intact. This cannot be undone.')) {
+    saveScores([]);
+    renderLeaderboard();
+    renderTotals();
+    renderGames();
+    toast('Leaderboard cleared');
+  }
+});
+
+/* ════════════════════════════════════════════════════════════════════
+   HELPERS
+   ════════════════════════════════════════════════════════════════════ */
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+function formatScore(n) {
+  if (Number.isInteger(n)) return n.toLocaleString();
+  return n.toFixed(2).replace(/\.?0+$/, '');
+}
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined, { month:'short', day:'numeric' }) +
+         ' · ' +
+         d.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════════════════════════════ */
+
+renderGames();
+setupFilter();
+renderLeaderboard();
+renderTotals();
+
+// Refresh the grid's "Your best" labels when the player name changes
+playerInput.addEventListener('change', renderGames);
+playerInput.addEventListener('blur',   renderGames);
+</script>
+
+</body>
+</html>

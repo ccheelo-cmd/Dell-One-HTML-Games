@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Symbol Echo — Pattern Memory Challenge</title>
+<style>
+  /* =============================================
+     CSS VARIABLES & RESET
+  ============================================= */
+  :root {
+    --bg:        #0d0d0f;
+    --surface:   #141417;
+    --panel:     #1a1a1f;
+    --border:    #2a2a32;
+    --border-hi: #3d3d4a;
+    --text:      #e8e8f0;
+    --muted:     #6b6b80;
+    --accent:    #c8f564;
+    --accent-dim:#7a9c3a;
+    --danger:    #f56464;
+    --warn:      #f5c464;
+    --info:      #64b5f5;
+    --correct:   #64f5a0;
+    --radius:    10px;
+    --font-mono: 'Courier New', monospace;
+    --font-body: Georgia, 'Times New Roman', serif;
+    --transition: 160ms ease;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { font-size: 16px; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+    line-height: 1.5;
+  }
+
+  /* =============================================
+     TYPOGRAPHY
+  ============================================= */
+  h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    letter-spacing: 0.12em;
+    font-weight: 400;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  h3 {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* =============================================
+     LAYOUT WRAPPER
+  ============================================= */
+  .app {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .header {
+    text-align: center;
+    padding: 8px 0 4px;
+  }
+
+  .header p {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 6px;
+    font-family: var(--font-mono);
+  }
+
+  /* =============================================
+     CARDS / PANELS
+  ============================================= */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  /* =============================================
+     CONTROLS PANEL
+  ============================================= */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .control-group label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .control-group select,
+  .control-group input[type="range"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    padding: 8px 10px;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color var(--transition);
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .control-group select:focus,
+  .control-group select:hover {
+    border-color: var(--border-hi);
+    outline: none;
+  }
+
+  /* Custom select arrow */
+  .control-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6b80'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  .range-val {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+  }
+
+  input[type="range"] {
+    padding: 4px 0 !important;
+    -webkit-appearance: auto;
+    appearance: auto;
+    accent-color: var(--accent);
+  }
+
+  /* =============================================
+     BUTTONS
+  ============================================= */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: var(--font-mono);
+    border: none;
+    border-radius: 7px;
+    transition: background var(--transition), color var(--transition), opacity var(--transition), transform 80ms ease;
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+  }
+
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0d0d0f;
+    flex: 1;
+    min-width: 120px;
+    font-weight: 700;
+  }
+
+  .btn-primary:hover:not(:disabled) { background: #d6ff70; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--border-hi);
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    opacity: 0.7;
+    padding: 6px 14px;
+    font-size: 0.75rem;
+  }
+
+  .btn-danger:hover:not(:disabled) { opacity: 1; }
+
+  /* =============================================
+     GAME ARENA
+  ============================================= */
+  #arena {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .status-bar span { color: var(--text); }
+
+  .status-item { display: flex; gap: 8px; align-items: center; }
+
+  /* Progress dots */
+  .progress-dots {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 300ms ease;
+  }
+  .dot.done-correct { background: var(--correct); }
+  .dot.done-wrong   { background: var(--danger); }
+  .dot.active       { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* Sequence display area */
+  .sequence-stage {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stage-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    position: absolute;
+    top: 12px;
+    left: 14px;
+  }
+
+  /* The symbol shown during reveal */
+  .big-symbol {
+    font-size: clamp(3rem, 12vw, 5rem);
+    line-height: 1;
+    transition: opacity 200ms ease, transform 200ms ease;
+    user-select: none;
+  }
+
+  .big-symbol.flash-in  { opacity: 1; transform: scale(1); }
+  .big-symbol.flash-out { opacity: 0; transform: scale(0.8); }
+
+  /* Sequence mini-track (shown during recall) */
+  .sequence-track {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .seq-slot {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    transition: background 200ms, border-color 200ms;
+  }
+
+  .seq-slot.revealed  { background: var(--surface); border-color: var(--border-hi); }
+  .seq-slot.correct   { background: #1a3a26; border-color: var(--correct); }
+  .seq-slot.wrong     { background: #3a1a1a; border-color: var(--danger); }
+  .seq-slot.pending   { background: #1e1e26; }
+
+  /* Input grid — symbol buttons */
+  .symbol-grid {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .sym-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1.5rem;
+    padding: 14px 6px;
+    transition: background var(--transition), border-color var(--transition), transform 80ms ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .sym-btn:hover:not(:disabled) {
+    background: var(--panel);
+    border-color: var(--border-hi);
+  }
+
+  .sym-btn:disabled { opacity: 0.35; }
+
+  .sym-btn.flash-correct {
+    background: #1a3a26;
+    border-color: var(--correct);
+  }
+
+  .sym-btn.flash-wrong {
+    background: #3a1a1a;
+    border-color: var(--danger);
+  }
+
+  /* Countdown display */
+  .countdown-display {
+    font-family: var(--font-mono);
+    font-size: clamp(2.5rem, 10vw, 4rem);
+    color: var(--accent);
+    text-align: center;
+    padding: 20px;
+    animation: pulse 800ms ease infinite alternate;
+  }
+
+  @keyframes pulse {
+    from { opacity: 0.7; }
+    to   { opacity: 1; }
+  }
+
+  /* Timer bar */
+  .timer-bar-wrap {
+    background: var(--surface);
+    border-radius: 3px;
+    height: 4px;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .timer-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 100ms linear, background 400ms ease;
+    width: 100%;
+  }
+
+  .timer-bar.warn  { background: var(--warn); }
+  .timer-bar.danger { background: var(--danger); }
+
+  /* Phase message */
+  .phase-msg {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* Streak indicator */
+  .streak-badge {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    background: #1e2a10;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    border-radius: 4px;
+    padding: 3px 8px;
+    letter-spacing: 0.1em;
+  }
+
+  /* =============================================
+     RESULTS PANEL
+  ============================================= */
+  #results { display: none; }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .result-cell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .result-cell .val {
+    font-family: var(--font-mono);
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    color: var(--accent);
+    display: block;
+    line-height: 1.2;
+  }
+
+  .result-cell .lbl {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+    display: block;
+  }
+
+  .feedback-msg {
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: 18px;
+    font-style: italic;
+  }
+
+  .pb-badge {
+    display: inline-block;
+    background: #1e2a10;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    letter-spacing: 0.12em;
+    margin-bottom: 14px;
+  }
+
+  /* =============================================
+     HISTORY
+  ============================================= */
+  #history-section { }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .history-list::-webkit-scrollbar { width: 4px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    transition: border-color var(--transition);
+  }
+
+  .history-item:hover { border-color: var(--border-hi); }
+
+  .history-item.is-pb { border-color: var(--accent-dim); }
+
+  .hi-date { color: var(--muted); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .hi-score { color: var(--accent); font-weight: 700; min-width: 36px; text-align: right; }
+
+  .hi-acc { color: var(--muted); min-width: 44px; text-align: right; }
+
+  .hi-diff {
+    color: var(--muted);
+    background: var(--panel);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.68rem;
+    white-space: nowrap;
+  }
+
+  .hi-pb {
+    color: var(--accent);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .empty-history {
+    text-align: center;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    padding: 20px;
+  }
+
+  /* =============================================
+     MISC UTILITIES
+  ============================================= */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+
+  .fade-in {
+    animation: fadeIn 300ms ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .hidden { display: none !important; }
+
+  /* =============================================
+     RESPONSIVE
+  ============================================= */
+  @media (max-width: 420px) {
+    .controls-grid { grid-template-columns: 1fr; }
+    .result-grid   { grid-template-columns: 1fr 1fr; }
+    .sym-btn       { font-size: 1.2rem; padding: 12px 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="header">
+    <h1>Symbol Echo</h1>
+    <p>Watch the sequence · Recall it in order</p>
+  </header>
+
+  <!-- ==================== CONTROLS ==================== -->
+  <section class="card" id="controls-panel">
+    <div class="card-header">
+      <h2>Settings</h2>
+    </div>
+
+    <div class="controls-grid">
+
+      <div class="control-group">
+        <label for="sel-difficulty">Difficulty</label>
+        <select id="sel-difficulty">
+          <option value="easy">Easy — 3 symbols</option>
+          <option value="normal" selected>Normal — 5 symbols</option>
+          <option value="hard">Hard — 7 symbols</option>
+          <option value="expert">Expert — 9 symbols</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="sel-rounds">Rounds per session</label>
+        <select id="sel-rounds">
+          <option value="5">5 rounds</option>
+          <option value="8" selected>8 rounds</option>
+          <option value="12">12 rounds</option>
+          <option value="16">16 rounds</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="rng-speed">Display speed <span class="range-val" id="speed-val">800 ms</span></label>
+        <input type="range" id="rng-speed" min="400" max="1800" step="100" value="800">
+      </div>
+
+      <div class="control-group">
+        <label for="rng-recall">Recall time <span class="range-val" id="recall-val">12 s</span></label>
+        <input type="range" id="rng-recall" min="6" max="30" step="1" value="12">
+      </div>
+
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-start">Start Session</button>
+      <button class="btn-ghost"   id="btn-preset-easy"   title="Quick easy preset">⚡ Easy</button>
+      <button class="btn-ghost"   id="btn-preset-speed"  title="Quick speed preset">🔥 Speed</button>
+    </div>
+  </section>
+
+  <!-- ==================== GAME ARENA ==================== -->
+  <section id="arena">
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-item">Round <span id="stat-round">—</span></div>
+      <div class="progress-dots" id="progress-dots"></div>
+      <div class="status-item">Score <span id="stat-score">0</span></div>
+    </div>
+
+    <!-- Main stage (countdown / reveal / recall) -->
+    <div class="sequence-stage" id="stage">
+      <span class="stage-label" id="stage-label">Ready</span>
+
+      <!-- Countdown view -->
+      <div id="view-countdown" class="hidden">
+        <div class="countdown-display" id="countdown-num">3</div>
+      </div>
+
+      <!-- Reveal view: one symbol at a time -->
+      <div id="view-reveal" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%">
+        <div class="big-symbol flash-out" id="reveal-symbol">●</div>
+        <div class="phase-msg" id="reveal-msg">Memorise the sequence</div>
+        <!-- mini progress row during reveal -->
+        <div class="sequence-track" id="reveal-track"></div>
+      </div>
+
+      <!-- Recall view: show slots to fill -->
+      <div id="view-recall" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%">
+        <div class="sequence-track" id="recall-track"></div>
+        <div class="timer-bar-wrap" style="width:100%;max-width:360px">
+          <div class="timer-bar" id="timer-bar"></div>
+        </div>
+        <div class="phase-msg">Tap the symbols in the correct order</div>
+      </div>
+
+    </div>
+
+    <!-- Symbol input grid -->
+    <div class="symbol-grid" id="symbol-grid"></div>
+
+  </section>
+
+  <!-- ==================== RESULTS ==================== -->
+  <section class="card fade-in" id="results">
+    <div class="card-header">
+      <h2>Session Results</h2>
+      <span id="pb-badge" class="pb-badge hidden">★ Personal Best</span>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-cell">
+        <span class="val" id="res-score">0</span>
+        <span class="lbl">Score</span>
+      </div>
+      <div class="result-cell">
+        <span class="val" id="res-accuracy">0%</span>
+        <span class="lbl">Accuracy</span>
+      </div>
+      <div class="result-cell">
+        <span class="val" id="res-streak">0</span>
+        <span class="lbl">Best Streak</span>
+      </div>
+      <div class="result-cell">
+        <span class="val" id="res-avg-time">—</span>
+        <span class="lbl">Avg Recall Time</span>
+      </div>
+    </div>
+
+    <div class="feedback-msg" id="res-feedback"></div>
+
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-play-again">Play Again</button>
+      <button class="btn-ghost"   id="btn-back-settings">Settings</button>
+    </div>
+  </section>
+
+  <!-- ==================== HISTORY ==================== -->
+  <section class="card" id="history-section">
+    <div class="card-header">
+      <h2>Session History</h2>
+      <button class="btn-danger" id="btn-clear-history">Clear</button>
+    </div>
+    <div class="history-list" id="history-list">
+      <p class="empty-history">No sessions yet — play to build history.</p>
+    </div>
+  </section>
+
+</div><!-- /.app -->
+
+<script>
+/* ============================================================
+   SYMBOL ECHO — Pure vanilla JS, zero dependencies
+   Architecture:
+     - AppState  : single source of truth
+     - Config    : derived from user settings
+     - Timers    : centralised cleanup
+     - UI        : render helpers
+     - Game      : phase logic
+     - History   : localStorage persistence
+   ============================================================ */
+
+'use strict';
+
+/* ----------------------------------------------------------
+   CONSTANTS
+   ---------------------------------------------------------- */
+const SYMBOLS = ['◆','▲','●','★','■','◎','✦','⬟','⬡','⬢','◈','⬣'];
+
+// Per-difficulty: [seqLength, bonusMultiplier]
+const DIFFICULTY_MAP = {
+  easy:   { seqLen: 3, label: 'Easy',   bonus: 1.0 },
+  normal: { seqLen: 5, label: 'Normal', bonus: 1.5 },
+  hard:   { seqLen: 7, label: 'Hard',   bonus: 2.2 },
+  expert: { seqLen: 9, label: 'Expert', bonus: 3.0 },
+};
+
+const FEEDBACK_TABLE = [
+  { min: 95, msg: 'Exceptional recall. Your working memory is sharp as glass.' },
+  { min: 80, msg: 'Great performance. Very consistent under pressure.' },
+  { min: 60, msg: 'Solid effort. A few slips, but you held the thread.' },
+  { min: 40, msg: 'Getting there. Pattern recognition takes practice.' },
+  { min:  0, msg: 'Keep going — every session trains the neural pathways.' },
+];
+
+const LS_KEY = 'symbol_echo_history_v1';
+
+/* ----------------------------------------------------------
+   APP STATE
+   ---------------------------------------------------------- */
+let state = {
+  phase: 'idle',   // idle | countdown | reveal | recall | result
+  round:   0,
+  totalRounds: 8,
+  sequence: [],    // symbols for this round
+  input: [],       // user's taps this round
+  score:   0,
+  roundResults: [], // [{correct:bool, timeMs:int}]
+  streak:  0,
+  bestStreak: 0,
+  // config snapshot
+  cfg: null,
+};
+
+/* ----------------------------------------------------------
+   TIMERS — centralised so we never leak
+   ---------------------------------------------------------- */
+const Timers = {
+  _ids: [],
+  set(fn, ms)       { const id = setTimeout(fn, ms);  this._ids.push(id); return id; },
+  interval(fn, ms)  { const id = setInterval(fn, ms); this._ids.push(id); return id; },
+  clear(id)         { clearTimeout(id); clearInterval(id); this._ids = this._ids.filter(x => x !== id); },
+  clearAll()        { this._ids.forEach(id => { clearTimeout(id); clearInterval(id); }); this._ids = []; },
+};
+
+/* ----------------------------------------------------------
+   HISTORY — localStorage wrapper
+   ---------------------------------------------------------- */
+const History = {
+  load() {
+    try {
+      return JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+    } catch { return []; }
+  },
+  save(entries) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(entries)); } catch { /* quota */ }
+  },
+  push(entry) {
+    const entries = this.load();
+    entries.unshift(entry);         // newest first
+    if (entries.length > 100) entries.length = 100;
+    this.save(entries);
+  },
+  clear() {
+    try { localStorage.removeItem(LS_KEY); } catch { /* ok */ }
+  },
+  personalBest() {
+    const entries = this.load();
+    if (!entries.length) return null;
+    return entries.reduce((best, e) => e.score > (best?.score ?? -1) ? e : best, null);
+  },
+};
+
+/* ----------------------------------------------------------
+   CONFIG — build from current control values
+   ---------------------------------------------------------- */
+function buildConfig() {
+  const diff       = document.getElementById('sel-difficulty').value;
+  const rounds     = parseInt(document.getElementById('sel-rounds').value, 10);
+  const speedMs    = parseInt(document.getElementById('rng-speed').value, 10);
+  const recallSecs = parseInt(document.getElementById('rng-recall').value, 10);
+  const dm         = DIFFICULTY_MAP[diff];
+  return {
+    difficulty:  diff,
+    diffLabel:   dm.label,
+    seqLen:      dm.seqLen,
+    bonusMult:   dm.bonus,
+    rounds,
+    speedMs,
+    recallMs:    recallSecs * 1000,
+    // build a shuffled symbol pool the right size
+    symbolPool:  buildSymbolPool(dm.seqLen),
+  };
+}
+
+function buildSymbolPool(seqLen) {
+  // Use more symbols for harder difficulties; always ≥ seqLen+1 unique choices
+  const needed = Math.min(seqLen + 3, SYMBOLS.length);
+  return shuffle([...SYMBOLS]).slice(0, needed);
+}
+
+/* ----------------------------------------------------------
+   UTILITIES
+   ---------------------------------------------------------- */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function generateSequence(pool, len) {
+  const seq = [];
+  for (let i = 0; i < len; i++) {
+    // Allow repeats but not two identical in a row
+    let sym;
+    do { sym = pool[Math.floor(Math.random() * pool.length)]; }
+    while (seq.length && sym === seq[seq.length - 1]);
+    seq.push(sym);
+  }
+  return seq;
+}
+
+function scoreRound(correct, timeMs, recallMs, bonusMult) {
+  if (!correct) return 0;
+  // Base 100, time bonus up to 50, multiplied by difficulty
+  const timeFrac = Math.max(0, 1 - timeMs / recallMs);
+  const raw = Math.round((100 + timeFrac * 50) * bonusMult);
+  return raw;
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month:'short', day:'numeric' })
+       + ' ' + d.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+}
+
+/* ----------------------------------------------------------
+   UI HELPERS
+   ---------------------------------------------------------- */
+const UI = {
+  show(id)  { document.getElementById(id).style.display = ''; document.getElementById(id).classList.remove('hidden'); },
+  hide(id)  { document.getElementById(id).classList.add('hidden'); },
+
+  showArena()    { document.getElementById('arena').style.display = 'flex'; },
+  hideArena()    { document.getElementById('arena').style.display = 'none'; },
+
+  showResults()  { document.getElementById('results').style.display = ''; document.getElementById('results').classList.remove('hidden'); },
+  hideResults()  { document.getElementById('results').style.display = 'none'; },
+
+  showControls() { document.getElementById('controls-panel').style.display = ''; },
+  hideControls() { document.getElementById('controls-panel').style.display = 'none'; },
+
+  /* Set which "view" is shown inside the stage */
+  showView(name) {
+    ['countdown','reveal','recall'].forEach(v => {
+      const el = document.getElementById('view-' + v);
+      if (v === name) { el.classList.remove('hidden'); el.style.display = 'flex'; }
+      else            { el.classList.add('hidden'); }
+    });
+  },
+
+  setStageLabel(text) {
+    document.getElementById('stage-label').textContent = text;
+  },
+
+  updateStatusBar() {
+    document.getElementById('stat-round').textContent = `${state.round} / ${state.totalRounds}`;
+    document.getElementById('stat-score').textContent = state.score;
+  },
+
+  buildProgressDots() {
+    const container = document.getElementById('progress-dots');
+    container.innerHTML = '';
+    for (let i = 0; i < state.totalRounds; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot';
+      d.id = `dot-${i}`;
+      container.appendChild(d);
+    }
+  },
+
+  setDot(index, cls) {
+    const d = document.getElementById(`dot-${index}`);
+    if (d) { d.className = 'dot ' + cls; }
+  },
+
+  buildSymbolGrid(pool, disabled) {
+    const grid = document.getElementById('symbol-grid');
+    grid.innerHTML = '';
+    // Responsive columns: 4 if ≤6 symbols, else 5
+    const cols = pool.length <= 6 ? Math.min(pool.length, 4) : 5;
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    pool.forEach(sym => {
+      const btn = document.createElement('button');
+      btn.className = 'sym-btn';
+      btn.textContent = sym;
+      btn.dataset.sym = sym;
+      btn.disabled = disabled;
+      btn.setAttribute('aria-label', `Symbol ${sym}`);
+      btn.addEventListener('click', () => handleSymbolInput(sym, btn));
+      grid.appendChild(btn);
+    });
+  },
+
+  setSymbolGridDisabled(disabled) {
+    document.querySelectorAll('.sym-btn').forEach(b => b.disabled = disabled);
+  },
+
+  buildRevealTrack(len) {
+    const track = document.getElementById('reveal-track');
+    track.innerHTML = '';
+    for (let i = 0; i < len; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'seq-slot pending';
+      slot.id = `rv-slot-${i}`;
+      track.appendChild(slot);
+    }
+  },
+
+  setRevealSlot(index, sym) {
+    const slot = document.getElementById(`rv-slot-${index}`);
+    if (slot) { slot.textContent = sym; slot.className = 'seq-slot revealed'; }
+  },
+
+  buildRecallTrack(len) {
+    const track = document.getElementById('recall-track');
+    track.innerHTML = '';
+    for (let i = 0; i < len; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'seq-slot pending';
+      slot.id = `rc-slot-${i}`;
+      track.appendChild(slot);
+    }
+  },
+
+  fillRecallSlot(index, sym, result) {
+    const slot = document.getElementById(`rc-slot-${index}`);
+    if (slot) {
+      slot.textContent = sym;
+      slot.className = 'seq-slot ' + (result === 'correct' ? 'correct' : 'wrong');
+    }
+  },
+
+  flashSymButton(sym, result) {
+    const btn = document.querySelector(`.sym-btn[data-sym="${sym}"]`);
+    if (!btn) return;
+    const cls = result === 'correct' ? 'flash-correct' : 'flash-wrong';
+    btn.classList.add(cls);
+    Timers.set(() => btn.classList.remove(cls), 400);
+  },
+
+  renderResults(data) {
+    document.getElementById('res-score').textContent    = data.score;
+    document.getElementById('res-accuracy').textContent = data.accuracy + '%';
+    document.getElementById('res-streak').textContent   = data.bestStreak;
+    document.getElementById('res-avg-time').textContent = data.avgRecallTime > 0
+      ? (data.avgRecallTime / 1000).toFixed(1) + 's' : '—';
+
+    const fb = FEEDBACK_TABLE.find(f => data.accuracy >= f.min)?.msg ?? '';
+    document.getElementById('res-feedback').textContent = fb;
+
+    // Personal best?
+    const pb = History.personalBest();
+    const badge = document.getElementById('pb-badge');
+    if (pb && data.score >= pb.score) {
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  },
+
+  renderHistory() {
+    const list    = document.getElementById('history-list');
+    const entries = History.load();
+    list.innerHTML = '';
+
+    if (!entries.length) {
+      list.innerHTML = '<p class="empty-history">No sessions yet — play to build history.</p>';
+      return;
+    }
+
+    const pb = History.personalBest();
+
+    entries.forEach(e => {
+      const item = document.createElement('div');
+      const isPb = pb && e.score === pb.score && e.ts === pb.ts;
+      item.className = 'history-item' + (isPb ? ' is-pb' : '');
+
+      item.innerHTML =
+        `<span class="hi-date">${formatDate(e.ts)}</span>` +
+        `<span class="hi-diff">${e.diffLabel}</span>` +
+        `<span class="hi-acc">${e.accuracy}%</span>` +
+        `<span class="hi-score">${e.score}</span>` +
+        (isPb ? `<span class="hi-pb">★PB</span>` : '');
+
+      list.appendChild(item);
+    });
+  },
+};
+
+/* ----------------------------------------------------------
+   GAME — phase controllers
+   ---------------------------------------------------------- */
+
+/** Start a fresh session */
+function startSession() {
+  Timers.clearAll();
+  const cfg = buildConfig();
+  state = {
+    phase: 'countdown',
+    round: 0,
+    totalRounds: cfg.rounds,
+    sequence: [],
+    input: [],
+    score: 0,
+    roundResults: [],
+    streak: 0,
+    bestStreak: 0,
+    cfg,
+  };
+
+  UI.hideControls();
+  UI.hideResults();
+  UI.showArena();
+  UI.buildProgressDots();
+  UI.updateStatusBar();
+  UI.buildSymbolGrid(cfg.symbolPool, true);
+
+  startCountdown(() => startRound());
+}
+
+/** 3-2-1 countdown before round */
+function startCountdown(cb) {
+  state.phase = 'countdown';
+  UI.showView('countdown');
+  UI.setStageLabel('Get ready');
+
+  let n = 3;
+  document.getElementById('countdown-num').textContent = n;
+
+  const tick = Timers.interval(() => {
+    n--;
+    if (n <= 0) {
+      Timers.clear(tick);
+      cb();
+    } else {
+      document.getElementById('countdown-num').textContent = n;
+    }
+  }, 800);
+}
+
+/** Begin a single round: reveal phase */
+function startRound() {
+  state.round++;
+  state.input = [];
+  state.sequence = generateSequence(state.cfg.symbolPool, state.cfg.seqLen);
+  state.phase = 'reveal';
+
+  UI.updateStatusBar();
+  UI.setDot(state.round - 1, 'active');
+  UI.setSymbolGridDisabled(true);
+  UI.buildRevealTrack(state.cfg.seqLen);
+  UI.showView('reveal');
+  UI.setStageLabel(`Round ${state.round} — Memorise`);
+
+  const revealEl  = document.getElementById('reveal-symbol');
+  const revealMsg = document.getElementById('reveal-msg');
+
+  revealMsg.textContent = `Memorise the sequence (${state.cfg.seqLen} symbols)`;
+
+  let idx = 0;
+
+  function showNext() {
+    // Flash in
+    revealEl.className = 'big-symbol flash-in';
+    revealEl.textContent = state.sequence[idx];
+    UI.setRevealSlot(idx, state.sequence[idx]);
+
+    Timers.set(() => {
+      // Flash out, then schedule next
+      revealEl.className = 'big-symbol flash-out';
+
+      Timers.set(() => {
+        idx++;
+        if (idx < state.sequence.length) {
+          showNext();
+        } else {
+          // All symbols shown — start recall
+          startRecall();
+        }
+      }, 200);
+    }, state.cfg.speedMs - 200);
+  }
+
+  // Small delay before first symbol
+  Timers.set(showNext, 400);
+}
+
+/** Recall phase: user inputs the sequence */
+function startRecall() {
+  state.phase = 'recall';
+  state._recallStart = Date.now();
+  state._inputIndex  = 0;
+
+  UI.showView('recall');
+  UI.setStageLabel(`Round ${state.round} — Recall`);
+  UI.buildRecallTrack(state.cfg.seqLen);
+  UI.setSymbolGridDisabled(false);
+
+  // Timer bar countdown
+  const bar      = document.getElementById('timer-bar');
+  const recallMs = state.cfg.recallMs;
+  bar.style.width  = '100%';
+  bar.className    = 'timer-bar';
+
+  const startTime = Date.now();
+  const tickMs    = 80;
+
+  const barTimer = Timers.interval(() => {
+    const elapsed = Date.now() - startTime;
+    const frac    = Math.max(0, 1 - elapsed / recallMs);
+    bar.style.width = (frac * 100).toFixed(1) + '%';
+    if      (frac < 0.25) bar.className = 'timer-bar danger';
+    else if (frac < 0.5)  bar.className = 'timer-bar warn';
+    else                  bar.className = 'timer-bar';
+
+    if (frac <= 0) {
+      Timers.clear(barTimer);
+      timeoutRecall();
+    }
+  }, tickMs);
+
+  // Store timer reference to cancel on completion
+  state._barTimer = barTimer;
+}
+
+/** Called when user taps a symbol */
+function handleSymbolInput(sym, btn) {
+  if (state.phase !== 'recall') return;
+  if (state._inputIndex >= state.sequence.length) return;
+
+  const idx      = state._inputIndex;
+  const expected = state.sequence[idx];
+  const isCorrect = sym === expected;
+
+  UI.fillRecallSlot(idx, sym, isCorrect ? 'correct' : 'wrong');
+  UI.flashSymButton(sym, isCorrect ? 'correct' : 'wrong');
+
+  state.input.push(sym);
+  state._inputIndex++;
+
+  if (!isCorrect) {
+    // Wrong answer — end recall for this round immediately
+    Timers.clear(state._barTimer);
+    UI.setSymbolGridDisabled(true);
+    // Show the remaining correct symbols briefly
+    revealCorrectRemaining(idx + 1, () => endRound(false));
+    return;
+  }
+
+  // Streak tracking
+  state.streak++;
+  if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+
+  if (state._inputIndex === state.sequence.length) {
+    // All correct!
+    Timers.clear(state._barTimer);
+    UI.setSymbolGridDisabled(true);
+    const elapsed = Date.now() - state._recallStart;
+    endRound(true, elapsed);
+  }
+}
+
+/** Reveal what remaining slots should have been, then proceed */
+function revealCorrectRemaining(fromIdx, cb) {
+  for (let i = fromIdx; i < state.sequence.length; i++) {
+    const slot = document.getElementById(`rc-slot-${i}`);
+    if (slot) {
+      slot.textContent = state.sequence[i];
+      slot.className   = 'seq-slot wrong';
+    }
+  }
+  Timers.set(cb, 900);
+}
+
+/** Timed out without completing */
+function timeoutRecall() {
+  if (state.phase !== 'recall') return;
+  UI.setSymbolGridDisabled(true);
+  state.streak = 0;
+
+  // Mark any unfilled slots
+  for (let i = state._inputIndex; i < state.sequence.length; i++) {
+    const slot = document.getElementById(`rc-slot-${i}`);
+    if (slot) {
+      slot.textContent = state.sequence[i];
+      slot.className   = 'seq-slot wrong';
+    }
+  }
+  Timers.set(() => endRound(false), 700);
+}
+
+/** Finish a round, tally score, decide next phase */
+function endRound(correct, elapsedMs) {
+  const roundScore = scoreRound(correct, elapsedMs || state.cfg.recallMs, state.cfg.recallMs, state.cfg.bonusMult);
+  if (correct) state.score += roundScore;
+  if (!correct) state.streak = 0;
+
+  state.roundResults.push({ correct, timeMs: elapsedMs || state.cfg.recallMs });
+  UI.setDot(state.round - 1, correct ? 'done-correct' : 'done-wrong');
+  UI.updateStatusBar();
+
+  if (state.round >= state.totalRounds) {
+    Timers.set(endSession, 600);
+  } else {
+    Timers.set(() => startCountdown(() => startRound()), 500);
+  }
+}
+
+/** Session complete */
+function endSession() {
+  Timers.clearAll();
+  state.phase = 'result';
+  UI.hideArena();
+
+  const correct  = state.roundResults.filter(r => r.correct).length;
+  const accuracy = Math.round((correct / state.totalRounds) * 100);
+  const correctTimes = state.roundResults.filter(r => r.correct).map(r => r.timeMs);
+  const avgRecallTime = correctTimes.length
+    ? Math.round(correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length)
+    : 0;
+
+  const summary = {
+    ts:          new Date().toISOString(),
+    score:       state.score,
+    accuracy,
+    bestStreak:  state.bestStreak,
+    avgRecallTime,
+    rounds:      state.totalRounds,
+    diffLabel:   state.cfg.diffLabel,
+    difficulty:  state.cfg.difficulty,
+  };
+
+  History.push(summary);
+  UI.renderResults({ ...summary });
+  UI.renderHistory();
+  UI.showResults();
+  UI.showControls();
+}
+
+/* ----------------------------------------------------------
+   CONTROL PANEL WIRING
+   ---------------------------------------------------------- */
+
+document.getElementById('btn-start').addEventListener('click', startSession);
+
+document.getElementById('btn-play-again').addEventListener('click', () => {
+  UI.hideResults();
+  startSession();
+});
+
+document.getElementById('btn-back-settings').addEventListener('click', () => {
+  UI.hideResults();
+  UI.showControls();
+});
+
+document.getElementById('btn-clear-history').addEventListener('click', () => {
+  if (confirm('Clear all session history?')) {
+    History.clear();
+    UI.renderHistory();
+  }
+});
+
+// Speed range display
+document.getElementById('rng-speed').addEventListener('input', function() {
+  document.getElementById('speed-val').textContent = this.value + ' ms';
+});
+
+// Recall time range display
+document.getElementById('rng-recall').addEventListener('input', function() {
+  document.getElementById('recall-val').textContent = this.value + ' s';
+});
+
+// Presets
+document.getElementById('btn-preset-easy').addEventListener('click', () => {
+  document.getElementById('sel-difficulty').value = 'easy';
+  document.getElementById('sel-rounds').value     = '5';
+  document.getElementById('rng-speed').value      = '1200';
+  document.getElementById('rng-recall').value     = '20';
+  document.getElementById('speed-val').textContent  = '1200 ms';
+  document.getElementById('recall-val').textContent = '20 s';
+});
+
+document.getElementById('btn-preset-speed').addEventListener('click', () => {
+  document.getElementById('sel-difficulty').value = 'hard';
+  document.getElementById('sel-rounds').value     = '8';
+  document.getElementById('rng-speed').value      = '450';
+  document.getElementById('rng-recall').value     = '8';
+  document.getElementById('speed-val').textContent  = '450 ms';
+  document.getElementById('recall-val').textContent = '8 s';
+});
+
+/* ----------------------------------------------------------
+   KEYBOARD SUPPORT
+   Build a mapping of keyboard keys → symbols when in recall
+   ---------------------------------------------------------- */
+document.addEventListener('keydown', (e) => {
+  if (state.phase !== 'recall') return;
+  // Map 1-9,0 to symbol buttons in grid order
+  const btns = [...document.querySelectorAll('.sym-btn:not([disabled])')];
+  const numMap = ['1','2','3','4','5','6','7','8','9','0'];
+  const idx = numMap.indexOf(e.key);
+  if (idx >= 0 && idx < btns.length) {
+    btns[idx].click();
+  }
+});
+
+/* ----------------------------------------------------------
+   INIT
+   ---------------------------------------------------------- */
+(function init() {
+  UI.hideArena();
+  UI.hideResults();
+  UI.renderHistory();
+})();
+
+</script>
+</body>
+</html>

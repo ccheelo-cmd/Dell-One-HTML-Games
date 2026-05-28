@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pattern Memory Test</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg:       #080b10;
+    --surface:  #0e1319;
+    --panel:    #131920;
+    --border:   #1e2d3d;
+    --accent:   #00e5ff;
+    --accent2:  #ff3d71;
+    --accent3:  #a3ff57;
+    --accent4:  #ffb700;
+    --text:     #ccd6e0;
+    --muted:    #4a5568;
+    --success:  #a3ff57;
+    --fail:     #ff3d71;
+    --mono:     'Share Tech Mono', monospace;
+    --sans:     'Rajdhani', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  header {
+    width: 100%;
+    max-width: 820px;
+    padding: 28px 24px 0;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  header h1 {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  header span {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  main {
+    width: 100%;
+    max-width: 820px;
+    padding: 20px 24px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── SCREEN management ── */
+  .screen { display: none; flex-direction: column; gap: 20px; }
+  .screen.active { display: flex; }
+
+  /* ── CONTROL PANEL ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 22px 24px;
+  }
+  .card-title {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .ctrl-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+  .ctrl-group select, .ctrl-group input[type=range] {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .ctrl-group select:focus { border-color: var(--accent); }
+  .range-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .range-row input { flex: 1; accent-color: var(--accent); }
+  .range-val {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    color: var(--accent);
+    min-width: 26px;
+    text-align: right;
+  }
+
+  .btn {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 14px 28px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: filter .15s, transform .1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+  .btn-primary:hover { filter: brightness(1.15); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-size: 0.85rem;
+    padding: 10px 20px;
+  }
+  .btn-ghost:hover { background: rgba(0,229,255,0.07); }
+  .btn-danger {
+    background: transparent;
+    color: var(--fail);
+    border: 1px solid var(--fail);
+    font-size: 0.8rem;
+    padding: 8px 16px;
+    letter-spacing: 2px;
+  }
+  .btn-danger:hover { background: rgba(255,61,113,0.08); }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    display: flex;
+    gap: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .stat-cell {
+    flex: 1;
+    padding: 12px 16px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 1.2rem;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  /* ── GRID ARENA ── */
+  .arena-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .phase-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    height: 18px;
+    transition: color .2s;
+  }
+  .phase-label.show { color: var(--accent4); }
+  .phase-label.recall { color: var(--accent); }
+  .phase-label.wait { color: var(--muted); }
+
+  #grid-container {
+    display: grid;
+    gap: 6px;
+    user-select: none;
+  }
+
+  .cell {
+    border-radius: 4px;
+    cursor: default;
+    transition: background .12s, transform .1s, box-shadow .12s;
+    position: relative;
+    overflow: hidden;
+  }
+  .cell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .cell.idle {
+    background: var(--panel);
+    border: 1px solid var(--border);
+  }
+  .cell.lit {
+    background: var(--accent4);
+    border: 1px solid #ffd740;
+    box-shadow: 0 0 16px rgba(255,183,0,0.5);
+    transform: scale(1.04);
+  }
+  .cell.selected {
+    background: var(--accent);
+    border: 1px solid #60f3ff;
+    box-shadow: 0 0 14px rgba(0,229,255,0.45);
+    transform: scale(1.04);
+    cursor: pointer;
+  }
+  .cell.correct {
+    background: var(--success);
+    border: 1px solid #c0ff80;
+    box-shadow: 0 0 16px rgba(163,255,87,0.5);
+    animation: pulse-correct .4s ease;
+  }
+  .cell.wrong {
+    background: var(--fail);
+    border: 1px solid #ff6e8e;
+    box-shadow: 0 0 16px rgba(255,61,113,0.5);
+    animation: shake .35s ease;
+  }
+  .cell.missed {
+    background: #3a1a22;
+    border: 1px solid #5a2a35;
+  }
+  .cell.clickable {
+    cursor: pointer;
+  }
+  .cell.clickable:hover:not(.selected) {
+    background: #1a2a35;
+    border-color: var(--accent);
+    transform: scale(1.03);
+  }
+
+  @keyframes pulse-correct {
+    0%   { transform: scale(1.04); }
+    50%  { transform: scale(1.12); }
+    100% { transform: scale(1.04); }
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%      { transform: translateX(-5px); }
+    75%      { transform: translateX(5px); }
+  }
+
+  /* countdown ring */
+  .countdown-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .countdown-ring {
+    position: relative;
+    width: 52px;
+    height: 52px;
+  }
+  .countdown-ring svg { transform: rotate(-90deg); }
+  .countdown-ring circle.track { fill: none; stroke: var(--border); stroke-width: 3; }
+  .countdown-ring circle.fill  { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset .1s linear; }
+  .countdown-num {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 1rem;
+    color: var(--accent);
+  }
+  .countdown-hint {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* progress dots */
+  .progress-dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background .2s;
+  }
+  .dot.done-ok  { background: var(--success); }
+  .dot.done-fail { background: var(--fail); }
+  .dot.current  { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* ── RESULT SCREEN ── */
+  .result-hero {
+    text-align: center;
+    padding: 10px 0 6px;
+  }
+  .result-grade {
+    font-family: var(--mono);
+    font-size: 3.8rem;
+    letter-spacing: 4px;
+    line-height: 1;
+  }
+  .result-grade.grade-s { color: var(--accent); text-shadow: 0 0 28px rgba(0,229,255,0.5); }
+  .result-grade.grade-a { color: var(--accent3); text-shadow: 0 0 22px rgba(163,255,87,0.4); }
+  .result-grade.grade-b { color: var(--accent4); }
+  .result-grade.grade-c { color: var(--muted); }
+  .result-grade.grade-f { color: var(--fail); }
+
+  .result-score-line {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    margin-top: 6px;
+  }
+  .result-desc {
+    font-size: 1rem;
+    color: var(--text);
+    margin-top: 10px;
+    letter-spacing: 1px;
+    font-weight: 300;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* ── HISTORY LOG ── */
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+  }
+  .history-table th {
+    text-align: left;
+    color: var(--muted);
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 0 8px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #0e1319;
+    color: var(--text);
+  }
+  .history-table tr:last-child td { border-bottom: none; }
+  .tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 2px;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .tag-s { background: rgba(0,229,255,0.12); color: var(--accent); }
+  .tag-a { background: rgba(163,255,87,0.1); color: var(--accent3); }
+  .tag-b { background: rgba(255,183,0,0.1); color: var(--accent4); }
+  .tag-c { background: rgba(100,116,139,0.15); color: var(--muted); }
+  .tag-f { background: rgba(255,61,113,0.1); color: var(--fail); }
+
+  .empty-history {
+    text-align: center;
+    padding: 22px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  /* ── FLASH OVERLAY ── */
+  #flash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 100;
+    transition: opacity .12s;
+  }
+  #flash.green { background: rgba(163,255,87,0.07); opacity: 1; }
+  #flash.red   { background: rgba(255,61,113,0.09); opacity: 1; }
+
+  /* ── BETWEEN ROUND ── */
+  .big-message {
+    text-align: center;
+    padding: 30px 0;
+  }
+  .big-message .icon { font-size: 2.8rem; margin-bottom: 8px; }
+  .big-message .msg  { font-family: var(--mono); font-size: 1rem; color: var(--accent); letter-spacing: 3px; }
+  .big-message .sub  { font-size: 0.85rem; color: var(--muted); margin-top: 6px; font-weight: 300; letter-spacing: 1px; }
+
+  /* responsive */
+  @media (max-width: 500px) {
+    .controls-grid { grid-template-columns: 1fr; }
+    .status-bar { flex-wrap: wrap; }
+    .stat-cell { min-width: 50%; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<div id="flash"></div>
+
+<header>
+  <h1>Pattern Memory</h1>
+  <span>Visual Recall Test</span>
+</header>
+
+<main>
+
+  <!-- ══════════ SCREEN: SETUP ══════════ -->
+  <div id="screen-setup" class="screen active">
+    <div class="card">
+      <div class="card-title">Test Configuration</div>
+      <div class="controls-grid">
+
+        <div class="ctrl-group">
+          <label>Grid Size</label>
+          <select id="cfg-grid">
+            <option value="3">3 × 3  — Novice</option>
+            <option value="4" selected>4 × 4  — Standard</option>
+            <option value="5">5 × 5  — Hard</option>
+            <option value="6">6 × 6  — Expert</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <label>Rounds</label>
+          <select id="cfg-rounds">
+            <option value="3">3 Rounds</option>
+            <option value="5" selected>5 Rounds</option>
+            <option value="8">8 Rounds</option>
+            <option value="10">10 Rounds</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <label>Show Duration (sec)</label>
+          <div class="range-row">
+            <input type="range" id="cfg-showtime" min="1" max="5" step="0.5" value="2">
+            <span class="range-val" id="cfg-showtime-val">2.0s</span>
+          </div>
+        </div>
+
+        <div class="ctrl-group">
+          <label>Recall Time (sec)</label>
+          <div class="range-row">
+            <input type="range" id="cfg-recalltime" min="5" max="20" step="1" value="8">
+            <span class="range-val" id="cfg-recalltime-val">8s</span>
+          </div>
+        </div>
+
+        <div class="ctrl-group">
+          <label>Lit Cells per Round</label>
+          <select id="cfg-cells">
+            <option value="auto" selected>Auto (scale with grid)</option>
+            <option value="3">3 cells</option>
+            <option value="4">4 cells</option>
+            <option value="5">5 cells</option>
+            <option value="6">6 cells</option>
+            <option value="7">7 cells</option>
+            <option value="8">8 cells</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <label>Difficulty Ramp</label>
+          <select id="cfg-ramp">
+            <option value="none">None — same pattern count</option>
+            <option value="easy" selected>Easy — +1 cell every 2 rounds</option>
+            <option value="hard">Hard — +1 cell every round</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-start" style="align-self:flex-start">START TEST</button>
+
+    <div class="card" id="history-card">
+      <div class="history-header">
+        <div class="card-title" style="margin:0">Session History</div>
+        <button class="btn btn-danger" id="btn-clear-history">CLEAR</button>
+      </div>
+      <div id="history-body"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ SCREEN: GAME ══════════ -->
+  <div id="screen-game" class="screen">
+    <div class="status-bar">
+      <div class="stat-cell">
+        <span class="stat-label">Round</span>
+        <span class="stat-val" id="stat-round">–</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Score</span>
+        <span class="stat-val" id="stat-score">–</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Streak</span>
+        <span class="stat-val" id="stat-streak">–</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Cells to find</span>
+        <span class="stat-val" id="stat-cells">–</span>
+      </div>
+    </div>
+
+    <div class="arena-wrap">
+      <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+        <div class="phase-label" id="phase-label">READY</div>
+        <div class="progress-dots" id="progress-dots"></div>
+      </div>
+
+      <div id="grid-container"></div>
+
+      <div class="countdown-wrap">
+        <div class="countdown-ring">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle class="track" cx="26" cy="26" r="22"/>
+            <circle class="fill" id="ring-fill" cx="26" cy="26" r="22"
+              stroke-dasharray="138.2" stroke-dashoffset="0"/>
+          </svg>
+          <span class="countdown-num" id="countdown-num">–</span>
+        </div>
+        <span class="countdown-hint" id="countdown-hint">––</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ SCREEN: RESULT ══════════ -->
+  <div id="screen-result" class="screen">
+    <div class="card result-hero">
+      <div class="card-title">Test Complete</div>
+      <div class="result-grade" id="result-grade">S</div>
+      <div class="result-score-line" id="result-score-line">12 / 15 CELLS CORRECT</div>
+      <div class="result-desc" id="result-desc">Exceptional recall.</div>
+    </div>
+
+    <div class="status-bar">
+      <div class="stat-cell">
+        <span class="stat-label">Rounds Passed</span>
+        <span class="stat-val" id="r-rounds">–</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Total Correct</span>
+        <span class="stat-val" id="r-correct">–</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Total Cells</span>
+        <span class="stat-val" id="r-total">–</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-label">Best Streak</span>
+        <span class="stat-val" id="r-streak">–</span>
+      </div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn btn-primary" id="btn-retry">RETRY</button>
+      <button class="btn btn-ghost" id="btn-newconfig">CHANGE CONFIG</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const cfg = {
+  grid: 4, rounds: 5, showTime: 2000, recallTime: 8000,
+  cellsBase: 'auto', ramp: 'easy'
+};
+
+let session = null;  // active game state
+let countdownTimer = null;
+let countdownStart = null;
+let countdownDuration = 0;
+
+// ─── DOM refs ────────────────────────────────────────────────────────────────
+const screens = {
+  setup:  document.getElementById('screen-setup'),
+  game:   document.getElementById('screen-game'),
+  result: document.getElementById('screen-result')
+};
+
+// ─── Utility ─────────────────────────────────────────────────────────────────
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function flash(type) {
+  const el = document.getElementById('flash');
+  el.className = type;
+  setTimeout(() => { el.className = ''; }, 300);
+}
+
+// ─── Controls init ───────────────────────────────────────────────────────────
+document.getElementById('cfg-showtime').addEventListener('input', e => {
+  document.getElementById('cfg-showtime-val').textContent = parseFloat(e.target.value).toFixed(1) + 's';
+});
+document.getElementById('cfg-recalltime').addEventListener('input', e => {
+  document.getElementById('cfg-recalltime-val').textContent = e.target.value + 's';
+});
+
+// ─── Countdown ring ──────────────────────────────────────────────────────────
+const RING_CIRC = 138.2;
+
+function startCountdown(durationMs, hintText, colorVar) {
+  clearTimeout(countdownTimer);
+  countdownDuration = durationMs;
+  countdownStart = performance.now();
+  document.getElementById('countdown-hint').textContent = hintText;
+  document.getElementById('ring-fill').style.stroke = colorVar || 'var(--accent)';
+  _tickCountdown();
+}
+
+function _tickCountdown() {
+  const elapsed = performance.now() - countdownStart;
+  const remaining = Math.max(0, countdownDuration - elapsed);
+  const frac = remaining / countdownDuration;
+  document.getElementById('ring-fill').style.strokeDashoffset = RING_CIRC * (1 - frac);
+  document.getElementById('countdown-num').textContent = Math.ceil(remaining / 1000);
+  if (remaining > 0) {
+    countdownTimer = setTimeout(_tickCountdown, 50);
+  }
+}
+
+function stopCountdown() {
+  clearTimeout(countdownTimer);
+  document.getElementById('countdown-num').textContent = '–';
+  document.getElementById('ring-fill').style.strokeDashoffset = 0;
+}
+
+// ─── Grid rendering ──────────────────────────────────────────────────────────
+function buildGrid(size) {
+  const container = document.getElementById('grid-container');
+  const cellPx = Math.min(Math.floor((Math.min(window.innerWidth, 820) - 100) / size), 80);
+  container.style.gridTemplateColumns = `repeat(${size}, ${cellPx}px)`;
+  container.innerHTML = '';
+  for (let i = 0; i < size * size; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell idle';
+    cell.style.width = cell.style.height = cellPx + 'px';
+    cell.dataset.idx = i;
+    container.appendChild(cell);
+  }
+}
+
+function getCells() { return Array.from(document.querySelectorAll('.cell')); }
+
+function setCellState(idx, state) {
+  const cell = document.querySelector(`.cell[data-idx="${idx}"]`);
+  if (!cell) return;
+  cell.className = 'cell ' + state;
+  if (state === 'clickable') cell.classList.add('clickable');
+}
+
+function setAllIdle() {
+  getCells().forEach(c => { c.className = 'cell idle'; });
+}
+
+// ─── Progress dots ───────────────────────────────────────────────────────────
+function buildDots(rounds) {
+  const wrap = document.getElementById('progress-dots');
+  wrap.innerHTML = '';
+  for (let i = 0; i < rounds; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.id = `dot-${i}`;
+    wrap.appendChild(d);
+  }
+}
+
+function setDot(idx, state) {
+  const d = document.getElementById(`dot-${idx}`);
+  if (d) d.className = 'dot ' + state;
+}
+
+// ─── Cells-to-show count ─────────────────────────────────────────────────────
+function getCellCount(roundIdx) {
+  let base;
+  if (cfg.cellsBase === 'auto') {
+    base = Math.max(3, Math.floor(cfg.grid * cfg.grid * 0.22));
+  } else {
+    base = parseInt(cfg.cellsBase);
+  }
+  let extra = 0;
+  if (cfg.ramp === 'easy')  extra = Math.floor(roundIdx / 2);
+  if (cfg.ramp === 'hard')  extra = roundIdx;
+  return Math.min(base + extra, cfg.grid * cfg.grid - 1);
+}
+
+// ─── Game flow ────────────────────────────────────────────────────────────────
+async function runGame() {
+  showScreen('game');
+
+  const totalRounds = cfg.rounds;
+  buildDots(totalRounds);
+
+  session = {
+    round: 0, score: 0, streak: 0, bestStreak: 0,
+    totalCells: 0, correctCells: 0, roundResults: []
+  };
+
+  for (let r = 0; r < totalRounds; r++) {
+    session.round = r;
+    setDot(r, 'current');
+    updateStats();
+
+    const numCells = getCellCount(r);
+    session.totalCells += numCells;
+
+    // Pick random cells
+    const allIdx = Array.from({ length: cfg.grid * cfg.grid }, (_, i) => i);
+    const litIdx = new Set(shuffle(allIdx).slice(0, numCells));
+
+    document.getElementById('stat-cells').textContent = numCells;
+
+    // — SHOW PHASE —
+    setPhaseLabel('show');
+    setAllIdle();
+    litIdx.forEach(i => setCellState(i, 'lit'));
+    startCountdown(cfg.showTime, 'memorise', 'var(--accent4)');
+    await sleep(cfg.showTime);
+
+    // — BLANK PHASE (brief) —
+    setPhaseLabel('wait');
+    setAllIdle();
+    stopCountdown();
+    await sleep(280);
+
+    // — RECALL PHASE —
+    setPhaseLabel('recall');
+    getCells().forEach(c => c.classList.add('clickable'));
+    getCells().forEach(c => {
+      if (c.className.includes('idle') || true) {
+        c.className = 'cell idle clickable';
+      }
+    });
+
+    const selected = new Set();
+    let recallDone = false;
+
+    const recallPromise = new Promise(resolve => {
+      getCells().forEach(cell => {
+        cell.onclick = () => {
+          if (recallDone) return;
+          const idx = parseInt(cell.dataset.idx);
+          if (selected.has(idx)) {
+            selected.delete(idx);
+            cell.className = 'cell idle clickable';
+          } else {
+            selected.add(idx);
+            cell.className = 'cell selected clickable';
+          }
+          // auto-submit when enough selected
+          if (selected.size === numCells) {
+            recallDone = true;
+            clearTimeout(recallTimer);
+            resolve();
+          }
+        };
+      });
+
+      startCountdown(cfg.recallTime, 'select cells', 'var(--accent)');
+      var recallTimer = setTimeout(() => {
+        recallDone = true;
+        resolve();
+      }, cfg.recallTime);
+    });
+
+    await recallPromise;
+    stopCountdown();
+    getCells().forEach(c => { c.onclick = null; });
+
+    // — FEEDBACK PHASE —
+    let roundCorrect = 0;
+    getCells().forEach(cell => {
+      const idx = parseInt(cell.dataset.idx);
+      const wasLit = litIdx.has(idx);
+      const wasPicked = selected.has(idx);
+      if (wasLit && wasPicked) {
+        cell.className = 'cell correct'; roundCorrect++;
+      } else if (wasLit && !wasPicked) {
+        cell.className = 'cell missed';
+      } else if (!wasLit && wasPicked) {
+        cell.className = 'cell wrong';
+      } else {
+        cell.className = 'cell idle';
+      }
+    });
+
+    session.correctCells += roundCorrect;
+    const roundPassed = roundCorrect === numCells;
+
+    if (roundPassed) {
+      session.score += numCells * 10;
+      session.streak++;
+      session.bestStreak = Math.max(session.bestStreak, session.streak);
+      flash('green');
+      setDot(r, 'done-ok');
+    } else {
+      session.streak = 0;
+      flash('red');
+      setDot(r, 'done-fail');
+    }
+
+    session.roundResults.push({ correct: roundCorrect, total: numCells, passed: roundPassed });
+    updateStats();
+
+    await sleep(900);
+    setAllIdle();
+    await sleep(180);
+  }
+
+  // Done
+  endGame();
+}
+
+function setPhaseLabel(phase) {
+  const el = document.getElementById('phase-label');
+  el.className = 'phase-label ' + phase;
+  const labels = { show: 'MEMORISE', wait: 'BLANK', recall: 'RECALL — TAP THE LIT CELLS' };
+  el.textContent = labels[phase] || phase.toUpperCase();
+}
+
+function updateStats() {
+  document.getElementById('stat-round').textContent  = (session.round + 1) + '/' + cfg.rounds;
+  document.getElementById('stat-score').textContent  = session.score;
+  document.getElementById('stat-streak').textContent = session.streak;
+}
+
+// ─── End game & results ───────────────────────────────────────────────────────
+function gradeSession(pct) {
+  if (pct >= 0.95) return 'S';
+  if (pct >= 0.80) return 'A';
+  if (pct >= 0.60) return 'B';
+  if (pct >= 0.40) return 'C';
+  return 'F';
+}
+
+const gradeDesc = {
+  S: 'Exceptional pattern recall.',
+  A: 'Strong visual memory.',
+  B: 'Solid performance.',
+  C: 'Room to improve.',
+  F: 'Keep practising.'
+};
+
+function endGame() {
+  const pct = session.totalCells > 0 ? session.correctCells / session.totalCells : 0;
+  const grade = gradeSession(pct);
+  const roundsPassed = session.roundResults.filter(r => r.passed).length;
+
+  document.getElementById('result-grade').textContent  = grade;
+  document.getElementById('result-grade').className    = 'result-grade grade-' + grade.toLowerCase();
+  document.getElementById('result-score-line').textContent =
+    session.correctCells + ' / ' + session.totalCells + ' CELLS CORRECT · ' + Math.round(pct * 100) + '%';
+  document.getElementById('result-desc').textContent  = gradeDesc[grade];
+  document.getElementById('r-rounds').textContent     = roundsPassed + '/' + cfg.rounds;
+  document.getElementById('r-correct').textContent    = session.correctCells;
+  document.getElementById('r-total').textContent      = session.totalCells;
+  document.getElementById('r-streak').textContent     = session.bestStreak;
+
+  saveHistory({ grade, pct, roundsPassed, rounds: cfg.rounds,
+    correct: session.correctCells, total: session.totalCells,
+    grid: cfg.grid, score: session.score, ts: Date.now() });
+
+  showScreen('result');
+}
+
+// ─── History ─────────────────────────────────────────────────────────────────
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem('pmtest_history') || '[]'); }
+  catch(e) { return []; }
+}
+function saveHistory(entry) {
+  const h = loadHistory();
+  h.unshift(entry);
+  if (h.length > 30) h.length = 30;
+  localStorage.setItem('pmtest_history', JSON.stringify(h));
+  renderHistory();
+}
+function renderHistory() {
+  const h = loadHistory();
+  const body = document.getElementById('history-body');
+  if (!h.length) {
+    body.innerHTML = '<div class="empty-history">NO SESSIONS YET</div>';
+    return;
+  }
+  const rows = h.slice(0, 15).map(e => {
+    const d = new Date(e.ts);
+    const dateStr = d.toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) + ' ' +
+                    d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+    const gl = e.grade.toLowerCase();
+    return `<tr>
+      <td>${dateStr}</td>
+      <td>${e.grid}×${e.grid}</td>
+      <td>${e.roundsPassed}/${e.rounds}</td>
+      <td>${e.correct}/${e.total}</td>
+      <td>${Math.round(e.pct*100)}%</td>
+      <td><span class="tag tag-${gl}">${e.grade}</span></td>
+    </tr>`;
+  }).join('');
+  body.innerHTML = `<table class="history-table">
+    <thead><tr>
+      <th>Date</th><th>Grid</th><th>Rounds</th><th>Cells</th><th>Acc.</th><th>Grade</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ─── Wiring ───────────────────────────────────────────────────────────────────
+document.getElementById('btn-start').addEventListener('click', () => {
+  cfg.grid       = parseInt(document.getElementById('cfg-grid').value);
+  cfg.rounds     = parseInt(document.getElementById('cfg-rounds').value);
+  cfg.showTime   = parseFloat(document.getElementById('cfg-showtime').value) * 1000;
+  cfg.recallTime = parseInt(document.getElementById('cfg-recalltime').value) * 1000;
+  cfg.cellsBase  = document.getElementById('cfg-cells').value;
+  cfg.ramp       = document.getElementById('cfg-ramp').value;
+
+  buildGrid(cfg.grid);
+  runGame();
+});
+
+document.getElementById('btn-retry').addEventListener('click', () => {
+  buildGrid(cfg.grid);
+  runGame();
+});
+document.getElementById('btn-newconfig').addEventListener('click', () => {
+  renderHistory();
+  showScreen('setup');
+});
+document.getElementById('btn-clear-history').addEventListener('click', () => {
+  localStorage.removeItem('pmtest_history');
+  renderHistory();
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderHistory();
+</script>
+</body>
+</html>

@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stroop Effect Test</title>
+<style>
+  /* ─── RESET & BASE ─────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #07090f;
+    --panel:     #0d1220;
+    --border:    #1a2540;
+    --border-hi: #2a3f65;
+    --text:      #c8d8f0;
+    --muted:     #3d5070;
+    --dim:       #253348;
+    --accent:    #3b7fff;
+    --accent-lo: rgba(59,127,255,0.12);
+    --success:   #22c55e;
+    --error:     #ef4444;
+    --warn:      #f59e0b;
+
+    --red:    #ef4444;
+    --green:  #22c55e;
+    --blue:   #60a5fa;
+    --yellow: #f0c030;
+    --purple: #c084fc;
+    --orange: #fb923c;
+
+    --font-mono: 'Courier New', 'Lucida Console', monospace;
+    --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+    min-height: 100vh;
+  }
+
+  /* ─── LAYOUT ─────────────────────────────────────── */
+  .shell {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 28px 32px;
+  }
+
+  .panel-sm {
+    padding: 18px 24px;
+  }
+
+  /* ─── TYPOGRAPHY ─────────────────────────────────── */
+  .mono { font-family: var(--font-mono); }
+  .ui   { font-family: var(--font-ui); }
+
+  h1 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: normal;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+
+  .label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ─── BUTTONS ────────────────────────────────────── */
+  button {
+    cursor: pointer;
+    border: none;
+    outline: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    padding: 12px 32px;
+    font-size: 13px;
+    letter-spacing: 2px;
+  }
+  .btn-primary:hover { background: #5590ff; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    padding: 10px 20px;
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
+
+  /* ─── SEGMENTED CONTROLS ────────────────────────── */
+  .seg-group {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px;
+  }
+
+  .seg-btn {
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 16px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    border-radius: 3px;
+    flex: 1;
+    text-align: center;
+  }
+  .seg-btn:hover { color: var(--text); }
+  .seg-btn.active {
+    background: var(--border-hi);
+    color: var(--text);
+  }
+
+  /* ─── DIVIDER ─────────────────────────────────────── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .divider-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    color: var(--dim);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .divider-label::before, .divider-label::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ─── VIEWS ──────────────────────────────────────── */
+  .view { display: none; }
+  .view.active { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ─── SETUP VIEW ─────────────────────────────────── */
+  .config-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .config-row:last-child { border-bottom: none; }
+  .config-label { font-size: 12px; color: var(--text); }
+  .config-desc  { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* ─── COUNTDOWN VIEW ─────────────────────────────── */
+  #countdown-view {
+    align-items: center;
+    justify-content: center;
+    min-height: 340px;
+    text-align: center;
+  }
+
+  .countdown-num {
+    font-size: 120px;
+    font-weight: bold;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -4px;
+    transition: all 0.3s;
+    animation: pulseIn 0.5s ease-out;
+  }
+
+  @keyframes pulseIn {
+    from { transform: scale(1.4); opacity: 0.3; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+
+  .countdown-go {
+    font-size: 72px;
+    font-weight: bold;
+    color: var(--accent);
+    letter-spacing: 4px;
+    animation: pulseIn 0.3s ease-out;
+  }
+
+  /* ─── TRIAL VIEW ─────────────────────────────────── */
+  .trial-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* Timer bar */
+  .timer-track {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .timer-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width linear, background 0.3s;
+    background: var(--success);
+  }
+
+  /* The word display */
+  .word-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    position: relative;
+  }
+
+  .color-word {
+    font-size: 76px;
+    font-weight: 900;
+    font-family: var(--font-ui);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    user-select: none;
+    animation: wordAppear 0.2s ease-out;
+    text-shadow: 0 0 40px currentColor;
+  }
+
+  @keyframes wordAppear {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .instruction-badge {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-align: center;
+    padding: 6px 0;
+  }
+
+  /* Color buttons */
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .color-btn {
+    padding: 16px 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    border-radius: 5px;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    color: var(--text);
+    transition: transform 0.1s, border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .color-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0.08;
+    transition: opacity 0.15s;
+  }
+
+  .color-btn:hover::before { opacity: 0.16; }
+  .color-btn:hover { transform: translateY(-2px); }
+  .color-btn:active { transform: translateY(0); }
+
+  .color-btn.flash-correct {
+    border-color: var(--success) !important;
+    animation: flashGreen 0.35s ease-out forwards;
+  }
+  .color-btn.flash-wrong {
+    border-color: var(--error) !important;
+    animation: flashRed 0.35s ease-out forwards;
+  }
+
+  @keyframes flashGreen {
+    0%, 100% { background: var(--panel); }
+    40%       { background: rgba(34,197,94,0.2); }
+  }
+  @keyframes flashRed {
+    0%, 100% { background: var(--panel); }
+    40%       { background: rgba(239,68,68,0.2); }
+  }
+
+  /* Trial feedback overlay */
+  .trial-fb {
+    position: absolute;
+    right: 0; top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  .trial-fb.show { opacity: 1; }
+
+  /* ─── RESULTS VIEW ───────────────────────────────── */
+  .results-header {
+    text-align: center;
+    padding: 16px 0 8px;
+  }
+
+  .big-stat {
+    font-size: 56px;
+    font-weight: bold;
+    font-family: var(--font-mono);
+    line-height: 1;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-val {
+    font-size: 14px;
+    font-weight: bold;
+    font-family: var(--font-mono);
+  }
+
+  .stroop-effect-box {
+    background: var(--accent-lo);
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .stroop-num { font-size: 32px; font-weight: bold; color: var(--accent); }
+  .stroop-sub { font-size: 10px; letter-spacing: 2px; color: var(--muted); margin-top: 4px; }
+
+  .results-btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* ─── HISTORY TABLE ───────────────────────────────── */
+  .history-scroll {
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .history-table th {
+    padding: 6px 10px;
+    text-align: left;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 1px;
+    font-size: 10px;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+  }
+
+  .history-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  .history-table tr:last-child td { border-bottom: none; }
+
+  .history-table tr:hover td {
+    background: rgba(255,255,255,0.02);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-mode-mixed      { background: #1a2540; color: #7090c0; }
+  .badge-mode-congruent  { background: #0f2520; color: #4aaa7a; }
+  .badge-mode-incongruent{ background: #251020; color: #aa5070; }
+
+  .empty-state {
+    text-align: center;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  /* ─── CLEAR BTN ───────────────────────────────────── */
+  .clear-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    padding: 4px 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .clear-btn:hover { color: var(--error); }
+
+  /* ─── SCROLLBAR ───────────────────────────────────── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ═══════════════════════════════════════════════════
+       SETUP VIEW
+  ════════════════════════════════════════════════════ -->
+  <div id="setup-view" class="view active">
+
+    <div class="panel">
+      <h1>Cognitive Experiment · Session Config</h1>
+      <h2 style="margin: 8px 0 4px">Stroop Effect Test</h2>
+      <p style="font-size:11px; color:var(--muted); line-height:1.7; margin-top:10px;">
+        A word appears in a colored ink. Your task: click the <em style="color:var(--text)">ink color</em>,
+        not the word itself. Congruent trials (word matches ink) are easy.
+        Incongruent trials reveal the Stroop interference effect.
+      </p>
+
+      <hr class="divider">
+
+      <div class="config-row">
+        <div>
+          <div class="config-label">Number of trials</div>
+          <div class="config-desc">Total stimuli presented per session</div>
+        </div>
+        <div class="seg-group" id="trials-seg">
+          <button class="seg-btn" data-val="10">10</button>
+          <button class="seg-btn active" data-val="20">20</button>
+          <button class="seg-btn" data-val="30">30</button>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <div>
+          <div class="config-label">Trial mode</div>
+          <div class="config-desc">Controls congruency ratio</div>
+        </div>
+        <div class="seg-group" id="mode-seg">
+          <button class="seg-btn" data-val="congruent">Congruent</button>
+          <button class="seg-btn active" data-val="mixed">Mixed</button>
+          <button class="seg-btn" data-val="incongruent">Incongruent</button>
+        </div>
+      </div>
+
+      <div class="config-row">
+        <div>
+          <div class="config-label">Time limit per trial</div>
+          <div class="config-desc">Auto-marks as incorrect if exceeded</div>
+        </div>
+        <div class="seg-group" id="timelimit-seg">
+          <button class="seg-btn" data-val="2000">2 s</button>
+          <button class="seg-btn active" data-val="3000">3 s</button>
+          <button class="seg-btn" data-val="4000">4 s</button>
+        </div>
+      </div>
+
+      <div style="margin-top:28px; text-align:center;">
+        <button class="btn-primary" onclick="startCountdown()">BEGIN TEST</button>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="panel panel-sm">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <span class="label">Session History</span>
+        <button class="clear-btn" onclick="clearHistory()">clear all</button>
+      </div>
+      <div class="history-scroll">
+        <div id="history-container"></div>
+      </div>
+    </div>
+
+  </div><!-- /setup-view -->
+
+
+  <!-- ═══════════════════════════════════════════════════
+       COUNTDOWN VIEW
+  ════════════════════════════════════════════════════ -->
+  <div id="countdown-view" class="view">
+    <div class="panel" style="display:flex;flex-direction:column;align-items:center;
+                               justify-content:center;min-height:340px;gap:16px;">
+      <p class="label">get ready</p>
+      <div id="countdown-display" class="countdown-num">3</div>
+      <p class="label" id="countdown-sub">focus on the screen</p>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       TRIAL VIEW
+  ════════════════════════════════════════════════════ -->
+  <div id="trial-view" class="view">
+    <div class="panel">
+      <!-- Meta row -->
+      <div class="trial-meta" style="margin-bottom:10px;">
+        <span id="trial-counter">Trial 1 / 20</span>
+        <span id="trial-mode-badge"></span>
+        <span id="trial-score">0 correct</span>
+      </div>
+
+      <!-- Timer bar -->
+      <div class="timer-track" style="margin-bottom:20px;">
+        <div id="timer-bar" class="timer-bar" style="width:100%;"></div>
+      </div>
+
+      <!-- Word stage -->
+      <div class="word-stage">
+        <div id="color-word" class="color-word">RED</div>
+        <div id="trial-fb" class="trial-fb"></div>
+      </div>
+
+      <div class="instruction-badge">NAME THE INK COLOR — NOT THE WORD</div>
+
+      <!-- Color buttons -->
+      <div class="color-grid" style="margin-top:24px;" id="color-buttons">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       RESULTS VIEW
+  ════════════════════════════════════════════════════ -->
+  <div id="results-view" class="view">
+    <div class="panel">
+
+      <div class="results-header">
+        <p class="label" style="margin-bottom:8px;">test complete</p>
+        <div class="big-stat" id="res-accuracy-big">--</div>
+        <p style="font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:1px;">ACCURACY</p>
+      </div>
+
+      <hr class="divider" style="margin:14px 0;">
+
+      <div class="stat-row">
+        <span class="label">Trials completed</span>
+        <span class="stat-val" id="res-trials">--</span>
+      </div>
+      <div class="stat-row">
+        <span class="label">Overall avg response time</span>
+        <span class="stat-val" id="res-avg-rt">-- ms</span>
+      </div>
+      <div class="stat-row">
+        <span class="label">Congruent trials · accuracy / avg RT</span>
+        <span class="stat-val" id="res-cong">-- / -- ms</span>
+      </div>
+      <div class="stat-row">
+        <span class="label">Incongruent trials · accuracy / avg RT</span>
+        <span class="stat-val" id="res-incong">-- / -- ms</span>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Stroop effect highlight -->
+      <div class="stroop-effect-box" id="stroop-box">
+        <div class="stroop-num" id="stroop-delta">+-- ms</div>
+        <div class="stroop-sub" id="stroop-label">STROOP INTERFERENCE EFFECT</div>
+        <p id="stroop-desc" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;"></p>
+      </div>
+
+      <div class="results-btns" style="margin-top:24px;">
+        <button class="btn-primary" onclick="retryTest()">TRY AGAIN</button>
+        <button class="btn-ghost"   onclick="goSetup()">CHANGE SETTINGS</button>
+      </div>
+    </div>
+
+    <!-- History (shown again below results) -->
+    <div class="panel panel-sm">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <span class="label">Session History</span>
+        <button class="clear-btn" onclick="clearHistory()">clear all</button>
+      </div>
+      <div class="history-scroll">
+        <div id="history-container-results"></div>
+      </div>
+    </div>
+
+  </div><!-- /results-view -->
+
+</div><!-- /shell -->
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════════════
+const COLORS = [
+  { name:'RED',    hex:'#ef4444' },
+  { name:'GREEN',  hex:'#22c55e' },
+  { name:'BLUE',   hex:'#60a5fa' },
+  { name:'YELLOW', hex:'#f0c030' },
+  { name:'PURPLE', hex:'#c084fc' },
+  { name:'ORANGE', hex:'#fb923c' },
+];
+
+const STORAGE_KEY = 'stroop_history_v1';
+
+// ══════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════
+let cfg = {
+  trials:    20,
+  mode:      'mixed',   // 'congruent' | 'incongruent' | 'mixed'
+  timelimit: 3000,
+};
+
+let session = {
+  trials:      [],    // {wordName, inkName, isCongruent}
+  results:     [],    // {correct, rt, isCongruent}
+  current:     0,
+  trialStart:  0,
+  timerRAF:    null,
+  answered:    false,
+  timeoutID:   null,
+};
+
+// ══════════════════════════════════════════════════════════════
+//  SEGMENTED CONTROL HELPERS
+// ══════════════════════════════════════════════════════════════
+document.querySelectorAll('.seg-group').forEach(group => {
+  group.addEventListener('click', e => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    group.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const id = group.id;
+    if (id === 'trials-seg')    cfg.trials    = parseInt(btn.dataset.val);
+    if (id === 'mode-seg')      cfg.mode      = btn.dataset.val;
+    if (id === 'timelimit-seg') cfg.timelimit = parseInt(btn.dataset.val);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════
+//  VIEW MANAGER
+// ══════════════════════════════════════════════════════════════
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TRIAL GENERATION
+// ══════════════════════════════════════════════════════════════
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickDifferent(current) {
+  const others = COLORS.filter(c => c.name !== current.name);
+  return others[Math.floor(Math.random() * others.length)];
+}
+
+function generateTrials(n, mode) {
+  const trials = [];
+  for (let i = 0; i < n; i++) {
+    const isCongruent = mode === 'congruent' ? true
+                      : mode === 'incongruent' ? false
+                      : (Math.random() < 0.4); // mixed: ~40% congruent
+    const wordColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+    const inkColor  = isCongruent ? wordColor : pickDifferent(wordColor);
+    trials.push({
+      wordName:    wordColor.name,
+      inkName:     inkColor.name,
+      inkHex:      inkColor.hex,
+      isCongruent,
+    });
+  }
+  return trials;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  COUNTDOWN
+// ══════════════════════════════════════════════════════════════
+function startCountdown() {
+  // Build trials
+  session.trials  = generateTrials(cfg.trials, cfg.mode);
+  session.results = [];
+  session.current = 0;
+
+  showView('countdown-view');
+  renderHistory('history-container');
+
+  let count = 3;
+  const display = document.getElementById('countdown-display');
+  const sub     = document.getElementById('countdown-sub');
+
+  const tick = () => {
+    display.classList.remove('countdown-num', 'countdown-go');
+    void display.offsetWidth; // reflow for animation restart
+
+    if (count > 0) {
+      display.className = 'countdown-num';
+      display.textContent = count;
+      sub.textContent = count === 3 ? 'focus on the screen'
+                      : count === 2 ? 'name the ink color'
+                      : 'not the word!';
+      count--;
+      setTimeout(tick, 850);
+    } else {
+      display.className = 'countdown-go';
+      display.textContent = 'GO';
+      sub.textContent = '';
+      setTimeout(startTrial, 600);
+    }
+  };
+  tick();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TRIAL LOGIC
+// ══════════════════════════════════════════════════════════════
+function buildColorButtons() {
+  const grid = document.getElementById('color-buttons');
+  grid.innerHTML = '';
+  const shuffled = shuffle(COLORS);
+  shuffled.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'color-btn';
+    btn.dataset.name = c.name;
+    btn.style.color = c.hex;
+    btn.textContent = c.name;
+    btn.addEventListener('click', () => handleAnswer(c.name));
+    grid.appendChild(btn);
+  });
+}
+
+function startTrial() {
+  showView('trial-view');
+
+  if (session.current === 0) buildColorButtons();
+
+  const trial = session.trials[session.current];
+  session.answered = false;
+  session.trialStart = performance.now();
+
+  // Update meta
+  document.getElementById('trial-counter').textContent =
+    `Trial ${session.current + 1} / ${cfg.trials}`;
+  document.getElementById('trial-score').textContent =
+    `${session.results.filter(r=>r.correct).length} correct`;
+
+  const modeLabel = {
+    congruent:'congruent', incongruent:'incongruent', mixed:'mixed'
+  }[cfg.mode];
+  document.getElementById('trial-mode-badge').innerHTML =
+    `<span style="color:var(--muted);font-size:10px;letter-spacing:1px;">${modeLabel}</span>`;
+
+  // Show word
+  const wordEl = document.getElementById('color-word');
+  wordEl.textContent = trial.wordName;
+  wordEl.style.color  = trial.inkHex;
+  // Restart animation
+  wordEl.style.animation = 'none';
+  void wordEl.offsetWidth;
+  wordEl.style.animation = '';
+
+  // Reset feedback
+  const fb = document.getElementById('trial-fb');
+  fb.classList.remove('show');
+
+  // Enable buttons
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.disabled = false;
+    btn.classList.remove('flash-correct', 'flash-wrong');
+  });
+
+  // Timer bar
+  startTimerBar();
+
+  // Auto-timeout
+  clearTimeout(session.timeoutID);
+  session.timeoutID = setTimeout(() => {
+    if (!session.answered) handleAnswer(null);
+  }, cfg.timelimit);
+}
+
+function startTimerBar() {
+  const bar = document.getElementById('timer-bar');
+  const start = performance.now();
+  const limit = cfg.timelimit;
+
+  cancelAnimationFrame(session.timerRAF);
+
+  const animate = (now) => {
+    const elapsed = now - start;
+    const pct = Math.max(0, 100 - (elapsed / limit) * 100);
+    bar.style.width = pct + '%';
+    const hue = pct > 50 ? 120 : pct > 25 ? 60 : 0; // green→yellow→red
+    bar.style.background = `hsl(${hue}, 80%, 55%)`;
+    if (pct > 0 && !session.answered) {
+      session.timerRAF = requestAnimationFrame(animate);
+    }
+  };
+  session.timerRAF = requestAnimationFrame(animate);
+}
+
+function handleAnswer(chosenName) {
+  if (session.answered) return;
+  session.answered = true;
+  clearTimeout(session.timeoutID);
+  cancelAnimationFrame(session.timerRAF);
+
+  const rt = Math.round(performance.now() - session.trialStart);
+  const trial = session.trials[session.current];
+  const correct = chosenName !== null && chosenName === trial.inkName;
+
+  session.results.push({ correct, rt: chosenName ? rt : cfg.timelimit, isCongruent: trial.isCongruent });
+
+  // Visual feedback on buttons
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.disabled = true;
+    if (btn.dataset.name === trial.inkName) {
+      btn.classList.add('flash-correct');
+    } else if (btn.dataset.name === chosenName && !correct) {
+      btn.classList.add('flash-wrong');
+    }
+  });
+
+  // Inline feedback
+  const fb = document.getElementById('trial-fb');
+  if (chosenName === null) {
+    fb.textContent = 'TOO SLOW';
+    fb.style.color = 'var(--warn)';
+  } else if (correct) {
+    fb.textContent = rt + 'ms ✓';
+    fb.style.color = 'var(--success)';
+  } else {
+    fb.textContent = '✗';
+    fb.style.color = 'var(--error)';
+  }
+  fb.classList.add('show');
+
+  // Advance
+  setTimeout(() => {
+    session.current++;
+    if (session.current < cfg.trials) {
+      startTrial();
+    } else {
+      showResults();
+    }
+  }, 480);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RESULTS
+// ══════════════════════════════════════════════════════════════
+function avg(arr) {
+  if (!arr.length) return 0;
+  return Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+}
+
+function showResults() {
+  const results = session.results;
+  const total   = results.length;
+  const correct = results.filter(r => r.correct).length;
+  const accuracy = Math.round((correct / total) * 100);
+
+  const cong   = results.filter(r =>  r.isCongruent);
+  const incong = results.filter(r => !r.isCongruent);
+
+  const congCorrect  = cong.filter(r => r.correct).length;
+  const incongCorrect= incong.filter(r => r.correct).length;
+  const congAcc      = cong.length   ? Math.round(congCorrect  / cong.length   * 100) : null;
+  const incongAcc    = incong.length ? Math.round(incongCorrect/ incong.length  * 100) : null;
+
+  const congRT   = avg(cong.filter(r=>r.correct).map(r=>r.rt));
+  const incongRT = avg(incong.filter(r=>r.correct).map(r=>r.rt));
+  const overallRT= avg(results.filter(r=>r.correct).map(r=>r.rt));
+
+  // Fill UI
+  const accColor = accuracy >= 80 ? 'var(--success)'
+                 : accuracy >= 60 ? 'var(--warn)'
+                 : 'var(--error)';
+
+  document.getElementById('res-accuracy-big').textContent = accuracy + '%';
+  document.getElementById('res-accuracy-big').style.color = accColor;
+  document.getElementById('res-trials').textContent       = `${correct} / ${total}`;
+  document.getElementById('res-avg-rt').textContent       = overallRT ? overallRT + ' ms' : '—';
+
+  document.getElementById('res-cong').textContent =
+    cong.length ? `${congAcc}% / ${congRT || '—'} ms` : '—';
+  document.getElementById('res-incong').textContent =
+    incong.length ? `${incongAcc}% / ${incongRT || '—'} ms` : '—';
+
+  // Stroop effect box
+  const stroopBox = document.getElementById('stroop-box');
+  const stroopDelta = document.getElementById('stroop-delta');
+  const stroopDesc  = document.getElementById('stroop-desc');
+
+  if (cong.length && incong.length && congRT && incongRT) {
+    const delta = incongRT - congRT;
+    stroopDelta.textContent = (delta >= 0 ? '+' : '') + delta + ' ms';
+    stroopDelta.style.color  = delta > 0 ? 'var(--accent)' : 'var(--success)';
+    stroopDesc.textContent   = delta > 100
+      ? `Your incongruent trials took ${Math.abs(delta)}ms longer — a strong Stroop effect. The brain's reading process created measurable interference with color naming.`
+      : delta > 0
+      ? `A modest ${delta}ms slowdown on incongruent trials. The Stroop interference is present but mild.`
+      : `Incongruent trials were actually faster — an unusual result! This sometimes occurs with short sessions or high practice effects.`;
+    document.getElementById('stroop-label').textContent = 'STROOP INTERFERENCE EFFECT';
+  } else {
+    stroopDelta.textContent = cfg.mode === 'congruent' ? 'N/A'
+                            : cfg.mode === 'incongruent' ? 'N/A'
+                            : '—';
+    stroopDesc.textContent = 'Use mixed mode to measure the Stroop interference effect (requires both trial types).';
+  }
+
+  // Save to history
+  const record = {
+    ts:        Date.now(),
+    trials:    total,
+    correct,
+    accuracy,
+    avgRT:     overallRT,
+    congRT,
+    incongRT,
+    delta:     (cong.length && incong.length) ? (incongRT - congRT) : null,
+    mode:      cfg.mode,
+  };
+  saveHistory(record);
+
+  showView('results-view');
+  renderHistory('history-container-results');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function retryTest() {
+  startCountdown();
+}
+
+function goSetup() {
+  showView('setup-view');
+  renderHistory('history-container');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LOCALSTORAGE HISTORY
+// ══════════════════════════════════════════════════════════════
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveHistory(record) {
+  const hist = loadHistory();
+  hist.unshift(record);
+  // Cap at 50 records
+  if (hist.length > 50) hist.length = 50;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
+}
+
+function clearHistory() {
+  localStorage.removeItem(STORAGE_KEY);
+  renderHistory('history-container');
+  renderHistory('history-container-results');
+}
+
+function renderHistory(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const hist = loadHistory();
+
+  if (hist.length === 0) {
+    container.innerHTML = `<div class="empty-state">No sessions recorded yet.</div>`;
+    return;
+  }
+
+  const rows = hist.map(r => {
+    const d    = new Date(r.ts);
+    const date = d.toLocaleDateString([], { month:'short', day:'numeric' });
+    const time = d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    const acc  = r.accuracy;
+    const accColor = acc >= 80 ? '#22c55e' : acc >= 60 ? '#f59e0b' : '#ef4444';
+    const modeBadge = `<span class="badge badge-mode-${r.mode}">${r.mode}</span>`;
+    const deltaStr = r.delta !== null && r.delta !== undefined
+      ? (r.delta >= 0 ? `+${r.delta}ms` : `${r.delta}ms`)
+      : '—';
+    return `<tr>
+      <td>${date}<br><span style="color:var(--muted);font-size:10px;">${time}</span></td>
+      <td>${r.correct}/${r.trials}</td>
+      <td style="color:${accColor};font-weight:bold;">${acc}%</td>
+      <td>${r.avgRT ? r.avgRT + 'ms' : '—'}</td>
+      <td style="color:var(--accent)">${deltaStr}</td>
+      <td>${modeBadge}</td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Score</th>
+          <th>Acc</th>
+          <th>Avg RT</th>
+          <th>Δ Stroop</th>
+          <th>Mode</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+renderHistory('history-container');
+</script>
+</body>
+</html>

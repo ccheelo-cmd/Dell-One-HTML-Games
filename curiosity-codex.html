@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>The Curiosity Codex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0B1628;
+  --surface:   #112240;
+  --surface2:  #0D1B36;
+  --border:    #1E3358;
+  --border2:   #274570;
+  --ink:       #E8F0FE;
+  --ink2:      #B8CBE8;
+  --muted:     #6B8AB0;
+  --accent:    #4A9EFF;
+  --red:       #FF6B6B;
+  --green:     #4ECBA0;
+  --amber:     #FFB347;
+  --blue:      #4A9EFF;
+  --tag-bg:    #0D1B36;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Albert Sans', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── NOISE TEXTURE ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ─── HEADER ─── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 0 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 36px;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.logo-mark {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.logo-sub {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-left: 1px solid var(--border2);
+  padding-left: 10px;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.meta-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 5px 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  border-radius: 20px;
+}
+
+.meta-pill strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ─── LAYOUT ─── */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 32px;
+  padding-bottom: 60px;
+}
+
+/* ─── MAIN ─── */
+.main-col { display: flex; flex-direction: column; gap: 20px; }
+
+/* ─── CONTROLS ─── */
+.controls-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  border-radius: 16px;
+}
+
+.panel-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.category-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.cat-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'Albert Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+  border-radius: 20px;
+}
+
+.cat-btn:hover { border-color: var(--accent); color: var(--ink2); }
+.cat-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.intensity-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.intensity-label { white-space: nowrap; letter-spacing: 0.04em; }
+
+.intensity-track {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  position: relative;
+  cursor: pointer;
+}
+
+.intensity-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.15s;
+}
+
+.intensity-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px; height: 14px;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  transition: left 0.15s;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(74,158,255,0.4);
+}
+
+.intensity-thumb:active { cursor: grabbing; }
+
+.intensity-val {
+  min-width: 20px;
+  text-align: right;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ─── CARD STAGE ─── */
+.card-stage {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  border-radius: 20px;
+}
+
+.card-stage:hover { border-color: var(--accent); }
+
+/* Corner accents */
+.card-stage::before, .card-stage::after {
+  content: '';
+  position: absolute;
+  width: 20px; height: 20px;
+  border-color: var(--border2);
+  border-style: solid;
+  transition: all 0.3s;
+}
+.card-stage::before {
+  top: 12px; left: 12px;
+  border-width: 1px 0 0 1px;
+}
+.card-stage::after {
+  bottom: 12px; right: 12px;
+  border-width: 0 1px 1px 0;
+}
+
+.card-stage:hover::before,
+.card-stage:hover::after {
+  width: 28px; height: 28px;
+  border-color: var(--accent);
+}
+
+/* ─── IDLE STATE ─── */
+.idle-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 40px;
+  text-align: center;
+  transition: opacity 0.2s;
+}
+
+.idle-glyph {
+  font-size: 2.8rem;
+  line-height: 1;
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.idle-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.idle-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 400;
+  max-width: 280px;
+  line-height: 1.6;
+}
+
+.cta-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border2);
+  padding: 6px 16px;
+  animation: blink 2.5s ease-in-out infinite;
+}
+
+@keyframes blink { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+/* ─── LOADING STATE ─── */
+.loading-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 48px;
+}
+
+.loading-state.active { display: flex; }
+
+.loader-line {
+  width: 120px;
+  height: 1px;
+  background: var(--border);
+  overflow: hidden;
+  position: relative;
+}
+
+.loader-line::after {
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 40%;
+  background: var(--ink);
+  animation: sweep 1s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% { left: -40%; }
+  100% { left: 140%; }
+}
+
+.loading-text {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ─── RESULT STATE ─── */
+.result-state {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 40px 44px;
+  width: 100%;
+  animation: fadeUp 0.4s ease-out;
+}
+
+.result-state.active { display: flex; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fact-era-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(74,158,255,0.1);
+  border: 1px solid rgba(74,158,255,0.25);
+  padding: 4px 10px;
+  margin-bottom: 20px;
+  display: inline-block;
+  border-radius: 20px;
+}
+
+.fact-wow-icon {
+  font-size: 1.6rem;
+  margin-bottom: 14px;
+  line-height: 1;
+}
+
+.fact-body {
+  font-size: 1.12rem;
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--ink);
+  margin-bottom: 24px;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+
+.fact-source {
+  font-size: 0.65rem;
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.reaction-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.react-btn {
+  flex: 1;
+  min-width: 80px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'Albert Sans', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+}
+
+.react-btn:hover { border-color: var(--accent); color: var(--ink); background: rgba(74,158,255,0.1); }
+.react-btn.picked { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ─── BOTTOM ACTION ─── */
+.stage-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.oracle-btn {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #fff;
+  font-family: 'Albert Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 10px 24px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  display: none;
+  border-radius: 10px;
+}
+
+.oracle-btn:hover { background: #2d8ae8; border-color: #2d8ae8; }
+.oracle-btn.visible { display: block; }
+
+/* ─── SIDEBAR ─── */
+.sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+.sidebar-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 18px 20px;
+  border-radius: 16px;
+}
+
+.sidebar-label {
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stat-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.stat-num {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.stat-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* History */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.history-list::-webkit-scrollbar { width: 2px; }
+.history-list::-webkit-scrollbar-track { background: transparent; }
+.history-list::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.history-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  animation: slideIn 0.25s ease-out;
+  border-radius: 10px;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.history-item:hover { border-color: var(--accent); }
+
+.history-era {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.history-snippet {
+  font-size: 0.68rem;
+  color: var(--ink2);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.history-reaction { font-size: 0.75rem; margin-top: 4px; }
+
+.history-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.7rem;
+  padding: 28px 0;
+  line-height: 1.7;
+}
+
+.clear-btn {
+  background: none; border: none;
+  color: var(--red);
+  font-family: 'Albert Sans', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: opacity 0.15s;
+  opacity: 0.6;
+  padding: 0;
+}
+
+.clear-btn:hover { opacity: 1; }
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(20, 20, 18, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  padding: 36px;
+  max-width: 500px;
+  width: 92%;
+  transform: translateY(16px);
+  transition: transform 0.25s;
+  border-radius: 20px;
+}
+
+.modal-overlay.open .modal { transform: translateY(0); }
+
+.modal-era {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.modal-text {
+  font-size: 1rem;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--ink);
+  margin-bottom: 16px;
+  letter-spacing: -0.01em;
+}
+
+.modal-source {
+  font-size: 0.62rem;
+  color: var(--muted);
+  line-height: 1.5;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-close {
+  display: inline-block;
+  margin-top: 20px;
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  font-family: 'Albert Sans', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 7px 18px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: all 0.15s;
+  border-radius: 8px;
+}
+
+.modal-close:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ─── SHAKE ─── */
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-7px) rotate(-0.8deg); }
+  40% { transform: translateX(7px) rotate(0.8deg); }
+  60% { transform: translateX(-4px) rotate(-0.4deg); }
+  80% { transform: translateX(4px) rotate(0.4deg); }
+}
+
+.card-stage.shaking { animation: shake 0.45s ease; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 720px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { border-top: 1px solid var(--border); padding-top: 20px; }
+  .result-state { padding: 28px 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-mark">The Curiosity Codex</div>
+      <div class="logo-sub">Historical Oddities Oracle</div>
+    </div>
+    <div class="header-meta">
+      <div class="meta-pill"><strong id="hdr-count">0</strong> consulted</div>
+      <div class="meta-pill" id="hdr-streak-pill"><span id="hdr-streak">No streak yet</span></div>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- Main Column -->
+    <div class="main-col">
+
+      <!-- Controls -->
+      <div class="controls-panel">
+        <div class="panel-label">Filter by Era</div>
+        <div class="category-grid" id="catGrid">
+          <button class="cat-btn active" data-cat="all">All Eras</button>
+          <button class="cat-btn" data-cat="ancient">Ancient</button>
+          <button class="cat-btn" data-cat="medieval">Medieval</button>
+          <button class="cat-btn" data-cat="renaissance">Renaissance</button>
+          <button class="cat-btn" data-cat="19th">19th Century</button>
+          <button class="cat-btn" data-cat="20th">20th Century</button>
+          <button class="cat-btn" data-cat="weird">Just Weird</button>
+        </div>
+        <div class="intensity-row">
+          <span class="intensity-label">Weirdness Threshold</span>
+          <div class="intensity-track" id="intensityTrack">
+            <div class="intensity-fill" id="intensityFill" style="width:60%"></div>
+            <div class="intensity-thumb" id="intensityThumb" style="left:60%"></div>
+          </div>
+          <span class="intensity-val" id="intensityVal">6</span>
+        </div>
+      </div>
+
+      <!-- Card Stage -->
+      <div class="card-stage" id="cardStage" onclick="handleStageClick()">
+        <!-- Idle -->
+        <div class="idle-state" id="idleState">
+          <div class="idle-glyph">📖</div>
+          <div class="idle-title">Ask the Codex</div>
+          <div class="idle-sub">Tap to reveal a curated historical oddity from the archive</div>
+          <div class="cta-tag">Click to Reveal</div>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading-state" id="loadingState">
+          <div class="loader-line"></div>
+          <div class="loading-text">Consulting the Archive</div>
+        </div>
+
+        <!-- Result -->
+        <div class="result-state" id="resultState"></div>
+      </div>
+
+      <!-- Action row -->
+      <div class="stage-actions">
+        <button class="oracle-btn" id="againBtn" onclick="resetStage(event)">↻ Consult Again</button>
+      </div>
+
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+      <!-- Stats -->
+      <div class="sidebar-panel">
+        <div class="sidebar-label">Session Stats</div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-num" id="stat-total">0</div>
+            <div class="stat-label">Total</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-today">0</div>
+            <div class="stat-label">Today</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-wow">0</div>
+            <div class="stat-label">Mind Blown</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-streak">0</div>
+            <div class="stat-label">Day Streak</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="sidebar-panel" style="flex:1;">
+        <div class="sidebar-label">
+          <span>History Log</span>
+          <button class="clear-btn" onclick="clearHistory()">Clear All</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <div class="history-empty" id="historyEmpty">No facts consulted yet.<br/>Click the card to begin.</div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-era" id="modal-era"></div>
+    <div class="modal-text" id="modal-text"></div>
+    <div class="modal-source" id="modal-source"></div>
+    <button class="modal-close" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────────
+const FACTS = [
+  {id:1,cat:'ancient',era:'Ancient Rome, ~55 BC',wow:'🤯',weirdness:8,text:"Julius Caesar was once kidnapped by pirates. When they named a ransom, Caesar laughed and insisted they raise it — arguing he was worth far more. He spent his captivity cheerfully writing poetry and threatening to execute them all. He later did exactly that.",note:"Plutarch, Life of Caesar."},
+  {id:2,cat:'ancient',era:'Ancient Egypt, ~1350 BC',wow:'😂',weirdness:7,text:"Pharaoh Ramesses II officially declared himself the god of storms in a peace treaty — to give himself a negotiating edge. The Hittites, who worshipped the same storm god, were reportedly baffled.",note:"Treaty of Kadesh, oldest surviving peace treaty."},
+  {id:3,cat:'ancient',era:'Ancient Athens, ~400 BC',wow:'🤔',weirdness:6,text:"Ancient Greeks believed that the brain was a cooling organ for the blood, and that all thought originated in the heart. Aristotle — considered the father of logic — argued this with great conviction.",note:"Aristotle, De Anima."},
+  {id:4,cat:'ancient',era:'Ancient Rome, ~100 AD',wow:'😲',weirdness:9,text:"Roman gladiator sweat was collected and sold as a cosmetic product, believed to improve complexion and act as an aphrodisiac. It was quite expensive.",note:"Pliny the Elder, Naturalis Historia."},
+  {id:5,cat:'ancient',era:'Ancient China, ~210 BC',wow:'🤯',weirdness:9,text:"Emperor Qin Shi Huang died from drinking mercury pills prescribed by his own physicians — who told him they were an elixir of immortality. His obsession with eternal life killed him at 49.",note:"Records of the Grand Historian, Sima Qian."},
+  {id:6,cat:'ancient',era:'Ancient Greece, ~600 BC',wow:'😂',weirdness:8,text:"The philosopher Chrysippus reportedly died of laughter — after watching a donkey eat his figs and ordering wine for it too. Ancient sources describe him as laughing uncontrollably until he expired.",note:"Diogenes Laërtius, Lives of the Eminent Philosophers."},
+  {id:7,cat:'medieval',era:'Medieval England, 1284',wow:'😂',weirdness:8,text:"In 1284, a land dispute was settled by ordering a trial by combat between a dog and its owner's alleged killer. The dog reportedly won.",note:"Various chronicles of the period."},
+  {id:8,cat:'medieval',era:'Medieval Europe, ~1100s',wow:'🤔',weirdness:7,text:"Medieval physicians diagnosed illness partly by tasting urine. There was an entire branch of medicine — uroscopy — dedicated to examining urine's colour, smell, and flavour. The pamphlets had illustrations.",note:"Gilles de Corbeil, Carmen de Urinis."},
+  {id:9,cat:'medieval',era:'Medieval France, 1386',wow:'😲',weirdness:10,text:"In 1386, a pig was formally tried, convicted of murder, sentenced to death by hanging, and executed while wearing human clothing — so the punishment would be more dignified.",note:"E. P. Evans, The Criminal Prosecution and Capital Punishment of Animals (1906)."},
+  {id:10,cat:'medieval',era:'Byzantine Empire, ~700 AD',wow:'😂',weirdness:9,text:"The Byzantine Empire had a tradition of blinding or nose-slitting rivals to disqualify them from becoming emperor — since physical imperfection was seen as incompatible with rule. Rhinotomy (nose removal) was a surprisingly common career setback.",note:"Multiple Byzantine chronicles."},
+  {id:11,cat:'medieval',era:'Medieval Cologne, 1374',wow:'🤯',weirdness:10,text:"In 1374, thousands of people in Germany and the Low Countries began dancing uncontrollably in the streets, unable to stop for days. Called 'dancing plague', it is entirely documented by witnesses and remains unexplained by historians.",note:"John Waller, A Time to Dance, A Time to Die (2008)."},
+  {id:12,cat:'renaissance',era:'Renaissance Italy, ~1490',wow:'🤔',weirdness:7,text:"Leonardo da Vinci reportedly wrote most of his notes in mirror script — right to left, backwards — not as a code, but possibly because he was left-handed and it prevented smearing.",note:"Da Vinci Notebooks, Royal Collection."},
+  {id:13,cat:'renaissance',era:'Tudor England, 1530s',wow:'😂',weirdness:9,text:"Henry VIII employed a 'Groom of the Stool' — a senior courtier whose role was to assist the king with personal hygiene after using the toilet. It was one of the most coveted positions at court, granting private access to the king.",note:"Court records, Tudor period."},
+  {id:14,cat:'renaissance',era:'Elizabethan England, ~1590',wow:'😲',weirdness:7,text:"Queen Elizabeth I reportedly owned over 2,000 gowns at her death. Her wardrobe budget occasionally exceeded the national defence budget.",note:"Janet Arnold, Queen Elizabeth's Wardrobe Unlock'd."},
+  {id:15,cat:'renaissance',era:'Renaissance Europe, 1518',wow:'😂',weirdness:8,text:"Pope Leo X kept a pet white elephant named Hanno, who was trained to bow before the Pope and spray water on dignitaries. When Hanno died, Leo composed a formal Latin epitaph and wept openly.",note:"Silvio Bedini, The Pope's Elephant."},
+  {id:16,cat:'19th',era:'Victorian England, 1850s',wow:'🤯',weirdness:8,text:"Victorian-era doctors sometimes prescribed 'rest cures' for women — complete bed rest for months, no reading, no conversation, no stimulation. Charlotte Perkins Gilman experienced this and wrote The Yellow Wallpaper about the experience.",note:"Charlotte Perkins Gilman, The Living of Charlotte Perkins Gilman."},
+  {id:17,cat:'19th',era:'United States, 1862',wow:'😂',weirdness:9,text:"During the Civil War, both sides agreed on informal truces to collect the wounded and exchange newspapers. Soldiers would sometimes shout friendly insults across the lines, then resume shooting the next morning.",note:"Shelby Foote, The Civil War: A Narrative."},
+  {id:18,cat:'19th',era:'Victorian England, 1880s',wow:'🤔',weirdness:8,text:"Arsenic was a fashionable beauty product in the 1800s — taken in tiny doses to improve complexion and supposedly 'brighten the eyes'. Arsenic-eating villages in Styria, Austria, were famous for their rosy cheeks and apparent health.",note:"James C. Whorton, The Arsenic Century."},
+  {id:19,cat:'19th',era:'United States, 1872',wow:'😲',weirdness:9,text:"A woman named Victoria Woodhull ran for President of the United States in 1872 — 48 years before women could legally vote. She was arrested on election day on obscenity charges and spent election night in jail.",note:"Barbara Goldsmith, Other Powers."},
+  {id:20,cat:'19th',era:'France, 1888',wow:'😂',weirdness:9,text:"When the Eiffel Tower was proposed, 300 French artists and intellectuals signed a petition calling it a 'truly tragic street lamp'. Guy de Maupassant supposedly ate lunch in the tower's restaurant daily — because it was the only place in Paris where he didn't have to look at it.",note:"Jill Jonnes, Eiffel's Tower."},
+  {id:21,cat:'20th',era:'World War II, 1943',wow:'🤯',weirdness:10,text:"The British military once considered a plan to use frozen water mixed with sawdust — called Pykrete — to build an aircraft carrier the size of a battleship. It would have been unsinkable. The project was called Operation Habakkuk and was seriously prototyped.",note:"Operation Habakkuk, National Archives UK."},
+  {id:22,cat:'20th',era:'United States, 1962',wow:'😂',weirdness:9,text:"The CIA spent the equivalent of millions of dollars trying to assassinate Fidel Castro with an exploding cigar, a poisoned wetsuit, a femme fatale, and a seashell bomb. None of these worked. Castro lived to 90.",note:"Church Committee Senate Reports; CIA FOIA files."},
+  {id:23,cat:'20th',era:'Cold War, 1959',wow:'🤯',weirdness:8,text:"The US Air Force once accidentally dropped two hydrogen bombs on North Carolina after a B-52 broke apart mid-flight. Both bombs went through their arming sequences. One had five of its six safety switches fail. One switch remained.",note:"Eric Schlosser, Command and Control (2013)."},
+  {id:24,cat:'20th',era:'World War II, 1944',wow:'😲',weirdness:9,text:"A US Army unit called the Ghost Army defeated German forces by using inflatable fake tanks, trucks, and artillery — plus sound effects played on giant speakers. They fooled entire German divisions and saved potentially 30,000 lives.",note:"Rick Beyer & Elizabeth Sayles, The Ghost Army of World War II."},
+  {id:25,cat:'20th',era:'Soviet Union, 1940s',wow:'😂',weirdness:10,text:"Soviet scientists attempted to create a human-chimpanzee hybrid under government orders. The lead scientist traveled to West Africa to conduct experiments. None were successful. He was later arrested during the purges, for unrelated reasons.",note:"Ilya Ivanov's Experiments; multiple academic histories."},
+  {id:26,cat:'20th',era:'United States, 1950s',wow:'🤔',weirdness:7,text:"In the 1950s, shoe shops installed X-ray fluoroscopes so customers could see their bones inside shoes. Children loved them. They were in widespread use for over two decades before anyone seriously considered the radiation exposure.",note:"Barron Lerner, New England Journal of Medicine (2001)."},
+  {id:27,cat:'weird',era:'Netherlands, 17th Century',wow:'😂',weirdness:9,text:"Tulip Mania in 1637 was the world's first recorded speculative bubble. At its peak, a single tulip bulb cost as much as a canal house in Amsterdam. When the market collapsed, it happened in a single afternoon.",note:"Mike Dash, Tulipomania."},
+  {id:28,cat:'weird',era:'England, 1810',wow:'😂',weirdness:10,text:"A man named John 'Mad Jack' Mytton once set his own nightshirt on fire to cure his hiccups. It worked. He survived with severe burns and reportedly told his horrified servants, 'Egad, the hiccup is gone.'",note:"Nimrod, Memoirs of the Life of the Late John Mytton."},
+  {id:29,cat:'weird',era:'United States, 1930s',wow:'🤔',weirdness:8,text:"The US government poisoned its own alcohol supply during Prohibition to stop people from drinking industrial alcohol. At least 10,000 people died. Officials publicly justified this as a deterrent.",note:"Deborah Blum, The Poisoner's Handbook."},
+  {id:30,cat:'weird',era:'Ancient Persia, 480 BC',wow:'😂',weirdness:9,text:"Xerxes I of Persia once ordered the sea to be whipped — 300 lashes — after a storm destroyed his bridge of boats. He also had the water shackled in chains and branded with hot iron for its insolence.",note:"Herodotus, The Histories."},
+  {id:31,cat:'weird',era:'Medieval Europe, ~800s',wow:'😲',weirdness:9,text:"For several decades in the early medieval period, a mysterious dimming of the sun caused crop failures across Europe, Asia and the Americas simultaneously. Historians call it 'the worst year to be alive': 536 AD.",note:"Michael McCormick, Journal of Roman Archaeology (2018)."},
+  {id:32,cat:'weird',era:'France, 1791',wow:'🤯',weirdness:8,text:"The guillotine was invented as a humane alternative to execution. Dr. Guillotin was a gentle humanitarian who believed death should be painless and equal regardless of class. He spent the rest of his life horrified by what his invention became.",note:"Daniel Gerould, Guillotine: Its Legend and Lore."},
+  {id:33,cat:'weird',era:'England, 1860s',wow:'😂',weirdness:10,text:"The eccentric landowner William Buckland ate his way through the animal kingdom as a matter of scientific curiosity — roasted panther, mice on toast, boiled hedgehog, and bluebottles, which he declared the most disgusting thing he had ever eaten.",note:"Mrs. Gordon, The Life and Correspondence of William Buckland."},
+  {id:34,cat:'weird',era:'United States, 1919',wow:'🤯',weirdness:9,text:"In January 1919, a 58-foot steel tank holding 2.3 million gallons of molasses collapsed in Boston. The resulting wave, moving at 35 mph, destroyed buildings and killed 21 people. The neighbourhood reportedly smelled of molasses for decades.",note:"Stephen Puleo, Dark Tide."},
+  {id:35,cat:'weird',era:'Japan, 1904',wow:'😂',weirdness:7,text:"During the Russo-Japanese War, Japan borrowed money from a Jewish-American banker named Jacob Schiff — partly because Schiff was furious about Russian pogroms and wanted to fund Russia's defeat. He was later awarded Japan's Order of the Rising Sun.",note:"Jonathan Kaufman, The Audacity of a Jewish Banker."},
+];
+
+// ─── STATE ───────────────────────────────────────────────────────
+let selectedCat = 'all';
+let weirdness = 6;
+let currentFact = null;
+let appState = 'idle'; // idle | loading | result
+
+function loadHistory(){ try { return JSON.parse(localStorage.getItem('codex_v2') || '[]'); } catch(e){ return []; } }
+function saveHistory(h){ localStorage.setItem('codex_v2', JSON.stringify(h)); }
+function addToHistory(fact, reaction){
+  const h = loadHistory();
+  h.unshift({ id:fact.id, era:fact.era, text:fact.text, reaction, ts:Date.now() });
+  if(h.length > 80) h.pop();
+  saveHistory(h);
+}
+function getTodayCount(){
+  return loadHistory().filter(x => x.ts > Date.now() - 86400000).length;
+}
+function getStreak(){
+  const h = loadHistory();
+  if(!h.length) return 0;
+  const days = [...new Set(h.map(x => new Date(x.ts).toDateString()))];
+  let streak = 0;
+  const now = new Date();
+  for(let i=0;i<days.length;i++){
+    const d = new Date(now); d.setDate(d.getDate()-i);
+    if(days.includes(d.toDateString())) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function pickFact(){
+  let pool = FACTS.filter(f => f.weirdness >= weirdness - 2);
+  if(selectedCat !== 'all') pool = pool.filter(f => f.cat === selectedCat);
+  if(!pool.length) pool = FACTS;
+  const recent = loadHistory().slice(0,5).map(x=>x.id);
+  const fresh = pool.filter(f => !recent.includes(f.id));
+  const src = fresh.length ? fresh : pool;
+  return src[Math.floor(Math.random() * src.length)];
+}
+
+// ─── STAGE CONTROL ───────────────────────────────────────────────
+function handleStageClick(){
+  if(appState === 'idle') startReveal();
+  // clicking in result state does nothing (use the button)
+}
+
+function startReveal(){
+  if(appState !== 'idle') return;
+  appState = 'loading';
+  const stage = document.getElementById('cardStage');
+  stage.classList.add('shaking');
+  setTimeout(()=>{ stage.classList.remove('shaking'); showLoading(); }, 460);
+}
+
+function showLoading(){
+  document.getElementById('idleState').style.display = 'none';
+  document.getElementById('loadingState').classList.add('active');
+  currentFact = pickFact();
+  setTimeout(showResult, 900);
+}
+
+function showResult(){
+  document.getElementById('loadingState').classList.remove('active');
+  const f = currentFact;
+  const container = document.getElementById('resultState');
+  container.innerHTML = `
+    <div class="fact-era-tag">${f.era}</div>
+    <div class="fact-wow-icon">${f.wow}</div>
+    <div class="fact-body">"${f.text}"</div>
+    <div class="fact-source">Source: ${f.note}</div>
+    <div class="reaction-row">
+      <button class="react-btn" onclick="react(event,'🤯','mind-blown')">🤯 Mind Blown</button>
+      <button class="react-btn" onclick="react(event,'😂','hilarious')">😂 Hilarious</button>
+      <button class="react-btn" onclick="react(event,'🤔','curious')">🤔 Curious</button>
+      <button class="react-btn" onclick="react(event,'😲','shocking')">😲 Shocking</button>
+    </div>
+  `;
+  container.classList.add('active');
+  appState = 'result';
+  document.getElementById('againBtn').classList.add('visible');
+  document.getElementById('cardStage').style.cursor = 'default';
+  updateStats();
+}
+
+function react(e, emoji, label){
+  e.stopPropagation();
+  document.querySelectorAll('.react-btn').forEach(b=>b.classList.remove('picked'));
+  e.target.closest('.react-btn').classList.add('picked');
+  addToHistory(currentFact, emoji);
+  updateStats();
+  renderHistory();
+}
+
+function resetStage(e){
+  if(e) e.stopPropagation();
+  document.getElementById('idleState').style.display = '';
+  document.getElementById('resultState').classList.remove('active');
+  document.getElementById('resultState').innerHTML = '';
+  document.getElementById('againBtn').classList.remove('visible');
+  document.getElementById('cardStage').style.cursor = '';
+  appState = 'idle';
+}
+
+// ─── INTENSITY SLIDER ─────────────────────────────────────────────
+(function(){
+  const track = document.getElementById('intensityTrack');
+  const fill = document.getElementById('intensityFill');
+  const thumb = document.getElementById('intensityThumb');
+  const val = document.getElementById('intensityVal');
+  let dragging = false;
+
+  function setVal(pct){
+    pct = Math.max(0, Math.min(100, pct));
+    weirdness = Math.round(pct / 10);
+    fill.style.width = pct + '%';
+    thumb.style.left = pct + '%';
+    val.textContent = weirdness;
+  }
+
+  function fromEvent(e){
+    const rect = track.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    return (x / rect.width) * 100;
+  }
+
+  thumb.addEventListener('mousedown', e=>{ dragging=true; e.stopPropagation(); });
+  thumb.addEventListener('touchstart', ()=>dragging=true, {passive:true});
+  track.addEventListener('click', e=>{ setVal(fromEvent(e)); e.stopPropagation(); });
+  window.addEventListener('mousemove', e=>{ if(dragging) setVal(fromEvent(e)); });
+  window.addEventListener('touchmove', e=>{ if(dragging) setVal(fromEvent(e)); }, {passive:true});
+  window.addEventListener('mouseup', ()=>dragging=false);
+  window.addEventListener('touchend', ()=>dragging=false);
+  setVal(60);
+})();
+
+// ─── CATEGORY BUTTONS ─────────────────────────────────────────────
+document.getElementById('catGrid').addEventListener('click', e=>{
+  const btn = e.target.closest('.cat-btn');
+  if(!btn) return;
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedCat = btn.dataset.cat;
+});
+
+// ─── STATS & HISTORY ──────────────────────────────────────────────
+function updateStats(){
+  const h = loadHistory();
+  document.getElementById('stat-total').textContent = h.length;
+  document.getElementById('stat-today').textContent = getTodayCount();
+  document.getElementById('stat-wow').textContent = h.filter(x=>x.reaction==='🤯').length;
+  const streak = getStreak();
+  document.getElementById('stat-streak').textContent = streak;
+  document.getElementById('hdr-count').textContent = h.length;
+  document.getElementById('hdr-streak').textContent = streak > 1 ? `${streak}-day streak 🔥` : streak === 1 ? 'Active today' : 'No streak yet';
+}
+
+function renderHistory(){
+  const h = loadHistory();
+  const list = document.getElementById('historyList');
+  const empty = document.getElementById('historyEmpty');
+  if(!h.length){ empty.style.display = 'block'; list.querySelectorAll('.history-item').forEach(x=>x.remove()); return; }
+  empty.style.display = 'none';
+  list.innerHTML = '';
+  h.slice(0,25).forEach((item,i)=>{
+    const el = document.createElement('div');
+    el.className = 'history-item';
+    el.innerHTML = `
+      <div class="history-era">${item.era}</div>
+      <div class="history-snippet">${item.text}</div>
+      ${item.reaction ? `<div class="history-reaction">${item.reaction}</div>` : ''}
+    `;
+    el.addEventListener('click', ()=>openModal(item));
+    list.appendChild(el);
+  });
+}
+
+function clearHistory(){
+  if(!confirm('Clear all history?')) return;
+  localStorage.removeItem('codex_v2');
+  updateStats(); renderHistory();
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────
+function openModal(item){
+  document.getElementById('modal-era').textContent = item.era;
+  document.getElementById('modal-text').textContent = item.text;
+  const full = FACTS.find(f=>f.id===item.id);
+  document.getElementById('modal-source').textContent = full ? '📚 ' + full.note : '';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e=>{ if(e.target===document.getElementById('modal')) closeModal(); });
+
+// ─── KEYBOARD ────────────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  if((e.code==='Space'||e.code==='Enter') && appState==='idle') startReveal();
+  else if((e.code==='Space'||e.code==='Enter') && appState==='result') resetStage();
+  if(e.code==='Escape') closeModal();
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────
+updateStats();
+renderHistory();
+</script>
+</body>
+</html>

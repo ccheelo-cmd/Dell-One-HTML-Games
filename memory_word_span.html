@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║              WORD SPAN MEMORY TEST — COGNITIVE BASIS             ║
+  ╠══════════════════════════════════════════════════════════════════╣
+  ║  Baddeley & Hitch (1974): The phonological loop model posits     ║
+  ║  a short-term store (~2 s decay) refreshed by subvocal rehearsal.║
+  ║  Word span tests load this loop with verbal material.            ║
+  ║                                                                  ║
+  ║  Miller (1956): "The Magical Number Seven, Plus or Minus Two"    ║
+  ║  — working memory capacity ≈ 7 ± 2 chunks; this app measures    ║
+  ║  the individual span via adaptive staircase methodology.         ║
+  ║                                                                  ║
+  ║  Unsworth & Engle (2007): Simple span tasks (like this) tap the  ║
+  ║  primary memory / phonological buffer, distinct from complex     ║
+  ║  span tasks that also engage executive attention.                ║
+  ║                                                                  ║
+  ║  Paivio (1971): Dual-coding theory — concrete, high-imageability ║
+  ║  words are easier to encode (verbal + imagistic codes), so word  ║
+  ║  categories here are matched on imageability where possible.     ║
+  ╚══════════════════════════════════════════════════════════════════╝
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Span — Memory Test</title>
+<style>
+  /* ── Google Fonts via @import (inline, no external JS dep) ─────── */
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+  /* ── Design tokens ─────────────────────────────────────────────── */
+  :root {
+    --bg:          #0c0d10;
+    --surface:     #13151a;
+    --surface2:    #1c1f27;
+    --border:      #2a2e3a;
+    --text:        #e8eaf0;
+    --muted:       #6b7280;
+    --accent:      #7ee8a2;
+    --accent2:     #5bc4f5;
+    --warn:        #f5c842;
+    --danger:      #f56565;
+    --correct:     #7ee8a2;
+    --present:     #f5c842;
+    --absent:      #f56565;
+
+    --font-display: 'Syne', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+
+    --r:   10px;
+    --r-lg: 16px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* ── Reset ──────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+
+  /* ── Layout shell ───────────────────────────────────────────────── */
+  #app {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 0 0 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  header h1 {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 5vw, 30px);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  header h1 span { color: var(--accent); }
+  .version {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 99px;
+  }
+
+  /* ── Screen panels ──────────────────────────────────────────────── */
+  .screen {
+    display: none;
+    animation: fadeUp 0.35s var(--ease) both;
+  }
+  .screen.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Cards / surfaces ───────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+
+  /* ── Form controls ──────────────────────────────────────────────── */
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .control-row:last-child { border-bottom: none; }
+  .control-label {
+    font-size: 13px;
+    color: var(--text);
+    flex: 1;
+  }
+  .control-label small {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Segmented control */
+  .seg {
+    display: flex;
+    gap: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 3px;
+  }
+  .seg button {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    padding: 5px 11px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.active {
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Number stepper */
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stepper button {
+    width: 30px; height: 30px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .stepper button:hover { background: var(--border); border-color: var(--muted); }
+  .stepper button:active { transform: scale(0.93); }
+  .stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .stepper span {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    min-width: 28px;
+    text-align: center;
+    color: var(--accent);
+  }
+
+  /* Toggle */
+  .toggle {
+    position: relative; width: 44px; height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 16px; height: 16px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform 0.2s var(--ease), background 0.2s;
+  }
+  .toggle input:checked + .toggle-track { background: #1a3a2a; border-color: var(--accent); }
+  .toggle input:checked + .toggle-track::after { transform: translateX(20px); background: var(--accent); }
+  .toggle input:focus-visible + .toggle-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ── Buttons ────────────────────────────────────────────────────── */
+  .btn {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    padding: 14px 32px;
+    border: none;
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: transform 0.12s, opacity 0.12s, box-shadow 0.15s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .btn-primary {
+    background: var(--accent);
+    color: #0c1a12;
+    width: 100%;
+    margin-top: 8px;
+  }
+  .btn-primary:hover { box-shadow: 0 0 24px rgba(126,232,162,0.25); }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    padding: 9px 18px;
+  }
+  .btn-ghost:hover { border-color: var(--muted); color: var(--text); }
+  .btn-danger {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-size: 13px;
+    padding: 9px 18px;
+  }
+  .btn-danger:hover { background: rgba(245,101,101,0.08); }
+
+  /* ── Arena (test display area) ──────────────────────────────────── */
+  .arena {
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    margin-bottom: 16px;
+    padding: 32px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle scanline texture */
+  .arena::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(255,255,255,0.012) 3px,
+      rgba(255,255,255,0.012) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* Fixation cross */
+  #fixation-cross {
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 300;
+    color: var(--muted);
+    animation: fixPulse 0.4s var(--ease);
+  }
+  @keyframes fixPulse {
+    from { opacity: 0; transform: scale(1.4); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* Word display */
+  #word-display {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 9vw, 60px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--text);
+    text-align: center;
+    animation: wordIn 0.22s var(--ease) both;
+  }
+  @keyframes wordIn {
+    from { opacity: 0; transform: scale(0.88); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .word-out {
+    animation: wordOut 0.15s ease-in forwards !important;
+  }
+  @keyframes wordOut {
+    to { opacity: 0; transform: scale(1.06); }
+  }
+
+  /* Progress dots during encoding */
+  #encoding-dots {
+    display: flex;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.2s, transform 0.2s;
+  }
+  .dot.active { background: var(--accent); transform: scale(1.3); }
+  .dot.done   { background: var(--muted); }
+
+  /* Session meta bar */
+  #session-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .meta-pill {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .meta-pill strong { color: var(--accent2); }
+
+  /* ── Recall phase ───────────────────────────────────────────────── */
+  /* Slot placeholders */
+  #recall-slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .recall-slot {
+    min-width: 72px;
+    height: 40px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 0 10px;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    animation: slotIn 0.3s var(--ease) both;
+  }
+  @keyframes slotIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .recall-slot.filled {
+    border-color: var(--accent2);
+    color: var(--text);
+    background: rgba(91,196,245,0.07);
+  }
+
+  /* Text input recall */
+  #text-recall-wrap {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 420px;
+  }
+  #recall-input {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 16px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    color: var(--text);
+    padding: 11px 16px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #recall-input:focus { border-color: var(--accent2); }
+  #recall-input::placeholder { color: var(--muted); }
+  #submit-word-btn {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 0 18px;
+    background: var(--accent2);
+    color: #091520;
+    border: none;
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  #submit-word-btn:hover { opacity: 0.88; }
+  #submit-word-btn:active { transform: scale(0.93); }
+  #submit-word-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Word bank */
+  #word-bank {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    max-width: 540px;
+  }
+  .bank-btn {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 9px 16px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, transform 0.1s, opacity 0.15s;
+    animation: bankIn 0.25s var(--ease) both;
+  }
+  .bank-btn:nth-child(odd)  { animation-delay: 0.03s; }
+  .bank-btn:nth-child(even) { animation-delay: 0.06s; }
+  @keyframes bankIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .bank-btn:hover { border-color: var(--accent2); background: rgba(91,196,245,0.07); }
+  .bank-btn:active { transform: scale(0.92); }
+  .bank-btn:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+  .bank-btn.selected { opacity: 0.3; pointer-events: none; }
+
+  /* Recall label */
+  .recall-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .recall-label strong { color: var(--accent); }
+
+  /* ── Feedback screen ────────────────────────────────────────────── */
+  #feedback-grid {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .fb-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: var(--r);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    animation: fbRowIn 0.25s var(--ease) both;
+  }
+  .fb-row:nth-child(1) { animation-delay: 0.04s; }
+  .fb-row:nth-child(2) { animation-delay: 0.08s; }
+  .fb-row:nth-child(3) { animation-delay: 0.12s; }
+  .fb-row:nth-child(4) { animation-delay: 0.16s; }
+  .fb-row:nth-child(5) { animation-delay: 0.20s; }
+  .fb-row:nth-child(6) { animation-delay: 0.24s; }
+  .fb-row:nth-child(7) { animation-delay: 0.28s; }
+  .fb-row:nth-child(8) { animation-delay: 0.32s; }
+  @keyframes fbRowIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .fb-pos {
+    font-size: 11px;
+    color: var(--muted);
+    min-width: 22px;
+  }
+  .fb-target {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    flex: 1;
+  }
+  .fb-given {
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .fb-icon {
+    font-size: 16px;
+    min-width: 22px;
+    text-align: right;
+  }
+  .fb-correct  { border-left: 3px solid var(--correct);  }
+  .fb-present  { border-left: 3px solid var(--present);  }
+  .fb-absent   { border-left: 3px solid var(--absent);   }
+  .fb-correct .fb-target { color: var(--correct); }
+  .fb-present .fb-target { color: var(--present); }
+  .fb-absent  .fb-target { color: var(--absent);  }
+
+  .fb-summary {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 16px 0 8px;
+  }
+  .fb-badge {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 99px;
+    font-weight: 600;
+  }
+  .fb-badge.pass { background: rgba(126,232,162,0.12); color: var(--correct); border: 1px solid var(--correct); }
+  .fb-badge.fail { background: rgba(245,101,101,0.10); color: var(--absent);  border: 1px solid var(--absent); }
+
+  /* ── Results screen ─────────────────────────────────────────────── */
+  .results-hero {
+    text-align: center;
+    padding: 32px 0 20px;
+  }
+  .results-hero .span-num {
+    font-family: var(--font-display);
+    font-size: clamp(64px, 18vw, 96px);
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    animation: numPop 0.5s var(--ease) both;
+  }
+  @keyframes numPop {
+    from { opacity: 0; transform: scale(0.6); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .results-hero .span-label {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .percentile-note {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.7;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px 18px;
+    margin: 16px 0;
+  }
+  .percentile-note em { color: var(--accent2); font-style: normal; font-weight: 600; }
+
+  /* Bar chart */
+  #accuracy-chart {
+    width: 100%;
+    overflow: visible;
+    margin: 8px 0;
+  }
+  .chart-bar rect.bar-bg  { fill: var(--surface2); }
+  .chart-bar rect.bar-fill { transition: width 0.6s var(--ease); }
+  .chart-bar text { font-family: var(--font-mono); fill: var(--muted); font-size: 11px; }
+  .chart-bar text.val { fill: var(--text); }
+
+  /* ── History log ────────────────────────────────────────────────── */
+  #history-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 8px 0;
+    width: 100%;
+    text-align: left;
+    margin-top: 16px;
+    letter-spacing: 0.04em;
+    transition: color 0.15s;
+  }
+  #history-toggle:hover { color: var(--text); }
+  #history-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #history-toggle .chevron {
+    display: inline-block;
+    transition: transform 0.2s;
+  }
+  #history-toggle.open .chevron { transform: rotate(90deg); }
+  #history-panel {
+    display: none;
+    margin-top: 8px;
+    animation: fadeUp 0.25s var(--ease) both;
+  }
+  #history-panel.open { display: block; }
+
+  #history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  #history-table th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+  #history-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(42,46,58,0.5);
+    color: var(--text);
+  }
+  #history-table tr:last-child td { border-bottom: none; }
+  #history-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .hist-empty {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 13px;
+    padding: 16px 0;
+    text-align: center;
+  }
+
+  /* ── Misc utilities ─────────────────────────────────────────────── */
+  .row { display: flex; gap: 10px; align-items: center; }
+  .spacer { flex: 1; }
+
+  /* Notification toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: 99px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 100;
+    white-space: nowrap;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Home button (visible during active test/feedback) ─────────── */
+  #home-btn {
+    display: none;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 5px 14px 5px 10px;
+    cursor: pointer;
+    margin-left: auto;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+  #home-btn:hover  { color: var(--text); border-color: var(--muted); background: var(--surface2); }
+  #home-btn:active { transform: scale(0.94); }
+  #home-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #home-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  /* ── Quit confirmation modal ────────────────────────────────────── */
+  #quit-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 9, 12, 0.82);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: overlayIn 0.2s ease both;
+  }
+  #quit-overlay.open { display: flex; }
+  @keyframes overlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  #quit-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 28px 28px 24px;
+    width: 100%;
+    max-width: 360px;
+    animation: modalIn 0.25s var(--ease) both;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  #quit-modal h2 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  #quit-modal p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 22px;
+  }
+  #quit-modal p strong { color: var(--warn); }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .modal-actions .btn { flex: 1; margin-top: 0; }
+  .btn-quit {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px 20px;
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-quit:hover  { background: rgba(245,101,101,0.1); }
+  .btn-quit:active { transform: scale(0.95); }
+  .btn-quit:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
+  .btn-stay {
+    background: var(--accent);
+    border: none;
+    color: #0c1a12;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px 20px;
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.1s;
+  }
+  .btn-stay:hover  { box-shadow: 0 0 20px rgba(126,232,162,0.25); }
+  .btn-stay:active { transform: scale(0.95); }
+  .btn-stay:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ── Responsive tweaks ──────────────────────────────────────────── */
+  @media (max-width: 420px) {
+    .control-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .seg button { padding: 5px 8px; font-size: 11px; }
+    .fb-given { display: none; }
+    #text-recall-wrap { flex-direction: column; }
+    #submit-word-btn { padding: 12px; }
+    .modal-actions { flex-direction: column-reverse; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>Word<span>Span</span></h1>
+    <span class="version">v1.0</span>
+    <button id="home-btn" aria-label="Return to home screen">
+      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M2 6.5L8 2l6 4.5V14a.5.5 0 0 1-.5.5h-4V10h-3v4.5h-4A.5.5 0 0 1 2 14V6.5Z"
+              stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+      Home
+    </button>
+  </header>
+
+  <!-- ══════════════ QUIT CONFIRMATION MODAL ══════════════ -->
+  <div id="quit-overlay" role="dialog" aria-modal="true" aria-labelledby="quit-title">
+    <div id="quit-modal">
+      <h2 id="quit-title">End this session?</h2>
+      <p>
+        You're <strong id="quit-progress">mid-session</strong>. Leaving now will discard
+        the current trial. Completed trials will still be counted in your results
+        if you choose to end here.
+      </p>
+      <div class="modal-actions">
+        <button class="btn-quit" id="quit-confirm-btn">End &amp; Go Home</button>
+        <button class="btn-stay" id="quit-cancel-btn">Keep Playing</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ IDLE / CONTROLS SCREEN ══════════════ -->
+  <div id="screen-idle" class="screen active">
+
+    <div class="card">
+      <div class="card-title">Test Configuration</div>
+
+      <div class="control-row">
+        <div class="control-label">
+          Starting span
+          <small>Words shown per sequence</small>
+        </div>
+        <div class="stepper">
+          <button id="span-dec" aria-label="Decrease span">−</button>
+          <span id="span-val">3</span>
+          <button id="span-inc" aria-label="Increase span">+</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-label">
+          Presentation speed
+          <small>Time each word is shown</small>
+        </div>
+        <div class="seg" role="group" aria-label="Speed">
+          <button class="seg-speed" data-val="1200">Slow</button>
+          <button class="seg-speed active" data-val="800">Normal</button>
+          <button class="seg-speed" data-val="500">Fast</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-label">
+          Recall mode
+          <small>How you enter your answers</small>
+        </div>
+        <div class="seg" role="group" aria-label="Recall mode">
+          <button class="seg-recall active" data-val="type">Type</button>
+          <button class="seg-recall" data-val="bank">Word Bank</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-label">
+          Word category
+          <small>Vocabulary pool for sequences</small>
+        </div>
+        <div class="seg" role="group" aria-label="Category">
+          <button class="seg-cat active" data-val="mixed">Mixed</button>
+          <button class="seg-cat" data-val="animals">Animals</button>
+          <button class="seg-cat" data-val="concrete">Objects</button>
+          <button class="seg-cat" data-val="abstract">Abstract</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-label">
+          Position feedback
+          <small>Show correct / wrong position detail</small>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-pos" checked>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+    </div>
+
+    <button class="btn btn-primary" id="start-btn">
+      ▶ &nbsp;Start Test
+    </button>
+
+    <!-- History -->
+    <button id="history-toggle" aria-expanded="false">
+      <span class="chevron">▶</span> Session History
+      <span id="history-count"></span>
+    </button>
+    <div id="history-panel">
+      <div class="card" style="margin-top:0">
+        <div id="history-content"></div>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="btn btn-danger" id="clear-hist-btn" style="display:none">Clear History</button>
+          <span id="clear-confirm" style="display:none; font-size:12px; color:var(--danger); align-self:center;">
+            Sure? &nbsp;
+            <button onclick="confirmClear()" style="color:var(--danger);background:none;border:none;cursor:pointer;font-size:12px;text-decoration:underline;">Yes, delete all</button>
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ ACTIVE TEST SCREEN ══════════════ -->
+  <div id="screen-test" class="screen">
+
+    <div id="session-meta">
+      <div class="meta-pill">Span <strong id="meta-span">—</strong></div>
+      <div class="meta-pill">Trial <strong id="meta-trial">—</strong></div>
+      <div class="meta-pill">Streak <strong id="meta-streak">—</strong></div>
+    </div>
+
+    <div class="arena" id="arena">
+      <div id="arena-inner"></div>
+      <div id="encoding-dots"></div>
+    </div>
+
+    <!-- Recall area (hidden until recall phase) -->
+    <div id="recall-area" style="display:none">
+      <p class="recall-label">Type the words in order — <strong id="recall-remaining">0 remaining</strong></p>
+      <div id="recall-slots"></div>
+      <div id="text-recall-wrap" style="display:none">
+        <input id="recall-input" type="text" placeholder="next word…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+        <button id="submit-word-btn">→</button>
+      </div>
+      <div id="word-bank" style="display:none"></div>
+      <button class="btn btn-ghost" id="skip-btn" style="margin-top:16px;width:100%">
+        Submit &amp; Continue (skip remaining)
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ FEEDBACK SCREEN ══════════════ -->
+  <div id="screen-feedback" class="screen">
+
+    <div class="card">
+      <div class="row">
+        <div class="card-title" style="margin-bottom:0">Trial Feedback</div>
+        <div class="spacer"></div>
+        <div id="fb-summary-badge"></div>
+      </div>
+      <div id="feedback-grid"></div>
+      <div class="fb-summary" id="fb-summary-row"></div>
+    </div>
+
+    <button class="btn btn-primary" id="next-trial-btn">
+      Continue →
+    </button>
+
+  </div>
+
+  <!-- ══════════════ RESULTS SCREEN ══════════════ -->
+  <div id="screen-results" class="screen">
+
+    <div class="card">
+      <div class="results-hero">
+        <div class="span-num" id="result-peak">—</div>
+        <div class="span-label">Peak Span Reached</div>
+      </div>
+
+      <div class="percentile-note" id="percentile-note"></div>
+
+      <div class="card-title" style="margin-top:20px;">Accuracy by Span Level</div>
+      <svg id="accuracy-chart" aria-label="Accuracy chart"></svg>
+    </div>
+
+    <div class="row" style="gap:10px">
+      <button class="btn btn-primary" id="again-btn" style="flex:1">
+        ↺ &nbsp;Try Again
+      </button>
+      <button class="btn btn-ghost" id="config-btn" style="flex-shrink:0">
+        Settings
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   WORD LISTS — Paivio-informed, high imageability/frequency nouns
+   ══════════════════════════════════════════════════════════════════ */
+const WORDS = {
+  animals: [
+    'bear','wolf','eagle','shark','tiger','lion','deer','crow','owl','fox',
+    'crab','moth','frog','mole','duck','goat','swan','lynx','hawk','pike',
+    'newt','wren','toad','ibis','vole','tern','carp','hare','kite','wasp',
+    'crane','moose','otter','bison','raven','snail','leech','koala','hyena','gecko',
+    'llama','tapir','zebra','bison','orca','dingo','stoat','viper','quail','finch',
+    'robin','lapwing','ferret','marten','hornet','locust','salmon','parrot','donkey','pigeon'
+  ],
+  concrete: [
+    'lamp','chair','knife','towel','shelf','clock','spoon','glass','brush','candle',
+    'fork','table','stove','frame','crate','drain','hinge','rivet','valve','patch',
+    'ladle','anvil','easel','chisel','mallet','funnel','bucket','mortar','satchel','pulley',
+    'flask','prism','spool','clamp','wedge','gauge','lathe','trowel','nozzle','socket',
+    'basin','shutter','pliers','mortar','scalpel','compass','dustpan','colander','strainer','decanter',
+    'kettle','ironing','blanket','pillow','mirror','curtain','cabinet','cabinet','handle','pedal'
+  ],
+  abstract: [
+    'grief','pride','doubt','envy','hope','dread','guilt','trust','rage','shame',
+    'peace','valor','mercy','irony','chaos','logic','poise','vigor','truth','malice',
+    'awe','bliss','wrath','angst','zeal','sloth','tact','grace','spite','mirth',
+    'folly','gloom','honor','panic','haste','qualm','scorn','piety','vanity','sorrow',
+    'courage','despair','ennui','apathy','fervor','remorse','wonder','longing','serenity','disdain',
+    'tension','resolve','wisdom','empathy','hubris','candor','solace','rapture','malice','wonder'
+  ],
+  mixed: []
+};
+// Build mixed pool from all three categories
+WORDS.mixed = [...WORDS.animals, ...WORDS.concrete, ...WORDS.abstract];
+
+/* ══════════════════════════════════════════════════════════════════
+   STATE MACHINE
+   States: IDLE → FIXATION → ENCODING → RECALL → FEEDBACK → RESULTS
+   ══════════════════════════════════════════════════════════════════ */
+let STATE = 'IDLE';
+
+/* Session state */
+let cfg = {
+  startSpan: 3,
+  speed: 800,
+  recallMode: 'type',
+  category: 'mixed',
+  posFeedback: true
+};
+
+let session = {
+  currentSpan: 3,
+  trials: [],        // {span, correct:[bool,...], recalled:[str,...], target:[str,...], rt:ms}
+  consecutiveFails: 0,
+  streak: [],        // visual: array of booleans
+  trialNum: 0
+};
+
+let trial = {
+  words: [],
+  recalled: [],
+  startTime: null,
+  timerId: null
+};
+
+/* ── DOM refs ──────────────────────────────────────────────────── */
+const $  = id => document.getElementById(id);
+const screens = {
+  idle: $('screen-idle'),
+  test: $('screen-test'),
+  feedback: $('screen-feedback'),
+  results: $('screen-results')
+};
+
+/* ── Utils ─────────────────────────────────────────────────────── */
+function showScreen(name) {
+  Object.entries(screens).forEach(([k, el]) => {
+    el.classList.toggle('active', k === name);
+  });
+  // Show home button whenever NOT on idle screen
+  const btn = document.getElementById('home-btn');
+  if (btn) btn.style.display = (name !== 'idle') ? 'flex' : 'none';
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function sample(arr, n) {
+  return shuffle(arr).slice(0, n);
+}
+
+function showToast(msg, ms = 2000) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ── LocalStorage helpers ──────────────────────────────────────── */
+function historyLoad() {
+  try {
+    return JSON.parse(localStorage.getItem('wordSpanHistory') || '[]');
+  } catch { return []; }
+}
+function historySave(arr) {
+  try { localStorage.setItem('wordSpanHistory', JSON.stringify(arr)); }
+  catch { /* private browsing / quota */ }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CONTROLS PANEL LOGIC
+   ══════════════════════════════════════════════════════════════════ */
+function initControls() {
+  // Span stepper
+  $('span-dec').addEventListener('click', () => {
+    cfg.startSpan = Math.max(2, cfg.startSpan - 1);
+    $('span-val').textContent = cfg.startSpan;
+  });
+  $('span-inc').addEventListener('click', () => {
+    cfg.startSpan = Math.min(9, cfg.startSpan + 1);
+    $('span-val').textContent = cfg.startSpan;
+  });
+
+  // Segmented buttons (generic)
+  function bindSeg(cls, prop) {
+    document.querySelectorAll('.' + cls).forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.' + cls).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        cfg[prop] = isNaN(btn.dataset.val) ? btn.dataset.val : Number(btn.dataset.val);
+      });
+    });
+  }
+  bindSeg('seg-speed',  'speed');
+  bindSeg('seg-recall', 'recallMode');
+  bindSeg('seg-cat',    'category');
+
+  // Position feedback toggle
+  $('toggle-pos').addEventListener('change', function() {
+    cfg.posFeedback = this.checked;
+  });
+
+  // Start button
+  $('start-btn').addEventListener('click', startSession);
+
+  // History toggle
+  $('history-toggle').addEventListener('click', () => {
+    const panel = $('history-panel');
+    const btn   = $('history-toggle');
+    const open  = panel.classList.toggle('open');
+    btn.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open);
+    if (open) renderHistory();
+  });
+
+  // Clear history
+  $('clear-hist-btn').addEventListener('click', () => {
+    $('clear-confirm').style.display = 'flex';
+    $('clear-hist-btn').style.display = 'none';
+  });
+
+  // Results screen buttons
+  $('again-btn').addEventListener('click', () => startSession());
+  $('config-btn').addEventListener('click', () => goHome());
+  $('next-trial-btn').addEventListener('click', () => {
+    advanceAfterFeedback();
+  });
+
+  // Home button — visible only during active session
+  $('home-btn').addEventListener('click', () => {
+    if (STATE === 'IDLE' || STATE === 'RESULTS') {
+      goHome();
+    } else {
+      openQuitModal();
+    }
+  });
+
+  // Quit modal
+  $('quit-confirm-btn').addEventListener('click', () => {
+    closeQuitModal();
+    if (session.trials && session.trials.length > 0) {
+      showResults();
+    } else {
+      goHome();
+    }
+  });
+  $('quit-cancel-btn').addEventListener('click', closeQuitModal);
+  $('quit-overlay').addEventListener('click', e => {
+    if (e.target === $('quit-overlay')) closeQuitModal();
+  });
+
+  // Recall controls
+  $('recall-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitRecalledWord();
+  });
+  $('submit-word-btn').addEventListener('click', submitRecalledWord);
+  $('skip-btn').addEventListener('click', finishRecall);
+}
+
+/* ── Home / quit modal helpers ─────────────────────────────────── */
+function goHome() {
+  // Cancel any running encoding timer
+  if (trial.timerId) { clearTimeout(trial.timerId); trial.timerId = null; }
+  STATE = 'IDLE';
+  showScreen('idle');
+  updateHomeBtnVisibility();
+  renderHistory();
+}
+
+function updateHomeBtnVisibility() {
+  const btn = $('home-btn');
+  const showBtn = STATE !== 'IDLE';
+  btn.style.display = showBtn ? 'flex' : 'none';
+}
+
+function openQuitModal() {
+  // Describe progress in the modal
+  const trialsDone = session.trials ? session.trials.length : 0;
+  const prog = trialsDone > 0
+    ? `on trial <strong>${session.trialNum}</strong> (span&nbsp;<strong>${session.currentSpan}</strong>)`
+    : 'just getting started';
+  $('quit-progress').innerHTML = prog;
+  $('quit-overlay').classList.add('open');
+  // Focus the "keep playing" button by default (safer choice first)
+  setTimeout(() => $('quit-cancel-btn').focus(), 50);
+}
+
+function closeQuitModal() {
+  $('quit-overlay').classList.remove('open');
+}
+
+window.confirmClear = function() {
+  historySave([]);
+  renderHistory();
+  $('clear-confirm').style.display = 'none';
+  showToast('History cleared');
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   SESSION & TRIAL MANAGEMENT
+   ══════════════════════════════════════════════════════════════════ */
+function startSession() {
+  session = {
+    currentSpan: cfg.startSpan,
+    trials: [],
+    consecutiveFails: 0,
+    streak: [],
+    trialNum: 0
+  };
+  showScreen('test');
+  beginTrial();
+}
+
+function beginTrial() {
+  session.trialNum++;
+  const pool = WORDS[cfg.category];
+  trial.words    = sample(pool, session.currentSpan);
+  trial.recalled = [];
+  trial.startTime = null;
+
+  updateMeta();
+  transitionToFixation();
+}
+
+function updateMeta() {
+  $('meta-span').textContent   = session.currentSpan;
+  $('meta-trial').textContent  = session.trialNum;
+  const icons = session.streak.slice(-5).map(s => s ? '✓' : '✗').join('');
+  $('meta-streak').textContent = icons || '—';
+}
+
+/* ── FIXATION ──────────────────────────────────────────────────── */
+function transitionToFixation() {
+  STATE = 'FIXATION';
+  $('recall-area').style.display = 'none';
+  const inner = $('arena-inner');
+  inner.innerHTML = '';
+  $('encoding-dots').innerHTML = '';
+
+  const fix = document.createElement('div');
+  fix.id = 'fixation-cross';
+  fix.textContent = '+';
+  inner.appendChild(fix);
+
+  setTimeout(transitionToEncoding, 600);
+}
+
+/* ── ENCODING ──────────────────────────────────────────────────── */
+function transitionToEncoding() {
+  STATE = 'ENCODING';
+  const inner = $('arena-inner');
+  inner.innerHTML = '';
+
+  // Build progress dots
+  const dotsEl = $('encoding-dots');
+  dotsEl.innerHTML = '';
+  trial.words.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.id = `dot-${i}`;
+    dotsEl.appendChild(d);
+  });
+
+  let idx = 0;
+  function showWord() {
+    if (idx >= trial.words.length) {
+      // Clear display, pause, then go to recall
+      inner.innerHTML = '';
+      setTimeout(transitionToRecall, 300);
+      return;
+    }
+
+    // Mark previous dot done
+    if (idx > 0) {
+      const prev = $(`dot-${idx-1}`);
+      if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
+    }
+
+    // Display word
+    inner.innerHTML = '';
+    const wd = document.createElement('div');
+    wd.id = 'word-display';
+    wd.textContent = trial.words[idx].toUpperCase();
+    inner.appendChild(wd);
+
+    // Activate current dot
+    const dot = $(`dot-${idx}`);
+    if (dot) dot.classList.add('active');
+
+    idx++;
+
+    // After display duration, animate out then show blank
+    trial.timerId = setTimeout(() => {
+      const el = $('word-display');
+      if (el) el.classList.add('word-out');
+      setTimeout(showWord, 200);
+    }, cfg.speed);
+  }
+
+  showWord();
+}
+
+/* ── RECALL ────────────────────────────────────────────────────── */
+function transitionToRecall() {
+  STATE = 'RECALL';
+  const inner = $('arena-inner');
+  inner.innerHTML = '';
+  $('encoding-dots').innerHTML = '';
+
+  // Show recall cue
+  const cue = document.createElement('div');
+  cue.style.cssText = 'font-size:40px;animation:fixPulse 0.3s ease both;color:var(--muted);';
+  cue.textContent = '?';
+  inner.appendChild(cue);
+
+  trial.startTime = performance.now();
+
+  setTimeout(() => {
+    inner.innerHTML = '';
+    buildRecallUI();
+    $('recall-area').style.display = 'block';
+  }, 450);
+}
+
+function buildRecallUI() {
+  trial.recalled = [];
+  const n = trial.words.length;
+
+  // Slots
+  const slots = $('recall-slots');
+  slots.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const sl = document.createElement('div');
+    sl.className = 'recall-slot';
+    sl.id = `slot-${i}`;
+    sl.style.animationDelay = `${i * 0.04}s`;
+    sl.textContent = i + 1;
+    slots.appendChild(sl);
+  }
+  updateRecallRemaining();
+
+  if (cfg.recallMode === 'type') {
+    $('text-recall-wrap').style.display = 'flex';
+    $('word-bank').style.display = 'none';
+    const input = $('recall-input');
+    input.value = '';
+    setTimeout(() => input.focus(), 100);
+  } else {
+    $('text-recall-wrap').style.display = 'none';
+    const bank = $('word-bank');
+    bank.style.display = 'flex';
+    bank.innerHTML = '';
+    // Build bank: target words + distractors
+    const distractors = sample(
+      WORDS[cfg.category].filter(w => !trial.words.includes(w)),
+      Math.min(trial.words.length, 6)
+    );
+    const bankWords = shuffle([...trial.words, ...distractors]);
+    bankWords.forEach(w => {
+      const btn = document.createElement('button');
+      btn.className = 'bank-btn';
+      btn.textContent = w.toUpperCase();
+      btn.addEventListener('click', () => {
+        btn.classList.add('selected');
+        recordRecalledWord(w);
+      });
+      bank.appendChild(btn);
+    });
+  }
+}
+
+function updateRecallRemaining() {
+  const rem = trial.words.length - trial.recalled.length;
+  $('recall-remaining').textContent = `${rem} remaining`;
+}
+
+function recordRecalledWord(word) {
+  const idx = trial.recalled.length;
+  if (idx >= trial.words.length) return;
+
+  trial.recalled.push(word.toLowerCase().trim());
+
+  const slot = $(`slot-${idx}`);
+  if (slot) {
+    slot.textContent = word.toUpperCase();
+    slot.classList.add('filled');
+  }
+  updateRecallRemaining();
+
+  if (trial.recalled.length >= trial.words.length) {
+    finishRecall();
+  }
+}
+
+function submitRecalledWord() {
+  const input = $('recall-input');
+  const val = input.value.trim();
+  if (!val) return;
+  input.value = '';
+  recordRecalledWord(val);
+  if (trial.recalled.length < trial.words.length) {
+    setTimeout(() => input.focus(), 50);
+  }
+}
+
+function finishRecall() {
+  const rt = Math.round(performance.now() - trial.startTime);
+  // Evaluate
+  const target   = trial.words.map(w => w.toLowerCase());
+  const recalled = [...trial.recalled];
+  // Pad if user skipped
+  while (recalled.length < target.length) recalled.push('');
+
+  const correct = target.map((w, i) => recalled[i] === w);
+  const allCorrect = correct.every(Boolean);
+
+  session.trials.push({
+    span: session.currentSpan,
+    target,
+    recalled,
+    correct,
+    allCorrect,
+    rt
+  });
+  session.streak.push(allCorrect);
+
+  showFeedback(target, recalled, correct, allCorrect);
+}
+
+/* ── FEEDBACK ──────────────────────────────────────────────────── */
+function showFeedback(target, recalled, correct, allCorrect) {
+  STATE = 'FEEDBACK';
+  showScreen('feedback');
+  $('recall-area').style.display = 'none';
+
+  // Summary badge
+  const badge = $('fb-summary-badge');
+  badge.innerHTML = allCorrect
+    ? '<span class="fb-badge pass">✓ Correct</span>'
+    : '<span class="fb-badge fail">✗ Incorrect</span>';
+
+  // Grid
+  const grid = $('feedback-grid');
+  grid.innerHTML = '';
+
+  target.forEach((word, i) => {
+    const given     = recalled[i] || '';
+    const isCorrect = correct[i];
+    // position-agnostic: is the word present anywhere?
+    const isPresent = !isCorrect && target.includes(given) && given !== '';
+
+    let cls = 'fb-absent', icon = '✗';
+    if (isCorrect)       { cls = 'fb-correct'; icon = '✓'; }
+    else if (isPresent && cfg.posFeedback) { cls = 'fb-present'; icon = '↕'; }
+
+    const row = document.createElement('div');
+    row.className = `fb-row ${cls}`;
+    row.innerHTML = `
+      <span class="fb-pos">${i+1}</span>
+      <span class="fb-target">${word.toUpperCase()}</span>
+      ${cfg.posFeedback
+        ? `<span class="fb-given">${given ? given.toUpperCase() : '—'}</span>`
+        : ''}
+      <span class="fb-icon">${icon}</span>
+    `;
+    grid.appendChild(row);
+  });
+
+  const scoreStr = `${correct.filter(Boolean).length}/${target.length} correct`;
+  $('fb-summary-row').innerHTML = `<span style="font-size:13px;color:var(--muted)">${scoreStr}</span>`;
+}
+
+function advanceAfterFeedback() {
+  const last = session.trials[session.trials.length - 1];
+  if (last.allCorrect) {
+    session.consecutiveFails = 0;
+    session.currentSpan = Math.min(session.currentSpan + 1, 12);
+  } else {
+    session.consecutiveFails++;
+    session.currentSpan = Math.max(session.currentSpan - 1, 2);
+  }
+
+  if (session.consecutiveFails >= 2 || session.trials.length >= 20) {
+    showResults();
+  } else {
+    showScreen('test');
+    beginTrial();
+  }
+}
+
+/* ── RESULTS ───────────────────────────────────────────────────── */
+function showResults() {
+  STATE = 'RESULTS';
+  showScreen('results');
+
+  const peakSpan = Math.max(...session.trials.map(t => t.span));
+  $('result-peak').textContent = peakSpan;
+
+  // Percentile blurb
+  let pctNote = '';
+  if      (peakSpan <= 3) pctNote = `A peak span of <em>${peakSpan}</em> is below the typical range. Consider retrying after a short break — fatigue, distraction, and speed all affect performance significantly.`;
+  else if (peakSpan <= 4) pctNote = `A peak span of <em>${peakSpan}</em> is at the lower end of the adult range (5–9). This is common and may reflect encoding speed or unfamiliarity with the task.`;
+  else if (peakSpan <= 6) pctNote = `A peak span of <em>${peakSpan}</em> falls within the typical adult range described by Miller (1956). Your phonological loop is working normally.`;
+  else if (peakSpan <= 8) pctNote = `A peak span of <em>${peakSpan}</em> is above average. You have a well-functioning verbal working memory, consistent with Baddeley's phonological loop model at peak capacity.`;
+  else                    pctNote = `A peak span of <em>${peakSpan}</em> is exceptionally high — top ~5–10% of adults. Either your subvocal rehearsal loop is very efficient, or you're applying chunking strategies.`;
+
+  $('percentile-note').innerHTML = pctNote;
+
+  // Accuracy by span
+  const spanData = {};
+  session.trials.forEach(t => {
+    if (!spanData[t.span]) spanData[t.span] = { attempts: 0, correct: 0, rt: [] };
+    spanData[t.span].attempts++;
+    if (t.allCorrect) spanData[t.span].correct++;
+    spanData[t.span].rt.push(t.rt);
+  });
+
+  drawChart(spanData);
+
+  // Average RT note
+  const typedTrials = session.trials.filter(t => cfg.recallMode === 'type');
+  if (typedTrials.length > 0) {
+    const avgRt = Math.round(typedTrials.reduce((s, t) => s + t.rt, 0) / typedTrials.length / 1000 * 10) / 10;
+    const rtNote = document.createElement('div');
+    rtNote.style.cssText = 'font-size:12px;color:var(--muted);margin-top:8px;';
+    rtNote.textContent = `Average recall time: ${avgRt}s`;
+    $('accuracy-chart').insertAdjacentElement('afterend', rtNote);
+  }
+
+  // Save to history
+  const hist = historyLoad();
+  hist.unshift({
+    date:     new Date().toISOString(),
+    peakSpan,
+    trials:   session.trials.length,
+    category: cfg.category,
+    mode:     cfg.recallMode,
+    accuracy: Math.round(session.trials.filter(t => t.allCorrect).length / session.trials.length * 100)
+  });
+  historySave(hist.slice(0, 50));
+  renderHistory();
+}
+
+function drawChart(spanData) {
+  const spans = Object.keys(spanData).map(Number).sort((a,b)=>a-b);
+  if (spans.length === 0) return;
+
+  const W = 560, barH = 28, gap = 10, labelW = 36, padding = 8;
+  const totalH = spans.length * (barH + gap) + padding * 2;
+  const barW = W - labelW - 70; // 70 for % text
+
+  let svg = `<svg viewBox="0 0 ${W} ${totalH}" xmlns="http://www.w3.org/2000/svg" id="accuracy-chart" aria-label="Accuracy by span level">`;
+
+  spans.forEach((span, i) => {
+    const d   = spanData[span];
+    const pct = Math.round(d.correct / d.attempts * 100);
+    const y   = padding + i * (barH + gap);
+    const fill = pct === 100 ? '#7ee8a2' : pct >= 50 ? '#f5c842' : '#f56565';
+    const filledW = Math.round(barW * pct / 100);
+
+    svg += `
+      <g class="chart-bar" transform="translate(0,${y})">
+        <text x="${labelW - 6}" y="${barH/2 + 4}" text-anchor="end" style="fill:var(--muted);font-family:var(--font-mono);font-size:12px">Span ${span}</text>
+        <rect x="${labelW}" y="0" width="${barW}" height="${barH}" rx="5" style="fill:var(--surface2);"/>
+        <rect x="${labelW}" y="0" width="${filledW}" height="${barH}" rx="5" style="fill:${fill};opacity:0.8;"/>
+        <text x="${labelW + barW + 8}" y="${barH/2 + 4}" style="fill:var(--text);font-family:var(--font-mono);font-size:12px">${pct}%</text>
+      </g>`;
+  });
+
+  svg += '</svg>';
+  $('accuracy-chart').outerHTML = svg;
+}
+
+/* ── HISTORY RENDER ────────────────────────────────────────────── */
+function renderHistory() {
+  const hist = historyLoad();
+  const content = $('history-content');
+  const clearBtn = $('clear-hist-btn');
+
+  $('history-count').textContent = hist.length > 0 ? `(${hist.length})` : '';
+
+  if (hist.length === 0) {
+    content.innerHTML = '<div class="hist-empty">No sessions yet — complete a test to start your log.</div>';
+    clearBtn.style.display = 'none';
+    return;
+  }
+
+  clearBtn.style.display = 'inline-flex';
+
+  let rows = hist.slice(0, 15).map(h => {
+    const d = new Date(h.date);
+    const dateStr = d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+    const timeStr = d.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+    return `<tr>
+      <td>${dateStr} ${timeStr}</td>
+      <td style="color:var(--accent);font-weight:700">${h.peakSpan}</td>
+      <td>${h.accuracy}%</td>
+      <td>${h.mode}</td>
+      <td style="color:var(--muted)">${h.category}</td>
+    </tr>`;
+  }).join('');
+
+  content.innerHTML = `
+    <table id="history-table">
+      <thead><tr>
+        <th>Date</th><th>Peak</th><th>Accuracy</th><th>Mode</th><th>Category</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   BOOTSTRAP
+   ══════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  initControls();
+  renderHistory();
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (STATE === 'IDLE' && e.key === 'Enter') $('start-btn').click();
+    if (STATE === 'FEEDBACK' && e.key === 'Enter') $('next-trial-btn').click();
+    // Escape closes the quit modal, or prompts quit during active states
+    if (e.key === 'Escape') {
+      if ($('quit-overlay').classList.contains('open')) {
+        closeQuitModal();
+      } else if (STATE !== 'IDLE' && STATE !== 'RESULTS') {
+        openQuitModal();
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Focus Session Tracker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--card:#1e2130;--ca:#252a3a;--ac:#2dd4bf;--ad:#1a8577;--tx:#e5e7eb;--mu:#9ca3af;--bd:#2d3450;--dn:#ef4444;--so:#f59e0b;--sf:#374151}
+body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 64px}
+header{width:100%;max-width:860px;display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;gap:16px;flex-wrap:wrap}
+.ht{display:flex;align-items:center;gap:14px}
+.ht svg{flex-shrink:0}
+.ht h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em} .ht p{margin-top:6px;color:var(--mu);font-size:.9rem}
+.hu{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:4px}
+#hun{font-size:.88rem;font-weight:600;color:var(--ac)} #hun::before{content:"Hi, ";color:var(--mu);font-weight:400}
+.hub{display:flex;gap:10px;align-items:center}
+#bsu,#bab{font-size:.75rem;color:var(--mu);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;font-family:inherit;transition:color .15s}
+#bsu:hover,#bab:hover{color:var(--ac);opacity:1}
+@keyframes flicker{0%,49%{color:var(--ac);text-shadow:0 0 8px var(--ac)}50%,100%{color:#fff;text-shadow:0 0 8px #fff}}
+.flk{animation:flicker 1.2s step-start infinite}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:28px 32px;width:100%;max-width:520px;margin-bottom:24px}
+.card h2{font-size:1rem;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-bottom:20px}
+.cw{max-width:860px}
+.fg{margin-bottom:18px}
+label{display:block;font-size:.85rem;color:var(--mu);margin-bottom:6px;font-weight:500}
+input,select,textarea{width:100%;background:var(--ca);border:1px solid var(--bd);border-radius:6px;color:var(--tx);font-family:inherit;font-size:.95rem;padding:10px 14px;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--ac)}
+textarea{resize:vertical;min-height:80px}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:.4}
+.fe{display:none;color:var(--dn);font-size:.82rem;margin-top:6px;font-weight:500} .fe.on{display:block}
+button{font-family:inherit;font-size:.95rem;font-weight:600;border:none;border-radius:8px;cursor:pointer;padding:11px 24px;transition:opacity .15s}
+button:hover{opacity:.88} button:active{opacity:.75}
+.bp{background:var(--ac);color:#0f1117;width:100%;margin-top:4px}
+.bd2{background:transparent;border:1px solid var(--dn);color:var(--dn);width:100%;margin-top:4px}
+.bs{background:var(--ca);border:1px solid var(--bd);color:var(--tx);width:100%;margin-top:4px}
+.bsm{padding:7px 16px;font-size:.82rem;width:auto!important}
+.sc{display:none} .sc.on{display:block}
+#sw{max-width:420px}
+.wi{text-align:center;margin-bottom:24px} .wi .ico{font-size:2.8rem;margin-bottom:12px}
+.wi p{color:var(--mu);font-size:.9rem;line-height:1.6}
+#cdwn{text-align:center;font-size:5.5rem;font-weight:700;letter-spacing:-.03em;color:var(--ac);line-height:1;margin:18px 0 10px;font-variant-numeric:tabular-nums}
+#ttl{text-align:center;font-size:1.35rem;font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:flicker 1.2s step-start infinite}
+#pt{width:100%;height:5px;background:var(--ca);border-radius:99px;overflow:hidden;margin-bottom:28px}
+#pb{height:100%;background:var(--ac);border-radius:99px;transition:width 1s linear;width:100%}
+#ts{text-align:center;font-size:.82rem;color:var(--mu);margin-bottom:20px}
+.sr{display:flex;gap:10px;justify-content:center;margin:12px 0 20px}
+.star{font-size:2.2rem;cursor:pointer;color:var(--sf);transition:color .15s,transform .1s;user-select:none}
+.star:hover,.star.lit{color:var(--so)} .star:hover{transform:scale(1.15)}
+#rl{text-align:center;font-size:.82rem;color:var(--mu);margin-bottom:4px}
+#rle{text-align:center;font-size:.82rem;color:var(--dn);font-weight:500;margin-top:4px;display:none}
+#rle.on{display:block}
+#sbs{display:none;width:100%;max-width:860px;gap:10px;margin-bottom:24px;flex-wrap:wrap}
+#sbs.on{display:flex}
+.sb{flex:1;min-width:140px;padding:10px 20px;background:var(--ca);border:1px solid var(--bd);color:var(--mu);border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;transition:background .15s,color .15s,border-color .15s;font-family:inherit}
+.sb:hover{color:var(--tx);border-color:var(--ac);opacity:1} .sb.on{background:var(--ac);color:#0f1117;border-color:var(--ac)}
+.panel{display:none;width:100%;max-width:860px;margin-bottom:24px} .panel.on{display:block}
+.gt{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.gtb{padding:6px 18px;border-radius:99px;font-size:.82rem;font-weight:600;background:var(--ca);border:1px solid var(--bd);color:var(--mu);cursor:pointer;transition:background .15s,color .15s;font-family:inherit}
+.gtb:hover{color:var(--tx);border-color:var(--ac);opacity:1} .gtb.on{background:var(--ac);color:#0f1117;border-color:var(--ac)}
+#gw{position:relative;width:100%;height:220px;background:var(--ca);border-radius:8px}
+#gs{width:100%;height:100%;display:block;overflow:visible}
+#gnd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:.9rem;pointer-events:none}
+#gtt{position:fixed;background:var(--card);border:1px solid var(--ac);border-radius:6px;padding:7px 13px;font-size:.82rem;color:var(--tx);pointer-events:none;opacity:0;transition:opacity .15s;z-index:100;white-space:nowrap}
+#gtt strong{color:var(--ac);display:block;margin-bottom:2px}
+.hh{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.hh h2,.cw h2{margin-bottom:0} .panel .cw{margin-bottom:0}
+.em{text-align:center;color:var(--mu);padding:28px 0;font-size:.9rem}
+.tw{overflow-x:auto;border-radius:8px;border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+thead th{background:var(--ca);color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:.75rem;padding:11px 14px;text-align:left;white-space:nowrap}
+tbody tr{border-top:1px solid var(--bd);transition:background .15s} tbody tr:hover{background:var(--ca)}
+tbody td{padding:11px 14px;vertical-align:middle}
+.tc{font-weight:500;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nc{color:var(--mu);max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sd{display:flex;gap:2px} .sd span{font-size:.95rem}
+.son{color:var(--so)} .sof{color:var(--sf)}
+.badge{display:inline-block;background:var(--ad);color:var(--ac);border-radius:4px;padding:2px 8px;font-size:.78rem;font-weight:600}
+.lrm{border-left:3px solid var(--ac)!important}
+.lr{font-weight:700;font-size:.95rem;color:var(--mu)}
+.lr.gold{color:#f59e0b} .lr.silver{color:#9ca3af} .lr.bronze{color:#b45309}
+.by{display:inline-block;background:var(--ac);color:#0f1117;border-radius:4px;padding:1px 7px;font-size:.72rem;font-weight:700;margin-left:8px;vertical-align:middle}
+.ln{font-weight:600} .lt{color:var(--ac);font-weight:600} .ls{color:var(--mu);font-size:.82rem}
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ac);color:#0f1117;padding:12px 24px;border-radius:8px;font-weight:600;font-size:.9rem;pointer-events:none;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s;opacity:0;z-index:999;white-space:nowrap}
+#toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+#mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;padding:24px}
+#mo.on{display:flex}
+#mb{background:var(--card);border:1px solid var(--bd);border-radius:12px;max-width:640px;width:100%;max-height:85vh;display:flex;flex-direction:column}
+#mh{display:flex;justify-content:space-between;align-items:center;padding:20px 24px 0}
+#mh h2{font-size:1.1rem;font-weight:700;color:var(--tx);letter-spacing:-.01em}
+#bmc{background:none;border:none;color:var(--mu);font-size:1.4rem;cursor:pointer;padding:0;line-height:1;transition:color .15s} #bmc:hover{color:var(--tx);opacity:1}
+#mbd{overflow-y:auto;padding:20px 24px 28px;font-size:.9rem;line-height:1.75;color:var(--tx)}
+#mbd h3{font-size:.95rem;font-weight:700;color:var(--ac);margin:20px 0 8px;text-transform:uppercase;letter-spacing:.06em} #mbd h3:first-child{margin-top:0}
+#mbd p,#mbd li{color:#cbd5e1;margin-bottom:5px} #mbd p{margin-bottom:10px} #mbd ul{padding-left:20px;margin-bottom:10px} #mbd strong{color:var(--tx)}
+.inrow{display:flex;gap:8px}
+.inrow input,.inrow select{width:auto;flex:1;min-width:0}
+.inrow select{flex:0 0 auto}
+.inrow button{flex:0 0 auto;width:auto!important;margin-top:0;padding:10px 18px;white-space:nowrap}
+/* sound picker */
+.sound-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sound-opt{padding:6px 14px;border-radius:99px;font-size:.82rem;font-weight:600;background:var(--ca);border:1px solid var(--bd);color:var(--mu);cursor:pointer;font-family:inherit;transition:background .15s,color .15s}
+.sound-opt:hover{color:var(--tx);border-color:var(--ac);opacity:1} .sound-opt.on{background:var(--ac);color:#0f1117;border-color:var(--ac)}
+.bstop{background:var(--dn);color:#fff;width:100%;margin-top:10px;display:none}
+.bstop.on{display:block}
+@media(max-width:600px){.card{padding:20px 16px}#cdwn{font-size:3.6rem}#ttl{font-size:1.1rem}.ht h1{font-size:1.3rem}header{flex-direction:column;gap:10px}.hu{align-items:flex-start}#sbs{gap:8px}.sb{min-width:0;font-size:.82rem;padding:9px 12px}.sound-row{gap:6px}.sound-opt{padding:5px 10px}.inrow button{padding:10px 12px;font-size:.85rem}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="ht">
+    <!-- Focus / timer icon -->
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="24" cy="26" r="18" stroke="#2dd4bf" stroke-width="2.5" fill="#1e2130"/>
+      <circle cx="24" cy="26" r="13" stroke="#2d3450" stroke-width="1.5" fill="none"/>
+      <!-- clock hands -->
+      <line x1="24" y1="26" x2="24" y2="15" stroke="#2dd4bf" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="24" y1="26" x2="31" y2="30" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="24" cy="26" r="2" fill="#2dd4bf"/>
+      <!-- crown / top -->
+      <rect x="21" y="6" width="6" height="3" rx="1.5" fill="#2dd4bf"/>
+      <rect x="23.2" y="4" width="1.6" height="4" rx=".8" fill="#2dd4bf"/>
+      <!-- tick marks -->
+      <line x1="24" y1="10" x2="24" y2="12.5" stroke="#2d3450" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="24" y1="39.5" x2="24" y2="42" stroke="#2d3450" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="8" y1="26" x2="10.5" y2="26" stroke="#2d3450" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="37.5" y1="26" x2="40" y2="26" stroke="#2d3450" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <h1><span class="flk">Focus</span> <span class="flk" style="animation-delay:.6s">Session</span> <span class="flk" style="animation-delay:.3s">Tracker</span></h1>
+      <p>Stay deep. Track progress. Build momentum.</p>
+    </div>
+  </div>
+  <div class="hu" id="hua" style="display:none">
+    <span id="hun"></span>
+    <div class="hub"><button id="bab">About</button><button id="bsu">Switch User</button></div>
+  </div>
+</header>
+
+<!-- About modal -->
+<div id="mo"><div id="mb">
+  <div id="mh"><h2>About Focus Session Tracker</h2><button id="bmc" aria-label="Close">&times;</button></div>
+  <div id="mbd">
+    <h3>What is this app?</h3>
+    <p><strong>Focus Session Tracker</strong> is a browser-based productivity tool. Everything runs locally — no accounts, no servers, no data leaves your device.</p>
+    <ul>
+      <li>Set a task and choose a session length (preset or custom in seconds, minutes, or hours)</li>
+      <li>Live countdown and progress bar keep you anchored during the session</li>
+      <li>Rate productivity (1–5 stars) and add notes after each session</li>
+      <li>History, focus-over-time graph, and leaderboard stored via <strong>localStorage</strong></li>
+      <li>Multiple users can share the same browser — each user's data is stored separately</li>
+      <li>Customisable end-of-session alert sound — choose from 6 built-in synthesized tones or silence</li>
+    </ul>
+    <h3>The Pomodoro Technique</h3>
+    <p>Created by <strong>Francesco Cirillo</strong> in the late 1980s in Rome. Struggling to focus as a student, he grabbed a tomato-shaped kitchen timer (<em>pomodoro</em> = tomato) and committed to 25 minutes of uninterrupted work. He refined it into a full system, published in 2006.</p>
+    <h3>The cycle</h3>
+    <ul>
+      <li>Work with full focus for <strong>25 minutes</strong> (one Pomodoro)</li>
+      <li>Take a <strong>5-minute</strong> short break</li>
+      <li>After 4 Pomodoros, take a <strong>15–30 minute</strong> long break</li>
+    </ul>
+    <h3>Why it works</h3>
+    <ul>
+      <li><strong>Beats procrastination</strong> — 25 minutes lowers the mental barrier to starting</li>
+      <li><strong>Reduces fatigue</strong> — structured breaks prevent burnout</li>
+      <li><strong>Improves focus</strong> — the running timer crowds out distractions</li>
+      <li><strong>Builds self-awareness</strong> — tracking reveals how long tasks actually take</li>
+      <li><strong>Creates momentum</strong> — each completed Pomodoro is a small win</li>
+    </ul>
+    <h3>Session lengths</h3>
+    <ul>
+      <li><strong>15 min</strong> — quick sprints, email triage</li>
+      <li><strong>25 min</strong> — classic Pomodoro, best for most work</li>
+      <li><strong>45 min</strong> — deep work blocks</li>
+      <li><strong>Custom</strong> — any value in seconds, minutes, or hours</li>
+    </ul>
+  </div>
+</div></div>
+
+<!-- Welcome -->
+<div id="sw" class="card sc on">
+  <div class="wi"><div class="ico">&#128075;</div>
+    <h2 style="text-transform:none;font-size:1.2rem;color:var(--tx);letter-spacing:0;margin-bottom:10px">Welcome to Focus Session Tracker</h2>
+    <p>Choose a username to get started. Your sessions will be saved locally under your name.</p>
+  </div>
+  <div class="fg"><label for="wni">Your Name</label>
+    <input type="text" id="wni" placeholder="e.g. Alex" maxlength="40" autocomplete="off"/>
+    <div class="fe" id="wne"></div>
+  </div>
+  <button class="bp" id="bwc">Continue</button>
+  <div id="euh" style="margin-top:18px;display:none">
+    <p style="font-size:.82rem;color:var(--mu);margin-bottom:10px;text-align:center">Or sign in as an existing user:</p>
+    <div id="eul" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center"></div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div id="sco" class="card sc">
+  <h2>New Session</h2>
+  <div class="fg"><label for="ti">Task / Goal</label>
+    <input type="text" id="ti" placeholder="What are you focusing on?" maxlength="120" autocomplete="off"/>
+  </div>
+  <div class="fg"><label for="ds">Session Duration</label>
+    <select id="ds">
+      <option value="15">15 minutes — Quick sprint</option>
+      <option value="25" selected>25 minutes — Pomodoro classic</option>
+      <option value="45">45 minutes — Deep work block</option>
+      <option value="custom">Custom…</option>
+    </select>
+  </div>
+  <div class="fg" id="cdg" style="display:none"><label>Custom Duration</label>
+    <div class="inrow">
+      <input type="number" id="ca" min="1" placeholder="e.g. 90"/>
+      <select id="cu">
+        <option value="seconds">Seconds</option>
+        <option value="minutes" selected>Minutes</option>
+        <option value="hours">Hours</option>
+      </select>
+    </div>
+  </div>
+  <!-- Alert sound picker -->
+
+  <div class="fg">
+    <label>Alert Sound</label>
+    <div class="sound-row">
+      <button type="button" class="sound-opt on" data-snd="beep">Beep</button>
+      <button type="button" class="sound-opt" data-snd="chime">Chime</button>
+      <button type="button" class="sound-opt" data-snd="bell">Bell</button>
+      <button type="button" class="sound-opt" data-snd="alarm">Alarm</button>
+      <button type="button" class="sound-opt" data-snd="ding">Ding</button>
+      <button type="button" class="sound-opt" data-snd="fanfare">Fanfare</button>
+      <button type="button" class="sound-opt" data-snd="none">None</button>
+    </div>
+  </div>
+  <button class="bp" id="bst">Start Session</button>
+</div>
+
+<!-- Timer -->
+<div id="stm" class="card sc">
+  <h2>In Session</h2>
+  <div id="ttl"></div><div id="cdwn">25:00</div>
+  <div id="pt"><div id="pb"></div></div>
+  <div id="ts">Focus. Breathe. You've got this.</div>
+  <button class="bd2" id="bee">End Early</button>
+  <button class="bstop" id="bsa">Stop Alert</button>
+</div>
+
+<!-- Results -->
+<div id="sre" class="card sc">
+  <h2>Session Complete</h2>
+  <div class="fg"><div id="rl">How productive was this session? <span style="color:var(--dn)">*</span></div>
+    <div class="sr" id="srw" role="group" aria-label="Productivity rating">
+      <span class="star" data-value="1" tabindex="0" role="button" aria-label="1 star">&#9733;</span>
+      <span class="star" data-value="2" tabindex="0" role="button" aria-label="2 stars">&#9733;</span>
+      <span class="star" data-value="3" tabindex="0" role="button" aria-label="3 stars">&#9733;</span>
+      <span class="star" data-value="4" tabindex="0" role="button" aria-label="4 stars">&#9733;</span>
+      <span class="star" data-value="5" tabindex="0" role="button" aria-label="5 stars">&#9733;</span>
+    </div>
+    <div id="rle">Please rate your session before saving.</div>
+  </div>
+  <div class="fg"><label for="ni">Notes <span style="color:var(--mu);font-weight:400">(optional)</span></label>
+    <textarea id="ni" placeholder="What did you accomplish? Any blockers?"></textarea>
+  </div>
+  <button class="bp" id="bsv">Save Session</button>
+  <div class="fg" style="margin-top:14px;margin-bottom:0">
+    <label>Extra Time</label>
+    <div class="inrow">
+      <input type="number" id="ext" min="0" step="1" placeholder="Amount"/>
+      <select id="exu">
+        <option value="minutes" selected>Minutes</option>
+        <option value="seconds">Seconds</option>
+        <option value="hours">Hours</option>
+      </select>
+      <button class="bs" id="bxt">+ Go</button>
+    </div>
+  </div>
+  <button class="bs" id="bdi" style="margin-top:10px">Discard &amp; Start Over</button>
+</div>
+
+<div id="sbs">
+  <button class="sb" data-panel="pg">Focus Over Time</button>
+  <button class="sb" data-panel="pl">Leaderboard</button>
+  <button class="sb" data-panel="ph">Session History</button>
+</div>
+
+<div class="panel" id="pg"><div class="card cw" style="margin-bottom:0">
+  <h2 style="margin-bottom:16px">Focus Over Time</h2>
+  <div class="gt">
+    <button class="gtb on" data-period="day">Day</button>
+    <button class="gtb" data-period="week">Week</button>
+    <button class="gtb" data-period="month">Month</button>
+    <button class="gtb" data-period="year">Year</button>
+  </div>
+  <div id="gw"><svg id="gs" xmlns="http://www.w3.org/2000/svg"></svg><div id="gnd" style="display:none">No data for this period</div></div>
+</div></div>
+
+<div class="panel" id="pl"><div class="card cw" style="margin-bottom:0">
+  <div class="hh"><h2>Leaderboard</h2><button class="bs bsm" id="blr" onclick="rLb()">&#8635; Refresh</button></div>
+  <div id="lbc"><div class="em">No data yet. Complete a session to appear here!</div></div>
+</div></div>
+
+<div class="panel" id="ph"><div class="card cw" style="margin-bottom:0">
+  <div class="hh"><h2>Session History</h2><button class="bs bsm" id="bch">Clear History</button></div>
+  <div id="hc"><div class="em">No sessions yet. Complete your first focus session!</div></div>
+</div></div>
+
+<div id="gtt"><strong id="gtl"></strong><span id="gtv"></span></div>
+<div id="toast" role="alert" aria-live="assertive"></div>
+
+<script>
+const UK='focusTrackerUsers_v1', SP='focusTrackerSessions_v1_';
+const $=id=>document.getElementById(id);
+let user=null,timer=null,total=0,rem=0,task='',dur=25,rating=0,nat=false,gp='day';
+
+// ── Sound system ──
+let sndMode='beep';
+let sndLoop=null, sndAlertActive=false;
+const AC=new (window.AudioContext||window.webkitAudioContext)();
+
+function playDefault(type){
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  const now=AC.currentTime;
+  if(type==='beep'){
+    o.frequency.value=880;g.gain.setValueAtTime(.4,now);g.gain.exponentialRampToValueAtTime(.001,now+.6);
+    o.start(now);o.stop(now+.6);return .7;
+  }else if(type==='chime'){
+    o.type='sine';o.frequency.setValueAtTime(523,now);o.frequency.setValueAtTime(659,now+.15);o.frequency.setValueAtTime(784,now+.3);
+    g.gain.setValueAtTime(.35,now);g.gain.exponentialRampToValueAtTime(.001,now+1.2);
+    o.start(now);o.stop(now+1.2);return 1.4;
+  }else if(type==='bell'){
+    o.type='sine';o.frequency.value=440;
+    g.gain.setValueAtTime(.5,now);g.gain.exponentialRampToValueAtTime(.001,now+2);
+    o.start(now);o.stop(now+2);
+    const o2=AC.createOscillator(),g2=AC.createGain();
+    o2.connect(g2);g2.connect(AC.destination);
+    o2.type='sine';o2.frequency.value=1320;
+    g2.gain.setValueAtTime(.15,now);g2.gain.exponentialRampToValueAtTime(.001,now+1.5);
+    o2.start(now);o2.stop(now+1.5);return 2.2;
+  }else if(type==='alarm'){
+    // pulsing two-tone urgent alarm
+    [0,.25,.5].forEach(t=>{
+      const oa=AC.createOscillator(),ga=AC.createGain();
+      oa.connect(ga);ga.connect(AC.destination);
+      oa.type='square';oa.frequency.value=880;
+      ga.gain.setValueAtTime(.3,now+t);ga.gain.exponentialRampToValueAtTime(.001,now+t+.2);
+      oa.start(now+t);oa.stop(now+t+.2);
+      const ob=AC.createOscillator(),gb=AC.createGain();
+      ob.connect(gb);gb.connect(AC.destination);
+      ob.type='square';ob.frequency.value=660;
+      gb.gain.setValueAtTime(.3,now+t+.12);gb.gain.exponentialRampToValueAtTime(.001,now+t+.24);
+      ob.start(now+t+.12);ob.stop(now+t+.24);
+    });return 1.1;
+  }else if(type==='ding'){
+    o.type='sine';o.frequency.value=1047;
+    g.gain.setValueAtTime(.45,now);g.gain.exponentialRampToValueAtTime(.001,now+.9);
+    o.start(now);o.stop(now+.9);return 1.1;
+  }else if(type==='fanfare'){
+    // ascending triumphant notes
+    [[523,.0],[659,.18],[784,.36],[1047,.54],[1047,.7]].forEach(([freq,t])=>{
+      const of=AC.createOscillator(),gf=AC.createGain();
+      of.connect(gf);gf.connect(AC.destination);
+      of.type='triangle';of.frequency.value=freq;
+      gf.gain.setValueAtTime(.35,now+t);gf.gain.exponentialRampToValueAtTime(.001,now+t+.28);
+      of.start(now+t);of.stop(now+t+.28);
+    });return 1.2;
+  }
+  return 1;
+}
+
+function stopSound(){
+  sndAlertActive=false;
+  clearInterval(sndLoop);sndLoop=null;
+  $('bsa').classList.remove('on');
+}
+
+function playSound(loop){
+  if(sndMode==='none') return;
+  const go=()=>{
+    if(!loop){playDefault(sndMode);return;}
+    sndAlertActive=true;$('bsa').classList.add('on');
+    const gap=playDefault(sndMode)*1000+400;
+    sndLoop=setInterval(()=>{if(sndAlertActive)playDefault(sndMode);else clearInterval(sndLoop)},gap);
+  };
+  AC.state==='suspended'?AC.resume().then(go):go();
+}
+
+// sound picker UI
+document.querySelectorAll('.sound-opt').forEach(b=>b.addEventListener('click',()=>{
+  stopSound();
+  document.querySelectorAll('.sound-opt').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  sndMode=b.dataset.snd;
+  if(sndMode!=='none') playSound(false);
+}));
+
+// ── Screens ──
+const sids=['sw','sco','stm','sre'];
+function show(id){sids.forEach(s=>$(s)&&$(s).classList.remove('on'));$(id)&&$(id).classList.add('on')}
+
+// section panels
+document.querySelectorAll('.sb').forEach(b=>b.addEventListener('click',()=>{
+  const id=b.dataset.panel,p=$(id),was=p.classList.contains('on');
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.sb').forEach(x=>x.classList.remove('on'));
+  if(!was){p.classList.add('on');b.classList.add('on');
+    if(id==='pg')rGraph(gp); else if(id==='pl')rLb(); else rHist();}
+}));
+
+// users
+function lUsers(){try{return JSON.parse(localStorage.getItem(UK))||[];}catch{return[]}}
+function sUsers(u){try{localStorage.setItem(UK,JSON.stringify(u));}catch{}}
+function uExists(n){return lUsers().some(u=>u.name.toLowerCase()===n.toLowerCase())}
+function regUser(n){const u=lUsers();u.push({name:n,createdAt:Date.now()});sUsers(u)}
+
+function actUser(name){
+  user=name;sessionStorage.setItem('focusTrackerActiveUser',name);
+  $('hun').textContent=name;$('hua').style.display='';
+  $('sbs').classList.add('on');show('sco');
+}
+function toWelcome(){
+  user=null;sessionStorage.removeItem('focusTrackerActiveUser');
+  $('hua').style.display='none';$('sbs').classList.remove('on');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.sb').forEach(b=>b.classList.remove('on'));
+  clearInterval(timer);timer=null;buildWelcome();show('sw');
+}
+function buildWelcome(){
+  $('wni').value='';$('wne').classList.remove('on');
+  const users=lUsers();
+  if(users.length){
+    $('euh').style.display='';
+    $('eul').innerHTML=users.map(u=>`<button class="bs bsm" data-u="${esc(u.name)}">${esc(u.name)}</button>`).join('');
+    $('eul').querySelectorAll('[data-u]').forEach(b=>b.addEventListener('click',()=>actUser(b.dataset.u)));
+  } else $('euh').style.display='none';
+}
+
+// sessions
+function lSess(u){try{return JSON.parse(localStorage.getItem(SP+(u||user)))||[];}catch{return[]}}
+function sSess(s){try{localStorage.setItem(SP+user,JSON.stringify(s));}catch{toast('Could not save.')}}
+
+// timer
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function tick(){
+  rem--;$('cdwn').textContent=fmt(rem);$('pb').style.width=(rem/total*100)+'%';
+  if(rem<=0){clearInterval(timer);timer=null;nat=true;playSound(true);toRes();}
+  else if(rem===300)$('ts').textContent='5 minutes remaining — keep the momentum!';
+  else if(rem===60)$('ts').textContent='1 minute remaining — almost there!';
+}
+function toTimer(){
+  task=$('ti').value.trim()||'Untitled Session';
+  if($('ds').value==='custom'){
+    const v=parseInt($('ca').value,10),unit=$('cu').value;
+    const lim={seconds:[10,3600],minutes:[1,240],hours:[1,4]};
+    const[mn,mx]=lim[unit];
+    if(!v||v<mn||v>mx){toast(`Enter ${unit} between ${mn} and ${mx}.`);$('ca').focus();return;}
+    total=rem=unit==='seconds'?v:unit==='hours'?v*3600:v*60;dur=Math.round(total/60);
+  } else{dur=parseInt($('ds').value,10);total=rem=dur*60;}
+  nat=false;$('ttl').textContent=task;$('ts').textContent="Focus. Breathe. You've got this.";
+  $('cdwn').textContent=fmt(rem);$('pb').style.width='100%';
+  show('stm');clearInterval(timer);timer=setInterval(tick,1000);
+}
+function toRes(){clearInterval(timer);timer=null;setStars(0);$('ni').value='';$('ext').value='';$('exu').value='minutes';show('sre');if(nat)toast('Session complete! Great work.')}
+function toCon(){clearInterval(timer);timer=null;stopSound();show('sco')}
+function addExtra(){
+  const v=parseInt($('ext').value,10),unit=$('exu').value;
+  const mx={seconds:3600,minutes:240,hours:4}[unit];
+  if(!v||v<=0||v>mx){toast(`Enter a value between 1 and ${mx} ${unit}.`);$('ext').focus();return;}
+  const secs=unit==='seconds'?v:unit==='hours'?v*3600:v*60;
+  stopSound();
+  total+=secs;rem=secs;nat=false;dur=Math.round(total/60);
+  $('ttl').textContent=task;$('ts').textContent='Bonus round — keep going!';
+  $('cdwn').textContent=fmt(rem);$('pb').style.width=(rem/total*100)+'%';
+  show('stm');clearInterval(timer);timer=setInterval(tick,1000);
+}
+function setStars(v){rating=v;document.querySelectorAll('.star').forEach(s=>s.classList.toggle('lit',+s.dataset.value<=v));if(v>0)$('rle').classList.remove('on')}
+
+// helpers
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtD(t){const d=new Date(t);return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}
+function stH(r){return[1,2,3,4,5].map(i=>`<span class="${i<=r?'son':'sof'}">&#9733;</span>`).join('')}
+function fmtM(m){if(m<60)return m+'m';const h=Math.floor(m/60),r=m%60;return r?`${h}h ${r}m`:`${h}h`}
+
+// history
+function rHist(){
+  if(!user)return;const s=lSess();
+  if(!s.length){$('hc').innerHTML='<div class="em">No sessions yet. Complete your first focus session!</div>';return;}
+  const rows=s.map(x=>`<tr><td style="white-space:nowrap;color:var(--mu);font-size:.82rem">${fmtD(x.timestamp)}</td><td class="tc" title="${esc(x.task)}">${esc(x.task)}</td><td><span class="badge">${x.duration} min</span></td><td><div class="sd">${stH(x.rating)}</div></td><td class="nc" title="${esc(x.notes||'—')}">${esc(x.notes||'—')}</td></tr>`).join('');
+  $('hc').innerHTML=`<div class="tw"><table><thead><tr><th>Date &amp; Time</th><th>Task</th><th>Duration</th><th>Rating</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// leaderboard
+function rLb(){
+  const all=lUsers();
+  const entries=all.map(u=>{const s=lSess(u.name);return{name:u.name,mins:s.reduce((a,x)=>a+(x.duration||0),0),count:s.length,last:s.length?s[0].timestamp:0}}).sort((a,b)=>b.mins-a.mins);
+  const top=entries.slice(0,10);
+  const total_users=all.length,total_mins=entries.reduce((a,e)=>a+e.mins,0);
+  if(!top.length||top.every(e=>e.mins===0)){$('lbc').innerHTML='<div class="em">No data yet. Complete a session to appear here!</div>';return;}
+  const rc=['gold','silver','bronze'];
+  const rows=top.map((e,i)=>{const me=user&&e.name.toLowerCase()===user.toLowerCase();
+    const last=e.last?`<span style="color:var(--mu);font-size:.78rem">${fmtD(e.last)}</span>`:'—';
+    return`<tr${me?' class="lrm"':''}><td><span class="lr${i<3?' '+rc[i]:''}">#${i+1}</span></td><td class="ln">${esc(e.name)}${me?'<span class="by">You</span>':''}</td><td class="lt">${fmtM(e.mins)}</td><td class="ls">${e.count} session${e.count!==1?'s':''}</td><td>${last}</td></tr>`;
+  }).join('');
+  const updated=new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+  $('lbc').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px"><span style="font-size:.82rem;color:var(--mu)">${total_users} user${total_users!==1?'s':''} · ${fmtM(total_mins)} total focus</span><span style="font-size:.75rem;color:var(--sf)">Updated ${updated}</span></div><div class="tw"><table><thead><tr><th>Rank</th><th>User</th><th>Total Focus</th><th>Sessions</th><th>Last Session</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// graph
+function bkts(period,sessions){
+  const now=new Date();
+  if(period==='day'){
+    const b=Array.from({length:24},(_,h)=>({label:h===0?'12am':h<12?`${h}am`:h===12?'12pm':`${h-12}pm`,value:0}));
+    const td=now.toDateString();sessions.forEach(s=>{const d=new Date(s.timestamp);if(d.toDateString()===td)b[d.getHours()].value+=s.duration||0;});return b;
+  }
+  if(period==='week'){
+    const dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const b=Array.from({length:7},(_,i)=>{const d=new Date(now);d.setDate(d.getDate()-(6-i));return{label:dn[d.getDay()],ds:d.toDateString(),value:0}});
+    sessions.forEach(s=>{const ds=new Date(s.timestamp).toDateString();const bk=b.find(x=>x.ds===ds);if(bk)bk.value+=s.duration||0;});return b;
+  }
+  if(period==='month'){
+    const y=now.getFullYear(),m=now.getMonth(),days=new Date(y,m+1,0).getDate();
+    const b=Array.from({length:days},(_,i)=>({label:String(i+1),value:0}));
+    sessions.forEach(s=>{const d=new Date(s.timestamp);if(d.getFullYear()===y&&d.getMonth()===m)b[d.getDate()-1].value+=s.duration||0;});return b;
+  }
+  const y=now.getFullYear();
+  const b=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(l=>({label:l,value:0}));
+  sessions.forEach(s=>{const d=new Date(s.timestamp);if(d.getFullYear()===y)b[d.getMonth()].value+=s.duration||0;});return b;
+}
+function rGraph(period){
+  gp=period;const svg=$('gs'),nd=$('gnd');svg.innerHTML='';
+  document.querySelectorAll('.gtb').forEach(t=>t.classList.toggle('on',t.dataset.period===period));
+  if(!user){nd.style.display='';return;}
+  const buckets=bkts(period,lSess());
+  if(!buckets.reduce((s,b)=>s+b.value,0)){nd.style.display='';svg.style.visibility='hidden';return;}
+  nd.style.display='none';svg.style.visibility='';drawChart(svg,buckets);
+}
+function drawChart(svgEl,buckets){
+  const PL=42,PR=12,PT=16,PB=32,TK=5,ns='http://www.w3.org/2000/svg';
+  const W=$('gw').clientWidth||600,H=$('gw').clientHeight||220;
+  svgEl.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const cW=W-PL-PR,cH=H-PT-PB,maxV=Math.max(...buckets.map(b=>b.value),1);
+  const step=cW/Math.max(buckets.length-1,1);
+  const pts=buckets.map((b,i)=>({x:PL+(buckets.length===1?cW/2:i*step),y:PT+cH-(b.value/maxV)*cH,b}));
+  const mk=(tag,a)=>{const e=document.createElementNS(ns,tag);Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v));return e};
+  for(let t=0;t<=TK;t++){
+    const gy=PT+cH-(t/TK)*cH;
+    svgEl.appendChild(mk('line',{x1:PL,x2:PL+cW,y1:gy,y2:gy,stroke:'#2d3450','stroke-width':'1'}));
+    const l=mk('text',{x:PL-6,y:gy+4,'text-anchor':'end','font-size':'10',fill:'#9ca3af','font-family':'system-ui,sans-serif'});
+    l.textContent=Math.round((t/TK)*maxV)+'m';svgEl.appendChild(l);
+  }
+  const ev=Math.max(1,Math.ceil(buckets.length/Math.floor(cW/36)));
+  pts.forEach((p,i)=>{if(i%ev!==0&&i!==buckets.length-1)return;
+    const l=mk('text',{x:p.x,y:H-6,'text-anchor':'middle','font-size':'10',fill:'#9ca3af','font-family':'system-ui,sans-serif'});
+    l.textContent=p.b.label;svgEl.appendChild(l);
+  });
+  if(pts.length>=2){
+    const by=PT+cH;
+    svgEl.appendChild(mk('polygon',{points:[`${pts[0].x},${by}`,...pts.map(p=>`${p.x},${p.y}`),`${pts[pts.length-1].x},${by}`].join(' '),fill:'#2dd4bf','fill-opacity':'.2'}));
+    svgEl.appendChild(mk('polyline',{points:pts.map(p=>`${p.x},${p.y}`).join(' '),fill:'none',stroke:'#2dd4bf','stroke-width':'2','stroke-linejoin':'round','stroke-linecap':'round'}));
+  }
+  const tt=$('gtt'),tl=$('gtl'),tv=$('gtv');
+  pts.forEach(p=>{
+    svgEl.appendChild(mk('circle',{cx:p.x,cy:p.y,r:'4',fill:'#2dd4bf',stroke:'#0f1117','stroke-width':'2'}));
+    const h=mk('circle',{cx:p.x,cy:p.y,r:'14',fill:'transparent'});
+    h.style.cursor='default';
+    h.addEventListener('mouseenter',e=>{tl.textContent=p.b.label;tv.textContent=p.b.value+' min focused';tt.style.opacity='1';posTT(e)});
+    h.addEventListener('mousemove',posTT);h.addEventListener('mouseleave',()=>tt.style.opacity='0');
+    svgEl.appendChild(h);
+  });
+}
+function posTT(e){
+  const tt=$('gtt'),w=tt.offsetWidth||120,h=tt.offsetHeight||50;
+  let x=e.clientX+14,y=e.clientY-h-8;
+  if(x+w>window.innerWidth-8)x=e.clientX-w-14;if(y<8)y=e.clientY+14;
+  tt.style.left=x+'px';tt.style.top=y+'px';
+}
+
+// toast
+let ttmr=null;
+function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('on');clearTimeout(ttmr);ttmr=setTimeout(()=>el.classList.remove('on'),3000)}
+
+// events
+$('bwc').addEventListener('click',()=>{
+  const raw=$('wni').value.trim(),err=$('wne');
+  if(!raw){err.textContent='Please enter a name.';err.classList.add('on');$('wni').focus();return;}
+  if(uExists(raw)){err.textContent='That name is taken. Choose another.';err.classList.add('on');$('wni').focus();return;}
+  err.classList.remove('on');regUser(raw);actUser(raw);
+});
+$('wni').addEventListener('keydown',e=>e.key==='Enter'&&$('bwc').click());
+$('wni').addEventListener('input',()=>$('wne').classList.remove('on'));
+$('bsu').addEventListener('click',toWelcome);
+$('bab').addEventListener('click',()=>$('mo').classList.add('on'));
+$('bmc').addEventListener('click',()=>$('mo').classList.remove('on'));
+$('mo').addEventListener('click',e=>{if(e.target===$('mo'))$('mo').classList.remove('on')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('mo').classList.remove('on')});
+$('ds').addEventListener('change',()=>{const c=$('ds').value==='custom';$('cdg').style.display=c?'block':'none';if(c)$('ca').focus()});
+$('bst').addEventListener('click',toTimer);
+$('ti').addEventListener('keydown',e=>e.key==='Enter'&&toTimer());
+$('bee').addEventListener('click',toRes);
+$('bsv').addEventListener('click',()=>{
+  if(!rating){$('rle').classList.add('on');$('srw').scrollIntoView({behavior:'smooth',block:'center'});return;}
+  const s=lSess();s.unshift({timestamp:Date.now(),task,duration:dur,rating,notes:$('ni').value.trim(),completed:nat});
+  sSess(s);stopSound();
+  if($('ph').classList.contains('on'))rHist();
+  if($('pg').classList.contains('on'))rGraph(gp);
+  if($('pl').classList.contains('on'))rLb();
+  toast('Session saved!');toCon();
+});
+$('bsa').addEventListener('click',stopSound);
+$('bxt').addEventListener('click',addExtra);
+$('bdi').addEventListener('click',toCon);
+$('bch').addEventListener('click',()=>{
+  if(!lSess().length){toast('History is already empty.');return;}
+  if(confirm('Clear all session history? This cannot be undone.')){sSess([]);rHist();rGraph(gp);rLb();toast('History cleared.')}
+});
+$('srw').addEventListener('click',e=>{const s=e.target.closest('.star');if(s)setStars(+s.dataset.value)});
+$('srw').addEventListener('keydown',e=>{const s=e.target.closest('.star');if(s&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setStars(+s.dataset.value)}});
+document.querySelectorAll('.gtb').forEach(b=>b.addEventListener('click',()=>rGraph(b.dataset.period)));
+let rtmr=null;
+window.addEventListener('resize',()=>{clearTimeout(rtmr);rtmr=setTimeout(()=>{if(user&&$('pg').classList.contains('on'))rGraph(gp)},150)});
+
+// init
+(()=>{const s=sessionStorage.getItem('focusTrackerActiveUser');if(s&&uExists(s))actUser(s);else{buildWelcome();show('sw')}})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0b0e17" />
+<title>Cipher — Codebreaker</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     ============================================================ */
+  :root {
+    --bg:            #0b0e17;
+    --bg-2:          #0f1320;
+    --panel:         #151a2b;
+    --panel-2:       #1b2236;
+    --stroke:        #262d44;
+    --stroke-soft:   #1e2438;
+    --text:          #e8ecf5;
+    --text-dim:      #9aa3bd;
+    --text-faint:    #5d6685;
+    --accent:        #6c8cff;
+    --accent-2:      #9d7bff;
+    --good:          #34d399;
+    --bad:           #f87171;
+    --warn:          #fbbf24;
+    --gold:          #ffcf5c;
+    --radius:        16px;
+    --radius-sm:     10px;
+    --shadow:        0 20px 50px -20px rgba(0,0,0,.7);
+    --shadow-soft:   0 8px 24px -12px rgba(0,0,0,.6);
+    --ease:          cubic-bezier(.22,.61,.36,1);
+    --ease-back:     cubic-bezier(.34,1.56,.64,1);
+
+    /* Peg palette */
+    --p0:#ff5d73; --p1:#ffa552; --p2:#ffe14d; --p3:#5fe08a;
+    --p4:#54c6ff; --p5:#9d7bff; --p6:#ff8ad8; --p7:#9fb0c9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(108,140,255,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(157,123,255,.10), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100%;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+
+  ::selection { background: rgba(108,140,255,.35); }
+
+  /* Confetti canvas overlay */
+  #fx {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 60;
+  }
+
+  .app {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: clamp(16px, 4vw, 36px) clamp(14px, 4vw, 28px) 64px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ============================================================
+     HEADER
+     ============================================================ */
+  header.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; margin-bottom: 22px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center; font-size: 22px;
+    box-shadow: 0 8px 22px -8px rgba(108,140,255,.7);
+    position: relative; overflow: hidden;
+  }
+  .logo::after {
+    content:""; position:absolute; inset:0;
+    background: linear-gradient(120deg, transparent 40%, rgba(255,255,255,.35) 50%, transparent 60%);
+    transform: translateX(-120%); animation: sheen 5s ease-in-out infinite;
+  }
+  @keyframes sheen { 0%,70%{transform:translateX(-120%)} 85%,100%{transform:translateX(120%)} }
+  .brand h1 { font-size: 20px; letter-spacing: .5px; font-weight: 700; }
+  .brand p  { font-size: 12px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; }
+
+  .top-actions { display:flex; gap: 8px; }
+  .icon-btn {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--stroke);
+    color: var(--text); cursor: pointer; font-size: 18px;
+    display: grid; place-items: center;
+    transition: transform .15s var(--ease-back), background .2s, border-color .2s;
+  }
+  .icon-btn:hover { background: var(--panel-2); border-color: var(--accent); transform: translateY(-2px); }
+  .icon-btn:active { transform: scale(.92); }
+  .icon-btn.on { color: var(--accent); border-color: var(--accent); }
+  .icon-btn.off { color: var(--text-faint); }
+
+  /* ============================================================
+     CARDS / PANELS
+     ============================================================ */
+  .card {
+    background: linear-gradient(180deg, var(--panel), var(--bg-2));
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: clamp(18px, 3vw, 28px);
+  }
+
+  .screen { animation: fadeUp .45s var(--ease) both; }
+  @keyframes fadeUp { from{opacity:0; transform: translateY(14px)} to{opacity:1; transform:none} }
+  .hidden { display: none !important; }
+
+  h2.section-title { font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 22px; }
+
+  /* ============================================================
+     SETTINGS / CONTROLS
+     ============================================================ */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px; margin-bottom: 22px;
+  }
+  .field {
+    background: var(--bg-2); border: 1px solid var(--stroke-soft);
+    border-radius: var(--radius-sm); padding: 14px;
+    transition: border-color .2s;
+  }
+  .field:hover { border-color: var(--stroke); }
+  .field > label {
+    display: block; font-size: 11px; letter-spacing: 1.4px;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px;
+  }
+
+  /* Segmented control */
+  .seg { display: flex; background: var(--bg); border:1px solid var(--stroke); border-radius: 9px; padding: 3px; gap: 2px; }
+  .seg button {
+    flex: 1; border: 0; background: transparent; color: var(--text-dim);
+    padding: 8px 4px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600;
+    transition: all .2s var(--ease); white-space: nowrap;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; box-shadow: 0 4px 14px -6px var(--accent);
+  }
+
+  /* Stepper */
+  .stepper { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .stepper button {
+    width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--stroke);
+    background: var(--bg); color: var(--text); font-size: 20px; cursor: pointer; line-height: 1;
+    transition: all .15s var(--ease-back);
+  }
+  .stepper button:hover { border-color: var(--accent); background: var(--panel-2); }
+  .stepper button:active { transform: scale(.88); }
+  .stepper .value { font-size: 24px; font-weight: 700; min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; }
+
+  /* Toggle switch */
+  .switch { display: flex; align-items: center; justify-content: space-between; }
+  .switch .lbl { font-size: 14px; color: var(--text); }
+  .toggle {
+    width: 52px; height: 30px; border-radius: 30px; background: var(--bg);
+    border: 1px solid var(--stroke); position: relative; cursor: pointer; flex: none;
+    transition: background .25s, border-color .25s;
+  }
+  .toggle::after {
+    content:""; position:absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+    border-radius: 50%; background: var(--text-faint); transition: all .25s var(--ease-back);
+  }
+  .toggle.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; }
+  .toggle.on::after { left: 25px; background: #fff; }
+
+  .hint-text { font-size: 12px; color: var(--text-faint); margin-top: 8px; line-height: 1.4; }
+
+  /* ============================================================
+     BUTTONS
+     ============================================================ */
+  .btn {
+    border: 0; cursor: pointer; font-weight: 700; font-size: 15px;
+    padding: 14px 22px; border-radius: 12px; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 10px 26px -10px var(--accent);
+    transition: transform .15s var(--ease-back), box-shadow .2s, filter .2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+  .btn:active { transform: translateY(0) scale(.97); }
+  .btn.full { width: 100%; }
+  .btn.ghost {
+    background: var(--panel); color: var(--text); border: 1px solid var(--stroke); box-shadow: none;
+  }
+  .btn.ghost:hover { border-color: var(--accent); background: var(--panel-2); }
+  .btn.danger { background: linear-gradient(135deg,#f87171,#e0567a); box-shadow:0 10px 26px -12px #f87171; }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn:disabled { opacity:.45; cursor:not-allowed; transform:none; filter:none; }
+
+  /* ============================================================
+     START EXTRAS — modes & stat strip
+     ============================================================ */
+  .modes { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:22px; }
+  .mode-chip {
+    flex:1; min-width: 150px; padding:14px; border-radius: var(--radius-sm);
+    background: var(--bg-2); border:1px solid var(--stroke-soft); cursor:pointer;
+    transition: all .2s var(--ease); position:relative; overflow:hidden;
+  }
+  .mode-chip:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .mode-chip.active { border-color: var(--accent); background: var(--panel-2); }
+  .mode-chip.active::before {
+    content:""; position:absolute; inset:0; background: linear-gradient(135deg, rgba(108,140,255,.12), transparent);
+  }
+  .mode-chip .mt { font-weight:700; font-size:15px; display:flex; align-items:center; gap:8px; }
+  .mode-chip .md { font-size:12px; color: var(--text-dim); margin-top:4px; }
+
+  .stat-strip { display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-bottom: 22px; }
+  .stat-mini { background: var(--bg-2); border:1px solid var(--stroke-soft); border-radius: var(--radius-sm); padding:12px; text-align:center; }
+  .stat-mini .v { font-size:22px; font-weight:800; font-variant-numeric: tabular-nums; }
+  .stat-mini .k { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); margin-top:2px; }
+  .stat-mini .v.gold { color: var(--gold); }
+
+  /* ============================================================
+     GAME SCREEN
+     ============================================================ */
+  .game-head {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin-bottom:16px; flex-wrap:wrap;
+  }
+  .pill {
+    background: var(--bg-2); border:1px solid var(--stroke); border-radius: 999px;
+    padding:8px 14px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:7px;
+    font-variant-numeric: tabular-nums;
+  }
+  .pill .ico { font-size:14px; opacity:.9; }
+  .pill.timer.warn { border-color: var(--warn); color: var(--warn); animation: pulseWarn 1s infinite; }
+  .pill.timer.crit { border-color: var(--bad); color: var(--bad); animation: pulseWarn .6s infinite; }
+  @keyframes pulseWarn { 50%{ filter: brightness(1.4) } }
+  .pill .combo-flame { color: var(--warn); }
+
+  .board {
+    background: var(--bg-2); border:1px solid var(--stroke-soft);
+    border-radius: var(--radius); padding: 12px; margin-bottom:16px;
+    max-height: 46vh; overflow-y:auto; scroll-behavior:smooth;
+  }
+  .board::-webkit-scrollbar { width:8px; }
+  .board::-webkit-scrollbar-thumb { background: var(--stroke); border-radius:8px; }
+
+  .row {
+    display:flex; align-items:center; gap:10px; padding:7px 6px;
+    border-radius: var(--radius-sm); transition: background .2s;
+  }
+  .row.current { background: rgba(108,140,255,.06); box-shadow: inset 0 0 0 1px rgba(108,140,255,.25); }
+  .row.spent { opacity:.78; }
+  .row .rownum { width:26px; text-align:center; font-size:12px; color:var(--text-faint); font-variant-numeric:tabular-nums; }
+
+  .slots { display:flex; gap:8px; flex:1; flex-wrap:wrap; }
+  .slot {
+    width:38px; height:38px; border-radius:50%;
+    background: var(--bg); border:2px dashed var(--stroke);
+    display:grid; place-items:center; font-size:18px; font-weight:700; color:#0b0e17;
+    transition: transform .18s var(--ease-back), box-shadow .2s, background .2s;
+    user-select:none;
+  }
+  .row.current .slot { cursor:pointer; }
+  .row.current .slot:hover { border-color: var(--accent); }
+  .slot.filled { border-style: solid; border-color: transparent; box-shadow: 0 4px 10px -4px rgba(0,0,0,.6); }
+  .slot.active { box-shadow: 0 0 0 3px rgba(108,140,255,.55); transform: scale(1.06); }
+  .slot.pop { animation: pop .28s var(--ease-back); }
+  @keyframes pop { 0%{transform:scale(.4)} 60%{transform:scale(1.18)} 100%{transform:scale(1)} }
+
+  /* Feedback peg cluster */
+  .feedback { display:grid; grid-template-columns: repeat(2, 1fr); gap:3px; width:34px; flex:none; }
+  .fb {
+    width:13px; height:13px; border-radius:50%; background: var(--stroke);
+    transition: transform .3s var(--ease-back), background .3s;
+    transform: scale(0);
+  }
+  .fb.show { transform: scale(1); }
+  .fb.exact { background: var(--good); box-shadow:0 0 8px -1px var(--good); }
+  .fb.partial{ background: var(--warn); box-shadow:0 0 8px -1px var(--warn); }
+
+  .row.shake { animation: shake .4s; }
+  @keyframes shake { 10%,90%{transform:translateX(-2px)} 30%,70%{transform:translateX(4px)} 50%{transform:translateX(-5px)} }
+  .row.win-flash { animation: winFlash .6s; }
+  @keyframes winFlash { 50%{ background: rgba(52,211,153,.18); box-shadow: inset 0 0 0 1px var(--good); } }
+
+  /* Palette / keypad */
+  .palette-wrap { margin-bottom: 14px; }
+  .palette { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom: 12px; }
+  .peg {
+    width:48px; height:48px; border-radius:50%; cursor:pointer; border:2px solid rgba(255,255,255,.12);
+    display:grid; place-items:center; font-size:20px; font-weight:800; color:#0b0e17;
+    box-shadow: 0 6px 14px -6px rgba(0,0,0,.7), inset 0 2px 6px rgba(255,255,255,.35);
+    transition: transform .15s var(--ease-back), box-shadow .2s;
+    position:relative;
+  }
+  .peg:hover { transform: translateY(-3px) scale(1.05); }
+  .peg:active { transform: scale(.9); }
+  .peg .kbd { position:absolute; bottom:-2px; right:-2px; font-size:9px; background:var(--bg); color:var(--text-dim);
+    border:1px solid var(--stroke); border-radius:5px; padding:0 3px; }
+
+  .game-controls { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+  /* ============================================================
+     RESULTS SCREEN
+     ============================================================ */
+  .result-hero { text-align:center; margin-bottom: 20px; }
+  .result-emoji { font-size: 54px; animation: pop .5s var(--ease-back); }
+  .result-title { font-size: 28px; font-weight:800; margin-top:6px; }
+  .result-title.win { background: linear-gradient(135deg,var(--good),#5fe0c0); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .result-title.lose { color: var(--bad); }
+  .result-sub { color: var(--text-dim); font-size:14px; margin-top:4px; }
+
+  .reveal-code { display:flex; gap:8px; justify-content:center; margin: 18px 0; }
+  .reveal-code .slot { width:44px; height:44px; animation: pop .4s var(--ease-back) both; }
+
+  .metrics { display:grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom: 18px; }
+  .metric { background: var(--bg-2); border:1px solid var(--stroke-soft); border-radius: var(--radius-sm); padding:14px; text-align:center; }
+  .metric .mv { font-size:26px; font-weight:800; font-variant-numeric: tabular-nums; }
+  .metric .mk { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); margin-top:4px; }
+  .metric .mv.score { color: var(--gold); }
+
+  .badges-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:18px; min-height: 0; }
+  .badge {
+    background: linear-gradient(135deg, rgba(255,207,92,.15), rgba(255,207,92,.05));
+    border:1px solid rgba(255,207,92,.4); color: var(--gold);
+    padding:8px 14px; border-radius:999px; font-size:13px; font-weight:700;
+    display:flex; align-items:center; gap:6px; animation: pop .4s var(--ease-back) both;
+  }
+
+  /* Accuracy bar */
+  .acc-wrap { margin-bottom:18px; }
+  .acc-label { display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-bottom:6px; }
+  .acc-track { height:10px; background: var(--bg); border-radius:999px; overflow:hidden; border:1px solid var(--stroke); }
+  .acc-fill { height:100%; width:0; border-radius:999px; background: linear-gradient(90deg,var(--good),var(--accent)); transition: width 1s var(--ease); }
+
+  /* ============================================================
+     HISTORY PANEL (modal)
+     ============================================================ */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(5,7,14,.7); backdrop-filter: blur(6px);
+    z-index: 50; display:flex; align-items:flex-start; justify-content:center;
+    padding: 24px 14px; overflow-y:auto; animation: fadeIn .25s ease;
+  }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .modal {
+    width: 100%; max-width: 640px; animation: fadeUp .35s var(--ease) both;
+  }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-head h2 { font-size:20px; }
+
+  .life-stats { display:grid; grid-template-columns: repeat(auto-fit,minmax(90px,1fr)); gap:10px; margin-bottom:18px; }
+
+  .hist-list { display:flex; flex-direction:column; gap:8px; max-height: 40vh; overflow-y:auto; padding-right:4px; }
+  .hist-list::-webkit-scrollbar { width:8px; }
+  .hist-list::-webkit-scrollbar-thumb { background: var(--stroke); border-radius:8px; }
+  .hist-item {
+    display:flex; align-items:center; gap:12px; padding:10px 12px;
+    background: var(--bg-2); border:1px solid var(--stroke-soft); border-radius: var(--radius-sm);
+    animation: fadeUp .3s var(--ease) both;
+  }
+  .hist-dot { width:10px; height:10px; border-radius:50%; flex:none; }
+  .hist-dot.win { background: var(--good); box-shadow:0 0 8px var(--good); }
+  .hist-dot.lose { background: var(--bad); }
+  .hist-main { flex:1; min-width:0; }
+  .hist-main .hl1 { font-size:14px; font-weight:600; }
+  .hist-main .hl2 { font-size:11px; color:var(--text-faint); }
+  .hist-score { font-weight:800; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .empty { text-align:center; color: var(--text-faint); padding: 30px; font-size:14px; }
+
+  /* Achievements list */
+  .ach-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top: 8px; }
+  .ach {
+    background: var(--bg-2); border:1px solid var(--stroke-soft); border-radius: var(--radius-sm);
+    padding:12px; display:flex; gap:10px; align-items:center; opacity:.4; filter: grayscale(.8);
+    transition: all .3s;
+  }
+  .ach.unlocked { opacity:1; filter:none; border-color: rgba(255,207,92,.4); }
+  .ach .ai { font-size:22px; }
+  .ach .an { font-size:13px; font-weight:700; }
+  .ach .ad { font-size:11px; color: var(--text-dim); }
+
+  /* Tabs in modal */
+  .tabs { display:flex; gap:6px; background:var(--bg); border:1px solid var(--stroke); border-radius:10px; padding:4px; margin-bottom:16px; }
+  .tabs button { flex:1; border:0; background:transparent; color:var(--text-dim); padding:9px; border-radius:7px; cursor:pointer; font-weight:600; font-size:13px; transition:all .2s; }
+  .tabs button.active { background: var(--panel-2); color: var(--text); }
+
+  /* Toast */
+  .toast-wrap { position: fixed; bottom: 20px; left:50%; transform: translateX(-50%); z-index:70; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; }
+  .toast {
+    background: var(--panel-2); border:1px solid var(--stroke); color:var(--text);
+    padding:12px 18px; border-radius:12px; font-size:14px; font-weight:600; box-shadow: var(--shadow-soft);
+    animation: toastIn .3s var(--ease-back), toastOut .3s ease 2.4s forwards;
+    display:flex; align-items:center; gap:8px;
+  }
+  .toast.gold { border-color: rgba(255,207,92,.5); color: var(--gold); }
+  @keyframes toastIn { from{opacity:0; transform: translateY(20px) scale(.9)} to{opacity:1; transform:none} }
+  @keyframes toastOut { to{opacity:0; transform: translateY(-10px)} }
+
+  footer.foot { text-align:center; color: var(--text-faint); font-size:12px; margin-top: 24px; }
+  footer.foot kbd { background:var(--bg-2); border:1px solid var(--stroke); border-radius:5px; padding:1px 6px; font-size:11px; }
+
+  @media (max-width: 520px) {
+    .stat-strip { grid-template-columns: repeat(2,1fr); }
+    .peg { width:44px; height:44px; }
+    .slot { width:34px; height:34px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+
+<div class="app">
+  <!-- ====================== HEADER ====================== -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🧩</div>
+      <div>
+        <h1>CIPHER</h1>
+        <p>Codebreaker</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn on" id="soundBtn" title="Toggle sound (M)">🔊</button>
+      <button class="icon-btn" id="histBtn" title="History & stats (H)">📊</button>
+    </div>
+  </header>
+
+  <!-- ====================== START SCREEN ====================== -->
+  <section class="card screen" id="startScreen">
+    <h2 class="section-title">Break the secret code.</h2>
+    <p class="subtitle">Deduce the hidden sequence using logic and feedback. Fewer guesses, higher score.</p>
+
+    <!-- Lifetime quick stats -->
+    <div class="stat-strip" id="quickStats"></div>
+
+    <!-- Game modes -->
+    <div class="modes" id="modes">
+      <div class="mode-chip active" data-mode="classic">
+        <div class="mt">🎯 Classic</div>
+        <div class="md">Fully customizable. Play your way.</div>
+      </div>
+      <div class="mode-chip" data-mode="daily">
+        <div class="mt">📅 Daily Challenge</div>
+        <div class="md">One fixed puzzle for everyone today.</div>
+      </div>
+      <div class="mode-chip" data-mode="hardcore">
+        <div class="mt">💀 Hardcore</div>
+        <div class="md">Long code, few tries, no hints, timed.</div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="settings-grid" id="settingsGrid">
+      <div class="field">
+        <label>Difficulty</label>
+        <div class="seg" data-setting="difficulty">
+          <button data-val="easy">Easy</button>
+          <button data-val="normal" class="active">Normal</button>
+          <button data-val="hard">Hard</button>
+          <button data-val="expert">Expert</button>
+        </div>
+        <div class="hint-text" id="diffHint"></div>
+      </div>
+
+      <div class="field">
+        <label>Code Length</label>
+        <div class="stepper" data-setting="length">
+          <button data-step="-1">−</button>
+          <span class="value" id="lengthVal">4</span>
+          <button data-step="1">+</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Attempts</label>
+        <div class="stepper" data-setting="attempts">
+          <button data-step="-1">−</button>
+          <span class="value" id="attemptsVal">10</span>
+          <button data-step="1">+</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Color Count</label>
+        <div class="stepper" data-setting="colors">
+          <button data-step="-1">−</button>
+          <span class="value" id="colorsVal">6</span>
+          <button data-step="1">+</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Timer</label>
+        <div class="switch">
+          <span class="lbl">Countdown clock</span>
+          <div class="toggle" id="timerToggle"></div>
+        </div>
+        <div class="hint-text">Beat the clock for a speed bonus.</div>
+      </div>
+
+      <div class="field">
+        <label>Duplicates</label>
+        <div class="switch">
+          <span class="lbl">Allow repeated colors</span>
+          <div class="toggle on" id="dupToggle"></div>
+        </div>
+        <div class="hint-text">Off = every peg in the code is unique.</div>
+      </div>
+    </div>
+
+    <button class="btn full" id="startBtn">▶ &nbsp;Start Game</button>
+    <footer class="foot">Tip: press number keys <kbd>1</kbd>–<kbd>8</kbd> to place pegs, <kbd>Enter</kbd> to guess.</footer>
+  </section>
+
+  <!-- ====================== GAME SCREEN ====================== -->
+  <section class="card screen hidden" id="gameScreen">
+    <div class="game-head">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="pill" id="attemptsPill"><span class="ico">🎲</span><span id="attemptsLeft">10</span> left</span>
+        <span class="pill" id="comboPill"><span class="ico combo-flame">🔥</span><span id="comboVal">x1</span></span>
+        <span class="pill timer hidden" id="timerPill"><span class="ico">⏱️</span><span id="timerVal">00:00</span></span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn ghost" id="hintBtn" style="padding:8px 14px; font-size:13px;">💡 Hint</button>
+        <button class="btn ghost" id="quitBtn" style="padding:8px 14px; font-size:13px;">✕ Quit</button>
+      </div>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <div class="palette-wrap">
+      <div class="palette" id="palette"></div>
+    </div>
+
+    <div class="game-controls">
+      <button class="btn ghost" id="clearBtn">⌫ Clear</button>
+      <button class="btn" id="guessBtn">✓ Submit Guess</button>
+    </div>
+  </section>
+
+  <!-- ====================== RESULTS SCREEN ====================== -->
+  <section class="card screen hidden" id="resultScreen">
+    <div class="result-hero">
+      <div class="result-emoji" id="resultEmoji">🏆</div>
+      <div class="result-title win" id="resultTitle">Code Cracked!</div>
+      <div class="result-sub" id="resultSub"></div>
+    </div>
+
+    <div class="reveal-code" id="revealCode"></div>
+
+    <div class="acc-wrap">
+      <div class="acc-label"><span>Deduction accuracy</span><span id="accPct">0%</span></div>
+      <div class="acc-track"><div class="acc-fill" id="accFill"></div></div>
+    </div>
+
+    <div class="metrics" id="metrics"></div>
+    <div class="badges-row" id="badgesRow"></div>
+
+    <div class="btn-row">
+      <button class="btn full" id="playAgainBtn">↻ Play Again</button>
+      <button class="btn ghost" id="toMenuBtn">☰ Menu</button>
+    </div>
+  </section>
+
+  <footer class="foot">Made with vanilla JS · No libraries · Your stats stay on this device.</footer>
+</div>
+
+<!-- ====================== HISTORY MODAL ====================== -->
+<div class="overlay hidden" id="histOverlay">
+  <div class="modal card">
+    <div class="modal-head">
+      <h2>📊 Stats & History</h2>
+      <button class="icon-btn" id="closeHist">✕</button>
+    </div>
+
+    <div class="tabs" id="histTabs">
+      <button class="active" data-tab="stats">Lifetime</button>
+      <button data-tab="history">History</button>
+      <button data-tab="achievements">Achievements</button>
+    </div>
+
+    <div id="tab-stats">
+      <div class="life-stats" id="lifeStats"></div>
+    </div>
+
+    <div id="tab-history" class="hidden">
+      <div class="hist-list" id="histList"></div>
+      <div style="margin-top:14px;">
+        <button class="btn danger full" id="clearHistBtn">🗑 Clear All History</button>
+      </div>
+    </div>
+
+    <div id="tab-achievements" class="hidden">
+      <div class="ach-grid" id="achGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   CIPHER — Codebreaker / Mastermind
+   Single-file vanilla JS. Everything namespaced under the Game IIFE to
+   avoid polluting the global scope.
+   ============================================================================ */
+const Game = (() => {
+
+  /* ----------------------------------------------------------------
+     CONSTANTS & CONFIG
+     ---------------------------------------------------------------- */
+  const PEGS = [
+    { c: 'var(--p0)', s: '●', name: 'Rose'   },
+    { c: 'var(--p1)', s: '▲', name: 'Amber'  },
+    { c: 'var(--p2)', s: '★', name: 'Gold'   },
+    { c: 'var(--p3)', s: '◆', name: 'Mint'   },
+    { c: 'var(--p4)', s: '■', name: 'Sky'    },
+    { c: 'var(--p5)', s: '⬢', name: 'Violet' },
+    { c: 'var(--p6)', s: '♥', name: 'Pink'   },
+    { c: 'var(--p7)', s: '◐', name: 'Slate'  },
+  ];
+
+  const DIFFICULTY = {
+    easy:   { length: 4, attempts: 12, colors: 5, label: 'Easy'   },
+    normal: { length: 4, attempts: 10, colors: 6, label: 'Normal' },
+    hard:   { length: 5, attempts: 9,  colors: 7, label: 'Hard'   },
+    expert: { length: 6, attempts: 8,  colors: 8, label: 'Expert' },
+  };
+
+  const LIMITS = { length: [3, 7], attempts: [5, 15], colors: [4, 8] };
+  const STORE_KEY = 'cipher_save_v1';
+
+  const ACHIEVEMENTS = [
+    { id:'first_win',   icon:'🎉', name:'First Blood',   desc:'Win your first game.' },
+    { id:'flawless',    icon:'💎', name:'Flawless',      desc:'Win in 3 guesses or fewer.' },
+    { id:'streak3',     icon:'🔥', name:'On Fire',       desc:'Win 3 games in a row.' },
+    { id:'streak5',     icon:'⚡', name:'Unstoppable',   desc:'Win 5 games in a row.' },
+    { id:'speed',       icon:'⚡', name:'Speed Demon',   desc:'Win a timed game with 50%+ time left.' },
+    { id:'expert_win',  icon:'🧠', name:'Mastermind',    desc:'Win on Expert difficulty.' },
+    { id:'hardcore',    icon:'💀', name:'Hardcore Hero', desc:'Win a Hardcore game.' },
+    { id:'nohint',      icon:'🎯', name:'Purist',        desc:'Win 10 games without hints.' },
+    { id:'daily',       icon:'📅', name:'Daily Devotee', desc:'Complete a daily challenge.' },
+    { id:'ten_wins',    icon:'🏅', name:'Veteran',       desc:'Win 10 games total.' },
+    { id:'score5k',     icon:'👑', name:'High Roller',   desc:'Score 5000+ in a single game.' },
+    { id:'perfectionist',icon:'🌟',name:'Perfectionist', desc:'Win with 100% accuracy.' },
+  ];
+
+  /* ----------------------------------------------------------------
+     PERSISTENCE
+     ---------------------------------------------------------------- */
+  const defaultSave = () => ({
+    history: [],
+    achievements: {},
+    settings: { difficulty:'normal', length:4, attempts:10, colors:6, timer:false, duplicates:true },
+    streak: 0, bestStreak: 0,
+    noHintWins: 0,
+  });
+
+  let save = defaultSave();
+
+  function loadSave() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) save = Object.assign(defaultSave(), JSON.parse(raw));
+    } catch (e) { save = defaultSave(); }
+  }
+  function persist() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(save)); } catch (e) {}
+  }
+
+  /* ----------------------------------------------------------------
+     AUDIO ENGINE (Web Audio, generated tones only)
+     ---------------------------------------------------------------- */
+  const Audio = (() => {
+    let ctx = null, enabled = true;
+    const ensure = () => { if (!ctx) try { ctx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} return ctx; };
+    function tone(freq, dur=0.1, type='sine', vol=0.15, when=0) {
+      if (!enabled) return;
+      const c = ensure(); if (!c) return;
+      if (c.state === 'suspended') c.resume();
+      const t0 = c.currentTime + when;
+      const osc = c.createOscillator(), g = c.createGain();
+      osc.type = type; osc.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(vol, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g); g.connect(c.destination);
+      osc.start(t0); osc.stop(t0 + dur + 0.02);
+    }
+    return {
+      setEnabled: v => enabled = v,
+      isEnabled: () => enabled,
+      place:  () => tone(420, 0.06, 'triangle', 0.12),
+      clear:  () => tone(260, 0.06, 'sine', 0.10),
+      invalid:() => { tone(180, 0.12, 'sawtooth', 0.10); tone(140, 0.14, 'sawtooth', 0.08, 0.05); },
+      submit: () => tone(520, 0.07, 'square', 0.08),
+      hint:   () => { tone(660, 0.08, 'sine', 0.10); tone(880, 0.10, 'sine', 0.08, 0.07); },
+      win:    () => { [523,659,784,1047].forEach((f,i)=>tone(f,0.18,'triangle',0.14,i*0.1)); },
+      lose:   () => { [392,330,262].forEach((f,i)=>tone(f,0.22,'sine',0.12,i*0.12)); },
+      combo:  () => { tone(700,0.06,'square',0.08); tone(1000,0.08,'square',0.07,0.05); },
+      badge:  () => { [784,988,1175].forEach((f,i)=>tone(f,0.14,'triangle',0.12,i*0.08)); },
+      tick:   () => tone(880, 0.04, 'sine', 0.05),
+    };
+  })();
+
+  /* ----------------------------------------------------------------
+     CONFETTI / PARTICLE FX (canvas)
+     ---------------------------------------------------------------- */
+  const FX = (() => {
+    const cv = document.getElementById('fx');
+    const cx = cv.getContext('2d');
+    let parts = [], raf = null, W = 0, H = 0;
+    function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+    addEventListener('resize', resize); resize();
+    const COLORS = ['#ff5d73','#ffa552','#ffe14d','#5fe08a','#54c6ff','#9d7bff','#ff8ad8'];
+    function burst(n = 140) {
+      for (let i=0;i<n;i++){
+        parts.push({
+          x: W/2 + (Math.random()-0.5)*120,
+          y: H*0.32,
+          vx:(Math.random()-0.5)*14,
+          vy:(Math.random()*-12)-4,
+          g:0.35+Math.random()*0.2,
+          size:5+Math.random()*7,
+          rot:Math.random()*6.28, vr:(Math.random()-0.5)*0.4,
+          col:COLORS[(Math.random()*COLORS.length)|0],
+          life:1, decay:0.008+Math.random()*0.01,
+          shape: Math.random()<0.5?'rect':'circ',
+        });
+      }
+      if (!raf) loop();
+    }
+    function loop() {
+      cx.clearRect(0,0,W,H);
+      parts.forEach(p=>{
+        p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.99;
+        p.rot += p.vr; p.life -= p.decay;
+        cx.save(); cx.globalAlpha = Math.max(0,p.life);
+        cx.translate(p.x,p.y); cx.rotate(p.rot); cx.fillStyle = p.col;
+        if (p.shape==='rect') cx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
+        else { cx.beginPath(); cx.arc(0,0,p.size/2,0,6.28); cx.fill(); }
+        cx.restore();
+      });
+      parts = parts.filter(p=>p.life>0 && p.y < H+40);
+      if (parts.length) raf = requestAnimationFrame(loop);
+      else { cx.clearRect(0,0,W,H); raf = null; }
+    }
+    return { burst };
+  })();
+
+  /* ----------------------------------------------------------------
+     STATE
+     ---------------------------------------------------------------- */
+  let state = null;          // active game state
+  let selectedMode = 'classic';
+  let timerInterval = null;
+
+  /* ----------------------------------------------------------------
+     DOM HELPERS
+     ---------------------------------------------------------------- */
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const el = (tag, cls, html) => { const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; };
+
+  function toast(msg, gold=false) {
+    const t = el('div', 'toast' + (gold?' gold':''), msg);
+    $('#toastWrap').appendChild(t);
+    setTimeout(()=>t.remove(), 2800);
+  }
+
+  function showScreen(id) {
+    ['startScreen','gameScreen','resultScreen'].forEach(s=>{
+      const node = $('#'+s);
+      if (s===id) { node.classList.remove('hidden'); node.classList.remove('screen'); void node.offsetWidth; node.classList.add('screen'); }
+      else node.classList.add('hidden');
+    });
+  }
+
+  /* ----------------------------------------------------------------
+     SECRET CODE GENERATION
+     ---------------------------------------------------------------- */
+  // Seeded RNG (mulberry32) for reproducible daily challenges
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  function dailySeed(){ const d=new Date(); return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate(); }
+
+  function makeCode(length, colors, duplicates, rng) {
+    rng = rng || Math.random;
+    const code = [];
+    if (duplicates) {
+      for (let i=0;i<length;i++) code.push((rng()*colors)|0);
+    } else {
+      const pool = Array.from({length:colors}, (_,i)=>i);
+      for (let i=0;i<length;i++){
+        const idx = (rng()*pool.length)|0;
+        code.push(pool.splice(idx,1)[0]);
+      }
+    }
+    return code;
+  }
+
+  /* ----------------------------------------------------------------
+     FEEDBACK COMPUTATION (exact + partial)
+     ---------------------------------------------------------------- */
+  function evaluate(guess, code) {
+    let exact = 0, partial = 0;
+    const cLeft = {}, gLeft = {};
+    for (let i=0;i<code.length;i++){
+      if (guess[i] === code[i]) exact++;
+      else { cLeft[code[i]]=(cLeft[code[i]]||0)+1; gLeft[guess[i]]=(gLeft[guess[i]]||0)+1; }
+    }
+    for (const k in gLeft) if (cLeft[k]) partial += Math.min(gLeft[k], cLeft[k]);
+    return { exact, partial };
+  }
+
+  /* ----------------------------------------------------------------
+     SETTINGS UI (start screen)
+     ---------------------------------------------------------------- */
+  const cfg = () => save.settings;
+
+  function applyDifficultyPreset(diff) {
+    const d = DIFFICULTY[diff];
+    cfg().difficulty = diff;
+    cfg().length = d.length;
+    cfg().attempts = d.attempts;
+    cfg().colors = d.colors;
+  }
+
+  function renderSettings() {
+    const c = cfg();
+    // difficulty segmented
+    $$('[data-setting="difficulty"] button').forEach(b=>b.classList.toggle('active', b.dataset.val===c.difficulty));
+    $('#diffHint').textContent = {
+      easy:'Shorter code, more tries, fewer colors.',
+      normal:'The balanced standard challenge.',
+      hard:'Longer code, tighter on attempts.',
+      expert:'Maximum colors. For seasoned breakers.',
+    }[c.difficulty] || '';
+    // steppers
+    $('#lengthVal').textContent = c.length;
+    $('#attemptsVal').textContent = c.attempts;
+    $('#colorsVal').textContent = c.colors;
+    // toggles
+    $('#timerToggle').classList.toggle('on', c.timer);
+    $('#dupToggle').classList.toggle('on', c.duplicates);
+    // duplicates must be on if colors < length
+    persist();
+  }
+
+  function clamp(v, [lo,hi]) { return Math.max(lo, Math.min(hi, v)); }
+
+  function setupSettingsEvents() {
+    // difficulty
+    $$('[data-setting="difficulty"] button').forEach(b=>{
+      b.addEventListener('click', ()=>{ applyDifficultyPreset(b.dataset.val); Audio.place(); renderSettings(); });
+    });
+    // steppers
+    $$('.stepper').forEach(st=>{
+      const key = st.dataset.setting;
+      st.querySelectorAll('button').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const c = cfg();
+          c[key] = clamp(c[key] + (+btn.dataset.step), LIMITS[key]);
+          // keep consistency: colors >= length when no duplicates
+          if (!c.duplicates && c.colors < c.length) {
+            if (key==='length') c.colors = Math.max(c.colors, c.length);
+            else c.length = Math.min(c.length, c.colors);
+          }
+          c.difficulty = 'custom';
+          Audio.place();
+          renderSettings();
+        });
+      });
+    });
+    // toggles
+    $('#timerToggle').addEventListener('click', ()=>{ cfg().timer = !cfg().timer; Audio.place(); renderSettings(); });
+    $('#dupToggle').addEventListener('click', ()=>{
+      cfg().duplicates = !cfg().duplicates;
+      if (!cfg().duplicates && cfg().colors < cfg().length) cfg().colors = cfg().length;
+      Audio.place(); renderSettings();
+    });
+    // modes
+    $$('#modes .mode-chip').forEach(chip=>{
+      chip.addEventListener('click', ()=>{
+        selectedMode = chip.dataset.mode;
+        $$('#modes .mode-chip').forEach(c=>c.classList.toggle('active', c===chip));
+        Audio.place();
+        const grid = $('#settingsGrid');
+        if (selectedMode==='hardcore') {
+          applyDifficultyPreset('expert');
+          cfg().timer = true; cfg().attempts = 7;
+          grid.style.opacity = '.5'; grid.style.pointerEvents='none';
+          toast('💀 Hardcore: 6 pegs · 7 tries · timed · no hints');
+        } else if (selectedMode==='daily') {
+          grid.style.opacity = '.5'; grid.style.pointerEvents='none';
+          toast('📅 Daily puzzle locked for everyone today');
+        } else {
+          grid.style.opacity = '1'; grid.style.pointerEvents='auto';
+        }
+        renderSettings();
+      });
+    });
+  }
+
+  /* ----------------------------------------------------------------
+     QUICK STATS (start screen)
+     ---------------------------------------------------------------- */
+  function renderQuickStats() {
+    const h = save.history;
+    const wins = h.filter(g=>g.win).length;
+    const winRate = h.length ? Math.round(wins/h.length*100) : 0;
+    const bestScore = h.reduce((m,g)=>Math.max(m,g.score||0),0);
+    const stats = [
+      { v: save.streak, k:'Streak', gold: save.streak>0 },
+      { v: save.bestStreak, k:'Best Streak' },
+      { v: winRate+'%', k:'Win Rate' },
+      { v: bestScore, k:'Best Score', gold: bestScore>0 },
+    ];
+    $('#quickStats').innerHTML = stats.map(s=>
+      `<div class="stat-mini"><div class="v ${s.gold?'gold':''}">${s.v}</div><div class="k">${s.k}</div></div>`
+    ).join('');
+  }
+
+  /* ----------------------------------------------------------------
+     GAME START
+     ---------------------------------------------------------------- */
+  function startGame() {
+    const c = cfg();
+    let length, attempts, colors, duplicates, timer, rng = Math.random, isDaily=false, isHardcore=false, hintsAllowed=true;
+
+    if (selectedMode === 'daily') {
+      const seed = dailySeed();
+      rng = mulberry32(seed);
+      length = 4; colors = 6; attempts = 10; duplicates = true; timer = false; isDaily = true;
+    } else if (selectedMode === 'hardcore') {
+      length = 6; colors = 8; attempts = 7; duplicates = true; timer = true; isHardcore = true; hintsAllowed = false;
+    } else {
+      length = c.length; attempts = c.attempts; colors = c.colors; duplicates = c.duplicates; timer = c.timer;
+    }
+    if (!duplicates && colors < length) colors = length;
+
+    const code = makeCode(length, colors, duplicates, rng);
+
+    state = {
+      code, length, colors, duplicates, timer, isDaily, isHardcore, hintsAllowed,
+      attempts, rows: [],
+      current: new Array(length).fill(null),
+      activeSlot: 0,
+      guessNum: 0,
+      finished: false, won: false,
+      hintsUsed: 0, revealedHints: new Array(length).fill(false),
+      startTime: Date.now(),
+      elapsed: 0,
+      timeLimit: timer ? (length * colors * 5) : 0, // seconds
+      difficultyLabel: isDaily ? 'Daily' : isHardcore ? 'Hardcore' : (DIFFICULTY[c.difficulty]?.label || 'Custom'),
+    };
+
+    buildBoard();
+    buildPalette();
+    updateHUD();
+    showScreen('gameScreen');
+    $('#hintBtn').style.display = hintsAllowed ? '' : 'none';
+
+    if (timer) startTimer();
+    else stopTimer();
+
+    $('#timerPill').classList.toggle('hidden', !timer);
+    Audio.submit();
+  }
+
+  /* ----------------------------------------------------------------
+     BOARD RENDERING
+     ---------------------------------------------------------------- */
+  function buildBoard() {
+    const board = $('#board');
+    board.innerHTML = '';
+    for (let r=0; r<state.attempts; r++){
+      const row = el('div','row');
+      row.dataset.row = r;
+      row.appendChild(el('div','rownum', r+1));
+      const slots = el('div','slots');
+      for (let i=0;i<state.length;i++){
+        const slot = el('div','slot');
+        slot.dataset.slot = i;
+        slot.addEventListener('click', ()=>{
+          if (state.finished || +row.dataset.row !== state.guessNum) return;
+          state.activeSlot = i; renderCurrentRow();
+        });
+        slots.appendChild(slot);
+      }
+      row.appendChild(slots);
+      const fb = el('div','feedback');
+      for (let i=0;i<state.length;i++) fb.appendChild(el('div','fb'));
+      row.appendChild(fb);
+      board.appendChild(row);
+    }
+    renderCurrentRow();
+  }
+
+  function pegStyle(idx) {
+    const p = PEGS[idx];
+    return `background:${p.c};`;
+  }
+
+  function renderCurrentRow() {
+    $$('#board .row').forEach((row,r)=>{
+      row.classList.toggle('current', r===state.guessNum && !state.finished);
+      row.classList.toggle('spent', r<state.guessNum);
+    });
+    const row = $(`#board .row[data-row="${state.guessNum}"]`);
+    if (!row) return;
+    const slots = row.querySelectorAll('.slot');
+    slots.forEach((slot,i)=>{
+      const val = state.current[i];
+      slot.classList.toggle('active', i===state.activeSlot);
+      if (val==null) {
+        slot.className = 'slot' + (i===state.activeSlot?' active':'');
+        slot.textContent = '';
+        slot.style.background = '';
+      } else {
+        slot.className = 'slot filled' + (i===state.activeSlot?' active':'');
+        slot.style.cssText = pegStyle(val);
+        slot.textContent = PEGS[val].s;
+      }
+    });
+  }
+
+  /* ----------------------------------------------------------------
+     PALETTE
+     ---------------------------------------------------------------- */
+  function buildPalette() {
+    const pal = $('#palette');
+    pal.innerHTML = '';
+    for (let i=0;i<state.colors;i++){
+      const peg = el('div','peg');
+      peg.style.cssText = pegStyle(i);
+      peg.textContent = PEGS[i].s;
+      peg.title = PEGS[i].name;
+      peg.appendChild(el('span','kbd', i+1));
+      peg.addEventListener('click', ()=>placePeg(i));
+      pal.appendChild(peg);
+    }
+  }
+
+  /* ----------------------------------------------------------------
+     PLACEMENT / INPUT
+     ---------------------------------------------------------------- */
+  function placePeg(colorIdx) {
+    if (state.finished || colorIdx >= state.colors) return;
+    state.current[state.activeSlot] = colorIdx;
+    Audio.place();
+    // animate
+    const slot = $(`#board .row[data-row="${state.guessNum}"] .slot[data-slot="${state.activeSlot}"]`);
+    renderCurrentRow();
+    if (slot){ slot.classList.add('pop'); setTimeout(()=>slot.classList.remove('pop'),300); }
+    // advance to next empty slot
+    let next = state.activeSlot;
+    for (let k=1;k<=state.length;k++){
+      const idx = (state.activeSlot + k) % state.length;
+      if (state.current[idx]==null){ next = idx; break; }
+      if (k===state.length) next = Math.min(state.activeSlot+1, state.length-1);
+    }
+    state.activeSlot = next;
+    renderCurrentRow();
+  }
+
+  function clearCurrent() {
+    if (state.finished) return;
+    state.current = new Array(state.length).fill(null);
+    // keep revealed hints
+    state.revealedHints.forEach((rev,i)=>{ if (rev) state.current[i] = state.code[i]; });
+    state.activeSlot = state.current.findIndex(v=>v==null);
+    if (state.activeSlot<0) state.activeSlot = 0;
+    Audio.clear();
+    renderCurrentRow();
+  }
+
+  function backspace() {
+    if (state.finished) return;
+    // delete last filled (non-hint) slot
+    let target = -1;
+    for (let i=state.length-1;i>=0;i--){
+      if (state.current[i]!=null && !state.revealedHints[i]){ target=i; break; }
+    }
+    if (target<0) return;
+    state.current[target] = null;
+    state.activeSlot = target;
+    Audio.clear();
+    renderCurrentRow();
+  }
+
+  /* ----------------------------------------------------------------
+     SUBMIT GUESS
+     ---------------------------------------------------------------- */
+  function submitGuess() {
+    if (state.finished) return;
+    if (state.current.some(v=>v==null)) {
+      Audio.invalid();
+      const row = $(`#board .row[data-row="${state.guessNum}"]`);
+      row.classList.add('shake'); setTimeout(()=>row.classList.remove('shake'),400);
+      toast('Fill every slot first');
+      return;
+    }
+    const guess = state.current.slice();
+    const fb = evaluate(guess, state.code);
+    state.rows.push({ guess, fb });
+    Audio.submit();
+
+    // animate feedback pegs
+    const row = $(`#board .row[data-row="${state.guessNum}"]`);
+    const fbDots = row.querySelectorAll('.fb');
+    let di = 0;
+    for (let i=0;i<fb.exact;i++){ const d=fbDots[di++]; setTimeout(()=>{d.classList.add('exact','show');}, 80*di); }
+    for (let i=0;i<fb.partial;i++){ const d=fbDots[di++]; setTimeout(()=>{d.classList.add('partial','show');}, 80*di); }
+
+    state.guessNum++;
+
+    if (fb.exact === state.length) {
+      row.classList.add('win-flash');
+      endGame(true);
+      return;
+    }
+    if (state.guessNum >= state.attempts) {
+      endGame(false);
+      return;
+    }
+    // prep next row, preserving revealed hints
+    state.current = new Array(state.length).fill(null);
+    state.revealedHints.forEach((rev,i)=>{ if (rev) state.current[i]=state.code[i]; });
+    state.activeSlot = state.current.findIndex(v=>v==null);
+    if (state.activeSlot<0) state.activeSlot=0;
+    updateHUD();
+    renderCurrentRow();
+    // scroll into view
+    $('#board').scrollTop = $('#board').scrollHeight;
+  }
+
+  /* ----------------------------------------------------------------
+     HINT SYSTEM
+     ---------------------------------------------------------------- */
+  function useHint() {
+    if (state.finished || !state.hintsAllowed) return;
+    const hidden = [];
+    for (let i=0;i<state.length;i++) if (!state.revealedHints[i]) hidden.push(i);
+    if (!hidden.length) { toast('All positions revealed'); return; }
+    const pos = hidden[(Math.random()*hidden.length)|0];
+    state.revealedHints[pos] = true;
+    state.current[pos] = state.code[pos];
+    state.hintsUsed++;
+    Audio.hint();
+    renderCurrentRow();
+    const slot = $(`#board .row[data-row="${state.guessNum}"] .slot[data-slot="${pos}"]`);
+    if (slot){ slot.classList.add('pop'); setTimeout(()=>slot.classList.remove('pop'),300); }
+    toast(`💡 Position ${pos+1} revealed (−score penalty)`);
+    // advance active slot off the revealed one
+    const nxt = state.current.findIndex(v=>v==null);
+    if (nxt>=0){ state.activeSlot = nxt; renderCurrentRow(); }
+  }
+
+  /* ----------------------------------------------------------------
+     TIMER
+     ---------------------------------------------------------------- */
+  function startTimer() {
+    stopTimer();
+    timerInterval = setInterval(()=>{
+      state.elapsed = (Date.now()-state.startTime)/1000;
+      const remaining = Math.max(0, state.timeLimit - state.elapsed);
+      renderTimer(remaining);
+      if (remaining<=10 && remaining>0 && Math.ceil(remaining)!==state._lastTick){ state._lastTick=Math.ceil(remaining); Audio.tick(); }
+      if (remaining<=0) { endGame(false, true); }
+    }, 200);
+  }
+  function stopTimer() { if (timerInterval){ clearInterval(timerInterval); timerInterval=null; } }
+  function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=(s/60)|0, ss=s%60; return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`; }
+  function renderTimer(remaining) {
+    const pill = $('#timerPill');
+    $('#timerVal').textContent = fmtTime(remaining);
+    pill.classList.toggle('warn', remaining<=20 && remaining>10);
+    pill.classList.toggle('crit', remaining<=10);
+  }
+
+  /* ----------------------------------------------------------------
+     HUD
+     ---------------------------------------------------------------- */
+  function updateHUD() {
+    $('#attemptsLeft').textContent = state.attempts - state.guessNum;
+    const combo = save.streak;
+    $('#comboVal').textContent = 'x' + (combo+1);
+    $('#comboPill').style.display = combo>0 ? '' : 'none';
+  }
+
+  /* ----------------------------------------------------------------
+     SCORING
+     ---------------------------------------------------------------- */
+  function computeScore() {
+    if (!state.won) return 0;
+    const base = 1000;
+    const difficultyMult = state.length * state.colors / 20; // bigger = harder
+    const guessesUsed = state.guessNum;
+    const efficiency = (state.attempts - guessesUsed + 1) / state.attempts; // 0..1
+    let score = base * difficultyMult * (0.4 + 0.6*efficiency);
+    // time bonus
+    if (state.timer) {
+      const remaining = Math.max(0, state.timeLimit - state.elapsed);
+      score += remaining * 8;
+    } else {
+      // small bonus for fast play even untimed
+      score += Math.max(0, 300 - state.elapsed*2);
+    }
+    // streak multiplier
+    score *= (1 + save.streak*0.1);
+    // hint penalty
+    score *= Math.max(0.3, 1 - state.hintsUsed*0.2);
+    // hardcore bonus
+    if (state.isHardcore) score *= 1.5;
+    return Math.round(score);
+  }
+
+  function computeAccuracy() {
+    // efficiency-based accuracy: best possible info per guess
+    if (!state.rows.length) return 0;
+    // accuracy = average proportion of correctly-placed pegs across guesses, weighted toward late
+    let totalExact = 0;
+    state.rows.forEach(r=>{ totalExact += r.fb.exact; });
+    const maxPossible = state.rows.length * state.length;
+    const raw = totalExact / maxPossible;
+    // blend with guess efficiency
+    const eff = state.won ? (state.attempts - state.guessNum + 1)/state.attempts : 0;
+    return Math.round(Math.min(100, (raw*60 + eff*40)));
+  }
+
+  /* ----------------------------------------------------------------
+     END GAME
+     ---------------------------------------------------------------- */
+  function endGame(won, timeout=false) {
+    if (state.finished) return;
+    state.finished = true;
+    state.won = won;
+    stopTimer();
+    state.elapsed = (Date.now()-state.startTime)/1000;
+
+    const score = computeScore();
+    const accuracy = computeAccuracy();
+
+    // streak handling
+    if (won) { save.streak++; if (save.streak>save.bestStreak) save.bestStreak=save.streak; }
+    else save.streak = 0;
+
+    if (won && state.hintsUsed===0) save.noHintWins++;
+
+    // record history
+    const record = {
+      date: Date.now(),
+      win: won,
+      difficulty: state.difficultyLabel,
+      length: state.length, colors: state.colors,
+      attemptsUsed: state.guessNum, attemptsMax: state.attempts,
+      time: Math.round(state.elapsed),
+      timed: state.timer,
+      score, accuracy,
+      hints: state.hintsUsed,
+      mode: state.isDaily?'daily':state.isHardcore?'hardcore':'classic',
+    };
+    save.history.unshift(record);
+    if (save.history.length>200) save.history.length=200;
+
+    // achievements
+    const earned = checkAchievements(record);
+
+    persist();
+
+    // FX + sound
+    if (won) { Audio.win(); setTimeout(()=>FX.burst(160), 120); if (state.timer && (state.timeLimit-state.elapsed)/state.timeLimit>=0.5) {} }
+    else Audio.lose();
+
+    setTimeout(()=>renderResults(record, earned, timeout), won?500:700);
+  }
+
+  /* ----------------------------------------------------------------
+     ACHIEVEMENTS
+     ---------------------------------------------------------------- */
+  function unlock(id) {
+    if (save.achievements[id]) return false;
+    save.achievements[id] = Date.now();
+    return true;
+  }
+  function checkAchievements(rec) {
+    const earned = [];
+    const totalWins = save.history.filter(g=>g.win).length;
+    const tryUnlock = id => { if (unlock(id)) earned.push(ACHIEVEMENTS.find(a=>a.id===id)); };
+
+    if (rec.win) {
+      tryUnlock('first_win');
+      if (rec.attemptsUsed<=3) tryUnlock('flawless');
+      if (save.streak>=3) tryUnlock('streak3');
+      if (save.streak>=5) tryUnlock('streak5');
+      if (rec.difficulty==='Expert') tryUnlock('expert_win');
+      if (rec.mode==='hardcore') tryUnlock('hardcore');
+      if (rec.mode==='daily') tryUnlock('daily');
+      if (totalWins>=10) tryUnlock('ten_wins');
+      if (rec.score>=5000) tryUnlock('score5k');
+      if (rec.accuracy>=100) tryUnlock('perfectionist');
+      if (save.noHintWins>=10) tryUnlock('nohint');
+      if (rec.timed && state.timeLimit>0 && (state.timeLimit-rec.time)/state.timeLimit>=0.5) tryUnlock('speed');
+    }
+    return earned;
+  }
+
+  /* ----------------------------------------------------------------
+     RESULTS SCREEN
+     ---------------------------------------------------------------- */
+  function renderResults(rec, earned, timeout) {
+    const won = rec.win;
+    $('#resultEmoji').textContent = won ? (rec.score>=5000?'👑':'🏆') : (timeout?'⏱️':'💥');
+    const title = $('#resultTitle');
+    title.textContent = won ? 'Code Cracked!' : (timeout?"Time's Up!":'Out of Guesses');
+    title.className = 'result-title ' + (won?'win':'lose');
+
+    const bestScore = Math.max(...save.history.map(g=>g.score||0), 0);
+    const isBest = won && rec.score>0 && rec.score>=bestScore;
+    $('#resultSub').innerHTML = won
+      ? `Solved in <b>${rec.attemptsUsed}</b> of ${rec.attemptsMax} guesses${isBest?' · 🌟 New best score!':''}`
+      : `The code eluded you this time.`;
+
+    // reveal code
+    const rev = $('#revealCode'); rev.innerHTML='';
+    state.code.forEach((idx,i)=>{
+      const s = el('div','slot filled');
+      s.style.cssText = pegStyle(idx); s.textContent = PEGS[idx].s;
+      s.style.animationDelay = (i*0.07)+'s';
+      rev.appendChild(s);
+    });
+
+    // accuracy
+    $('#accPct').textContent = rec.accuracy+'%';
+    const fill = $('#accFill'); fill.style.width='0';
+    setTimeout(()=>fill.style.width = rec.accuracy+'%', 100);
+
+    // metrics
+    const eff = won ? Math.round((rec.attemptsMax-rec.attemptsUsed+1)/rec.attemptsMax*100) : 0;
+    const metrics = [
+      { v: rec.score, k:'Score', cls:'score' },
+      { v: rec.attemptsUsed+'/'+rec.attemptsMax, k:'Guesses' },
+      { v: fmtTime(rec.time), k:'Time' },
+      { v: eff+'%', k:'Efficiency' },
+      { v: save.streak, k:'Streak' },
+      { v: rec.hints, k:'Hints Used' },
+    ];
+    $('#metrics').innerHTML = metrics.map(m=>
+      `<div class="metric"><div class="mv ${m.cls||''}">${m.v}</div><div class="mk">${m.k}</div></div>`
+    ).join('');
+
+    // badges
+    const badges = $('#badgesRow'); badges.innerHTML='';
+    earned.forEach((a,i)=>{
+      const b = el('div','badge', `${a.icon} ${a.name}`);
+      b.style.animationDelay = (i*0.1)+'s';
+      badges.appendChild(b);
+    });
+    if (earned.length){ setTimeout(()=>Audio.badge(), 600); }
+
+    showScreen('resultScreen');
+    renderQuickStats();
+
+    // toast new achievements
+    earned.forEach((a,i)=> setTimeout(()=>toast(`🏆 Unlocked: ${a.name}`, true), 800+i*400));
+  }
+
+  /* ----------------------------------------------------------------
+     HISTORY MODAL
+     ---------------------------------------------------------------- */
+  function openHist() {
+    renderLifeStats();
+    renderHistList();
+    renderAchievements();
+    $('#histOverlay').classList.remove('hidden');
+  }
+  function closeHist(){ $('#histOverlay').classList.add('hidden'); }
+
+  function renderLifeStats() {
+    const h = save.history;
+    const wins = h.filter(g=>g.win).length;
+    const losses = h.length - wins;
+    const winRate = h.length?Math.round(wins/h.length*100):0;
+    const bestScore = h.reduce((m,g)=>Math.max(m,g.score||0),0);
+    const totalScore = h.reduce((s,g)=>s+(g.score||0),0);
+    const avgGuesses = wins ? (h.filter(g=>g.win).reduce((s,g)=>s+g.attemptsUsed,0)/wins).toFixed(1) : '–';
+    const bestTime = (()=>{ const t=h.filter(g=>g.win&&g.time).map(g=>g.time); return t.length?fmtTime(Math.min(...t)):'–'; })();
+    const stats = [
+      { v:h.length, k:'Games' },
+      { v:wins, k:'Wins' },
+      { v:losses, k:'Losses' },
+      { v:winRate+'%', k:'Win Rate' },
+      { v:save.streak, k:'Streak', gold:true },
+      { v:save.bestStreak, k:'Best Streak', gold:true },
+      { v:bestScore, k:'Best Score', gold:true },
+      { v:totalScore, k:'Total Score' },
+      { v:avgGuesses, k:'Avg Guesses' },
+      { v:bestTime, k:'Best Time' },
+    ];
+    $('#lifeStats').innerHTML = stats.map(s=>
+      `<div class="stat-mini"><div class="v ${s.gold?'gold':''}">${s.v}</div><div class="k">${s.k}</div></div>`
+    ).join('');
+  }
+
+  function relTime(ts) {
+    const diff = (Date.now()-ts)/1000;
+    if (diff<60) return 'just now';
+    if (diff<3600) return Math.floor(diff/60)+'m ago';
+    if (diff<86400) return Math.floor(diff/3600)+'h ago';
+    const d = new Date(ts);
+    return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  }
+
+  function renderHistList() {
+    const list = $('#histList');
+    if (!save.history.length) { list.innerHTML = '<div class="empty">No games played yet. Crack your first code!</div>'; return; }
+    list.innerHTML = save.history.slice(0,50).map((g,i)=>`
+      <div class="hist-item" style="animation-delay:${Math.min(i*0.03,0.5)}s">
+        <span class="hist-dot ${g.win?'win':'lose'}"></span>
+        <div class="hist-main">
+          <div class="hl1">${g.win?'Win':'Loss'} · ${g.difficulty} ${g.timed?'⏱':''} ${g.mode==='daily'?'📅':g.mode==='hardcore'?'💀':''}</div>
+          <div class="hl2">${g.attemptsUsed}/${g.attemptsMax} guesses · ${fmtTime(g.time||0)} · ${g.accuracy}% acc · ${relTime(g.date)}</div>
+        </div>
+        <div class="hist-score">${g.score||0}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderAchievements() {
+    $('#achGrid').innerHTML = ACHIEVEMENTS.map(a=>{
+      const unlocked = !!save.achievements[a.id];
+      return `<div class="ach ${unlocked?'unlocked':''}">
+        <div class="ai">${a.icon}</div>
+        <div><div class="an">${a.name}</div><div class="ad">${a.desc}</div></div>
+      </div>`;
+    }).join('');
+  }
+
+  function clearHistory() {
+    if (!confirm('Delete all history, stats, streaks and achievements? This cannot be undone.')) return;
+    save = defaultSave();
+    persist();
+    renderLifeStats(); renderHistList(); renderAchievements(); renderQuickStats();
+    toast('History cleared');
+  }
+
+  /* ----------------------------------------------------------------
+     KEYBOARD SUPPORT
+     ---------------------------------------------------------------- */
+  function onKey(e) {
+    // global
+    if (e.key==='m'||e.key==='M') { toggleSound(); return; }
+    if (e.key==='h'||e.key==='H') {
+      if ($('#histOverlay').classList.contains('hidden')) openHist(); else closeHist();
+      return;
+    }
+    if (e.key==='Escape') { if (!$('#histOverlay').classList.contains('hidden')) closeHist(); return; }
+
+    const inGame = !$('#gameScreen').classList.contains('hidden') && state && !state.finished;
+    if (!inGame) {
+      if (e.key==='Enter' && !$('#startScreen').classList.contains('hidden')) startGame();
+      return;
+    }
+    if (e.key>='1' && e.key<='8') { placePeg(+e.key-1); }
+    else if (e.key==='Enter') submitGuess();
+    else if (e.key==='Backspace'){ e.preventDefault(); backspace(); }
+    else if (e.key==='Delete') clearCurrent();
+    else if (e.key==='ArrowLeft'){ state.activeSlot=(state.activeSlot-1+state.length)%state.length; renderCurrentRow(); }
+    else if (e.key==='ArrowRight'){ state.activeSlot=(state.activeSlot+1)%state.length; renderCurrentRow(); }
+    else if (e.key==='?'){ useHint(); }
+  }
+
+  /* ----------------------------------------------------------------
+     SOUND TOGGLE
+     ---------------------------------------------------------------- */
+  function toggleSound() {
+    const on = !Audio.isEnabled();
+    Audio.setEnabled(on);
+    const btn = $('#soundBtn');
+    btn.textContent = on?'🔊':'🔇';
+    btn.classList.toggle('on', on);
+    btn.classList.toggle('off', !on);
+    if (on) Audio.place();
+  }
+
+  /* ----------------------------------------------------------------
+     QUIT / ABANDON
+     ---------------------------------------------------------------- */
+  function quitGame() {
+    if (!state || state.finished) { showScreen('startScreen'); return; }
+    if (!confirm('Quit this game? It will count as a loss and break your streak.')) return;
+    endGame(false);
+  }
+
+  /* ----------------------------------------------------------------
+     WIRE UP EVENTS
+     ---------------------------------------------------------------- */
+  function bind() {
+    $('#startBtn').addEventListener('click', startGame);
+    $('#guessBtn').addEventListener('click', submitGuess);
+    $('#clearBtn').addEventListener('click', clearCurrent);
+    $('#hintBtn').addEventListener('click', useHint);
+    $('#quitBtn').addEventListener('click', quitGame);
+    $('#playAgainBtn').addEventListener('click', startGame);
+    $('#toMenuBtn').addEventListener('click', ()=>{ renderQuickStats(); showScreen('startScreen'); });
+    $('#soundBtn').addEventListener('click', toggleSound);
+    $('#histBtn').addEventListener('click', openHist);
+    $('#closeHist').addEventListener('click', closeHist);
+    $('#clearHistBtn').addEventListener('click', clearHistory);
+    $('#histOverlay').addEventListener('click', e=>{ if (e.target===$('#histOverlay')) closeHist(); });
+
+    // tabs
+    $$('#histTabs button').forEach(b=>b.addEventListener('click', ()=>{
+      $$('#histTabs button').forEach(x=>x.classList.toggle('active', x===b));
+      ['stats','history','achievements'].forEach(t=>$('#tab-'+t).classList.toggle('hidden', t!==b.dataset.tab));
+      Audio.place();
+    }));
+
+    setupSettingsEvents();
+    document.addEventListener('keydown', onKey);
+  }
+
+  /* ----------------------------------------------------------------
+     INIT
+     ---------------------------------------------------------------- */
+  function init() {
+    loadSave();
+    bind();
+    renderSettings();
+    renderQuickStats();
+    showScreen('startScreen');
+  }
+
+  return { init };
+})();
+
+document.addEventListener('DOMContentLoaded', Game.init);
+</script>
+</body>
+</html>

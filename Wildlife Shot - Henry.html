@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>What's Your Wildlife Shot?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,200;0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0f;
+    --bg-soft:#11111a;
+    --amber:#c8700a;
+    --amber-bright:#e88a1f;
+    --amber-dim:#8a4d07;
+    --text:#f0ede8;
+    --text-soft:#a8a39a;
+    --muted:#3a3530;
+    --line:#1f1c19;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);min-height:100%;}
+  body{
+    font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-weight:300;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  /* ambient grain + vignette */
+  body::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(200,112,10,0.07), transparent 55%),
+      radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0.6), transparent 70%);
+  }
+  body::after{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      radial-gradient(rgba(255,255,255,0.012) 1px, transparent 1px);
+    background-size: 3px 3px;
+    mix-blend-mode:overlay;
+    opacity:.6;
+  }
+
+  /* camera silhouette watermark layer */
+  .watermarks{
+    position:fixed; inset:0; z-index:0;
+    pointer-events:none;
+    overflow:hidden;
+  }
+  .watermarks svg{
+    position:absolute;
+    color:#1a1814;        /* dark-on-dark; sits on #0a0a0f */
+    opacity:0.05;
+    fill:currentColor;
+    stroke:currentColor;
+  }
+  .wm-1{ top: 6%;  left: -3%;  width: 320px; transform: rotate(-14deg); }
+  .wm-2{ top: 18%; right: -4%; width: 380px; transform: rotate(9deg); opacity:0.045; }
+  .wm-3{ top: 48%; left: 8%;   width: 240px; transform: rotate(22deg); opacity:0.055; }
+  .wm-4{ top: 62%; right: 6%;  width: 290px; transform: rotate(-7deg); }
+  .wm-5{ bottom: 4%; left: 22%; width: 360px; transform: rotate(4deg); opacity:0.04; }
+  .wm-6{ bottom: 14%; right: -2%; width: 260px; transform: rotate(-18deg); }
+  .wm-7{ top: 32%; left: 38%; width: 200px; transform: rotate(31deg); opacity:0.035; }
+  .wm-8{ bottom: 40%; left: -5%; width: 300px; transform: rotate(12deg); opacity:0.045; }
+  @media (max-width: 720px){
+    .wm-1,.wm-2,.wm-3,.wm-4,.wm-5,.wm-6,.wm-7,.wm-8{ width: 200px; }
+  }
+
+  .serif{ font-family: "Poppins", sans-serif; font-weight:400; }
+
+  #app{ position:relative; z-index:1; min-height:100vh; }
+
+  /* progress bar */
+  .progress{
+    position:fixed; top:0; left:0; right:0; height:1.5px;
+    background:rgba(255,255,255,0.04);
+    z-index:5;
+  }
+  .progress-fill{
+    height:100%;
+    background:linear-gradient(90deg, var(--amber-dim), var(--amber-bright));
+    box-shadow:0 0 12px rgba(200,112,10,0.6);
+    width:0%;
+    transition:width 600ms cubic-bezier(.22,.61,.36,1);
+  }
+
+  /* screens */
+  .screen{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:80px 32px 64px;
+    animation: fadeIn 700ms ease both;
+  }
+  @keyframes fadeIn{
+    from{opacity:0; transform:translateY(8px);}
+    to{opacity:1; transform:none;}
+  }
+  .fade-out{ animation: fadeOut 350ms ease both; }
+  @keyframes fadeOut{
+    from{opacity:1;}
+    to{opacity:0; transform:translateY(-6px);}
+  }
+
+  /* ===== START SCREEN ===== */
+  .start{ text-align:center; max-width:880px; margin:0 auto; }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:0.4em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin-bottom:36px;
+    opacity:.85;
+  }
+  .eyebrow .dot{
+    display:inline-block; width:5px; height:5px; border-radius:50%;
+    background:var(--amber);
+    box-shadow:0 0 10px var(--amber);
+    vertical-align:middle;
+    margin:0 14px 2px;
+  }
+  h1.title{
+    font-family:"Poppins", sans-serif;
+    font-weight:300;
+    font-size: clamp(44px, 7.2vw, 96px);
+    line-height:1.05;
+    letter-spacing:-0.035em;
+    margin:0 0 28px;
+    text-wrap:balance;
+  }
+  h1.title .italic{ font-style:italic; font-weight:400; color:#fff; }
+  .subtitle{
+    font-size:clamp(14px, 1.25vw, 16px);
+    color:var(--text-soft);
+    letter-spacing:0.03em;
+    line-height:1.65;
+    margin:0 0 56px;
+    font-weight:300;
+    opacity:.72;
+    max-width:560px;
+    text-wrap:balance;
+  }
+
+  /* amber button */
+  .btn{
+    position:relative;
+    display:inline-flex; align-items:center; gap:14px;
+    padding:18px 38px;
+    background:transparent;
+    color:var(--text);
+    border:1px solid var(--amber);
+    font-family:"Poppins", sans-serif;
+    font-weight:400;
+    font-size:13px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition: all 400ms ease;
+    overflow:hidden;
+  }
+  .btn::before{
+    content:"";
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse at center, rgba(200,112,10,0.25), transparent 70%);
+    opacity:.5;
+    transition:opacity 400ms ease;
+  }
+  .btn::after{
+    content:"";
+    position:absolute; inset:-2px;
+    box-shadow:0 0 28px rgba(200,112,10,0.55), 0 0 60px rgba(200,112,10,0.25);
+    pointer-events:none;
+    transition: box-shadow 400ms ease;
+  }
+  .btn:hover{
+    background:rgba(200,112,10,0.08);
+    border-color:var(--amber-bright);
+    color:#fff;
+  }
+  .btn:hover::before{ opacity:1; }
+  .btn:hover::after{ box-shadow:0 0 44px rgba(200,112,10,0.85), 0 0 100px rgba(200,112,10,0.4); }
+  .btn .arrow{ display:inline-block; transition:transform 400ms ease; }
+  .btn:hover .arrow{ transform:translateX(6px); }
+
+  .btn.ghost{
+    border-color:var(--muted);
+    color:var(--text-soft);
+  }
+  .btn.ghost::after{ box-shadow:none; }
+  .btn.ghost::before{ display:none; }
+  .btn.ghost:hover{
+    border-color:var(--text-soft);
+    color:var(--text);
+    background:rgba(255,255,255,0.02);
+  }
+
+  .footer-link{
+    position:absolute; bottom:32px; left:50%; transform:translateX(-50%);
+    font-size:12px; letter-spacing:0.25em; text-transform:uppercase;
+    color:var(--text-soft); text-decoration:none;
+    opacity:.6; transition:opacity 300ms, color 300ms;
+    cursor:pointer; background:none; border:0;
+    font-family:inherit;
+  }
+  .footer-link:hover{ opacity:1; color:var(--amber); }
+
+  /* pulse glow behind title */
+  .glow-orb{
+    position:absolute;
+    width:600px; height:600px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(200,112,10,0.12), transparent 60%);
+    filter:blur(40px);
+    top:50%; left:50%;
+    transform:translate(-50%,-55%);
+    z-index:-1;
+    animation: pulse 6s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity:.6; transform:translate(-50%,-55%) scale(1);}
+    50%{ opacity:1; transform:translate(-50%,-55%) scale(1.08);}
+  }
+
+  /* ===== QUIZ SCREEN ===== */
+  .quiz{ max-width:920px; margin:0 auto; width:100%; }
+  .q-count{
+    text-align:center;
+    font-size:11px;
+    letter-spacing:0.4em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin-bottom:48px;
+    opacity:.9;
+  }
+  .q-count span.num{ color:var(--text); }
+  .q-text{
+    font-family:"Poppins", sans-serif;
+    font-weight:300;
+    font-size:clamp(28px, 4.2vw, 48px);
+    line-height:1.2;
+    letter-spacing:-0.025em;
+    text-align:center;
+    margin:0 auto 28px;
+    max-width:780px;
+    text-wrap:balance;
+  }
+
+  /* per-question countdown bar */
+  .q-timer{
+    width:100%;
+    max-width:780px;
+    margin:0 auto 56px;
+    height:1.5px;
+    background:rgba(255,255,255,0.04);
+    position:relative;
+    overflow:hidden;
+  }
+  .q-timer-fill{
+    position:absolute; inset:0 0 0 0;
+    transform-origin:left center;
+    transform:scaleX(1);
+    background:linear-gradient(90deg, var(--amber-dim), var(--amber-bright));
+    box-shadow:0 0 10px rgba(200,112,10,0.55);
+    will-change: transform;
+  }
+  .q-timer-fill.run{
+    transition: transform 15000ms linear;
+    transform:scaleX(0);
+  }
+  .q-timer-fill.paused{
+    transition:none;
+  }
+  .options{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:14px;
+    width:100%;
+  }
+  @media (max-width:680px){
+    .options{ grid-template-columns:1fr; }
+  }
+  .option{
+    position:relative;
+    text-align:left;
+    background:rgba(255,255,255,0.015);
+    border:1px solid var(--line);
+    padding:26px 30px;
+    color:var(--text);
+    cursor:pointer;
+    transition: all 350ms cubic-bezier(.22,.61,.36,1);
+    font:inherit;
+    font-size:17px;
+    line-height:1.4;
+    min-height:96px;
+    display:flex; align-items:center; gap:20px;
+    overflow:hidden;
+  }
+  .option::before{
+    content:"";
+    position:absolute; left:0; top:0; bottom:0;
+    width:2px;
+    background:var(--amber);
+    transform:scaleY(0);
+    transform-origin: top;
+    transition: transform 400ms cubic-bezier(.22,.61,.36,1);
+  }
+  .option:hover{
+    border-color:var(--amber-dim);
+    background:rgba(200,112,10,0.04);
+    transform:translateY(-2px);
+  }
+  .option:hover::before{ transform:scaleY(1); }
+  .option .marker{
+    font-family:"Poppins", sans-serif;
+    font-weight:400;
+    font-style:italic;
+    color:var(--amber);
+    font-size:13px;
+    letter-spacing:0.05em;
+    opacity:.75;
+    min-width:18px;
+  }
+  .option .label{ flex:1; }
+  .option.selected{
+    border-color:var(--amber);
+    background:rgba(200,112,10,0.08);
+  }
+  .option.selected::before{ transform:scaleY(1); }
+
+  .quiz-foot{
+    margin-top:48px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:12px; letter-spacing:0.2em; text-transform:uppercase;
+    color:var(--text-soft);
+  }
+  .quiz-foot button{
+    background:none; border:0; color:inherit; font:inherit; letter-spacing:inherit;
+    text-transform:inherit; cursor:pointer; padding:6px 0;
+    opacity:.6; transition:opacity 250ms, color 250ms;
+  }
+  .quiz-foot button:hover{ opacity:1; color:var(--amber); }
+  .quiz-foot button:disabled{ opacity:.2; cursor:default; }
+
+  /* ===== RESULT SCREEN ===== */
+  .result{ max-width:780px; margin:0 auto; text-align:center; }
+  .result .eyebrow{ margin-bottom:32px; }
+  .result-title{
+    font-family:"Poppins", sans-serif;
+    font-weight:500;
+    font-size:clamp(40px, 6vw, 76px);
+    line-height:1.05;
+    letter-spacing:-0.035em;
+    margin:0 0 8px;
+    background: linear-gradient(180deg, #f3c178 0%, #c8700a 70%, #8a4d07 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow: 0 0 60px rgba(200,112,10,0.25);
+  }
+  .result-tagline{
+    font-family:"Poppins", sans-serif;
+    font-weight:300;
+    font-style:italic;
+    font-size:17px;
+    color:var(--text-soft);
+    margin:0 0 48px;
+  }
+  .divider{
+    width:40px; height:1px;
+    background:var(--amber);
+    margin:0 auto 36px;
+    box-shadow:0 0 8px var(--amber);
+  }
+  .result-desc{
+    font-size:18px;
+    line-height:1.7;
+    color:var(--text);
+    max-width:620px;
+    margin:0 auto 28px;
+    font-weight:300;
+    text-wrap:pretty;
+  }
+
+  /* result triplet (Moment / Feeling / Animal) with emoji watermark */
+  .result-trip-wrap{
+    position:relative;
+    margin:0 auto 28px;
+    padding:24px 24px 8px;
+    max-width:640px;
+  }
+  .result-emoji-bg{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    z-index:0;
+    font-size:clamp(240px, 36vw, 380px);
+    line-height:1;
+    opacity:0.07;
+    filter: grayscale(1) brightness(1.4);
+    user-select:none;
+  }
+  .result-trip{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  .trip-row{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+  }
+  .trip-label{
+    font-family:"Poppins", sans-serif;
+    font-weight:400;
+    font-size:10px;
+    letter-spacing:0.4em;
+    text-transform:uppercase;
+    color:var(--amber);
+    opacity:.85;
+  }
+  .trip-value{
+    font-family:"Poppins", sans-serif;
+    font-weight:300;
+    font-size:clamp(18px, 2.2vw, 24px);
+    line-height:1.35;
+    letter-spacing:-0.015em;
+    color:var(--text);
+    text-wrap:balance;
+    max-width:520px;
+  }
+  .trip-value.feeling{
+    font-style:italic;
+  }
+  .trip-value.animal{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+    font-weight:400;
+  }
+  .trip-value .a-emoji{
+    font-size:1.3em;
+    line-height:1;
+  }
+  .avg-time{
+    font-family:"Poppins", sans-serif;
+    font-weight:300;
+    font-style:italic;
+    font-size:13px;
+    letter-spacing:0.05em;
+    color:var(--text-soft);
+    margin:0 auto 56px;
+    text-align:center;
+  }
+  .avg-time span{ color:var(--amber); font-style:normal; letter-spacing:0.02em; }
+
+  .camera-card{
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    padding:32px 24px;
+    margin:0 auto 56px;
+    max-width:480px;
+  }
+  .camera-card .kicker{
+    font-size:10px;
+    letter-spacing:0.4em;
+    text-transform:uppercase;
+    color:var(--text-soft);
+    margin-bottom:14px;
+  }
+  .camera-card .model{
+    font-family:"Poppins", sans-serif;
+    font-weight:500;
+    font-size:26px;
+    color:var(--amber-bright);
+    letter-spacing:-0.005em;
+    margin-bottom:10px;
+    text-shadow:0 0 18px rgba(200,112,10,0.4);
+  }
+  .camera-card .why{
+    font-size:14px;
+    color:var(--text-soft);
+    line-height:1.5;
+  }
+
+  .result-actions{
+    display:flex; flex-direction:column; gap:18px; justify-content:center; align-items:center; flex-wrap:wrap;
+  }
+  .result-actions .btn{ min-width:280px; justify-content:center; }
+  .share-link{
+    background:none; border:0; color:var(--text-soft);
+    font:inherit; font-size:11px; letter-spacing:0.3em; text-transform:uppercase;
+    cursor:pointer; padding:6px 4px;
+    opacity:.7; transition:opacity 250ms, color 250ms;
+    position:relative;
+  }
+  .share-link::after{
+    content:""; position:absolute; left:4px; right:4px; bottom:2px; height:1px;
+    background:currentColor; opacity:.4;
+  }
+  .share-link:hover{ opacity:1; color:var(--amber); }
+
+  /* toast for share */
+  .toast{
+    position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:rgba(20,20,28,0.95);
+    border:1px solid var(--amber-dim);
+    color:var(--text);
+    padding:14px 22px;
+    font-size:13px; letter-spacing:0.15em; text-transform:uppercase;
+    box-shadow:0 0 30px rgba(200,112,10,0.3);
+    opacity:0; pointer-events:none;
+    transition:opacity 300ms, transform 300ms;
+    z-index:10;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+
+  /* ===== HISTORY SCREEN ===== */
+  .history{ max-width:760px; margin:0 auto; width:100%; }
+  .history h2{
+    font-family:"Poppins", sans-serif;
+    font-weight:400;
+    font-size:clamp(32px, 4.5vw, 48px);
+    letter-spacing:-0.025em;
+    margin:0 0 8px;
+    text-align:center;
+  }
+  .history .sub{
+    text-align:center;
+    color:var(--text-soft);
+    font-style:italic;
+    font-family:"Poppins", sans-serif;
+    font-weight:300;
+    margin:0 0 56px;
+    font-size:15px;
+  }
+  .history-list{
+    list-style:none; padding:0; margin:0 0 56px;
+    border-top:1px solid var(--line);
+  }
+  .history-item{
+    display:grid;
+    grid-template-columns: 1fr auto;
+    gap:8px 24px;
+    padding:24px 4px;
+    border-bottom:1px solid var(--line);
+    align-items:baseline;
+  }
+  .history-item .h-title{
+    font-family:"Poppins", sans-serif;
+    font-weight:400;
+    font-size:20px;
+    letter-spacing:-0.01em;
+    color:var(--text);
+  }
+  .history-item .h-date{
+    font-size:11px;
+    letter-spacing:0.25em;
+    text-transform:uppercase;
+    color:var(--text-soft);
+    white-space:nowrap;
+  }
+  .history-item .h-cam{
+    grid-column:1 / -1;
+    font-size:13px;
+    letter-spacing:0.1em;
+    color:var(--amber);
+  }
+  .history-empty{
+    text-align:center;
+    color:var(--text-soft);
+    font-style:italic;
+    font-family:"Poppins", sans-serif;
+    font-weight:300;
+    padding:80px 20px;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    margin-bottom:56px;
+    font-size:17px;
+  }
+  .history-actions{
+    display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
+  }
+  .clear-link{
+    background:none; border:0; color:var(--text-soft); cursor:pointer;
+    font:inherit; font-size:11px; letter-spacing:0.3em; text-transform:uppercase;
+    padding:14px; opacity:.5; transition:opacity 250ms, color 250ms;
+  }
+  .clear-link:hover{ opacity:1; color:#c45a5a; }
+
+  /* small util */
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- ambient Sony camera silhouettes -->
+<div class="watermarks" aria-hidden="true">
+  <!-- A7-style mirrorless body, front 3/4 view -->
+  <svg class="wm-1" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <!-- body outline -->
+      <path d="M30 70 Q30 56 44 56 L120 56 L132 36 L196 36 L208 56 L286 56 Q300 56 300 70 L300 150 Q300 164 286 164 L44 164 Q30 164 30 150 Z"/>
+      <!-- viewfinder hump -->
+      <path d="M132 36 L132 22 Q132 14 142 14 L186 14 Q196 14 196 22 L196 36"/>
+      <!-- hot shoe -->
+      <rect x="150" y="6" width="28" height="8"/>
+      <!-- lens mount + lens -->
+      <circle cx="164" cy="110" r="54"/>
+      <circle cx="164" cy="110" r="38"/>
+      <circle cx="164" cy="110" r="22"/>
+      <!-- grip suggestion -->
+      <path d="M44 56 Q58 60 60 78 L60 152"/>
+      <!-- mode dial -->
+      <circle cx="246" cy="54" r="14"/>
+      <!-- shutter button -->
+      <circle cx="74" cy="48" r="6"/>
+      <!-- AF assist -->
+      <circle cx="248" cy="96" r="3.5"/>
+      <circle cx="248" cy="112" r="3.5"/>
+    </g>
+  </svg>
+
+  <!-- Telephoto lens, side profile -->
+  <svg class="wm-2" viewBox="0 0 480 140" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <!-- lens hood -->
+      <path d="M6 30 L60 30 L60 110 L6 110 Z"/>
+      <!-- front element rings -->
+      <path d="M60 30 L92 36 L92 104 L60 110 Z"/>
+      <path d="M92 36 L118 36 L118 104 L92 104 Z"/>
+      <!-- main barrel -->
+      <path d="M118 36 L320 36 L320 104 L118 104 Z"/>
+      <!-- focus rings (vertical lines) -->
+      <line x1="150" y1="40" x2="150" y2="100"/>
+      <line x1="180" y1="40" x2="180" y2="100"/>
+      <line x1="232" y1="40" x2="232" y2="100"/>
+      <line x1="262" y1="40" x2="262" y2="100"/>
+      <!-- tripod foot -->
+      <path d="M210 104 L210 128 L270 128 L270 104"/>
+      <!-- mount end -->
+      <path d="M320 50 L360 50 L360 90 L320 90"/>
+      <path d="M360 56 L378 56 L378 84 L360 84"/>
+      <!-- mount flange -->
+      <circle cx="378" cy="70" r="6"/>
+      <!-- aperture/control switches -->
+      <rect x="196" y="50" width="22" height="8"/>
+      <rect x="196" y="82" width="22" height="8"/>
+    </g>
+  </svg>
+
+  <!-- FX3-style cinema body, top-down-ish -->
+  <svg class="wm-3" viewBox="0 0 280 220" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <!-- main cage/body -->
+      <rect x="30" y="60" width="220" height="130" rx="4"/>
+      <!-- top handle -->
+      <path d="M64 60 L64 28 L216 28 L216 60"/>
+      <path d="M64 28 L64 14 L216 14 L216 28"/>
+      <!-- handle screws -->
+      <circle cx="78" cy="21" r="3"/>
+      <circle cx="202" cy="21" r="3"/>
+      <!-- top accessory shoes -->
+      <rect x="100" y="32" width="30" height="10"/>
+      <rect x="150" y="32" width="30" height="10"/>
+      <!-- lens mount -->
+      <circle cx="140" cy="125" r="42"/>
+      <circle cx="140" cy="125" r="30"/>
+      <!-- 1/4-20 holes -->
+      <circle cx="50" cy="78" r="3"/>
+      <circle cx="50" cy="172" r="3"/>
+      <circle cx="230" cy="78" r="3"/>
+      <circle cx="230" cy="172" r="3"/>
+      <!-- record button -->
+      <circle cx="212" cy="82" r="5"/>
+      <!-- side vents -->
+      <line x1="40" y1="110" x2="40" y2="160"/>
+      <line x1="46" y1="110" x2="46" y2="160"/>
+      <line x1="234" y1="110" x2="234" y2="160"/>
+      <line x1="240" y1="110" x2="240" y2="160"/>
+    </g>
+  </svg>
+
+  <!-- Compact lens (prime) -->
+  <svg class="wm-4" viewBox="0 0 260 180" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <!-- body front view emphasis -->
+      <circle cx="130" cy="90" r="72"/>
+      <circle cx="130" cy="90" r="58"/>
+      <circle cx="130" cy="90" r="40"/>
+      <circle cx="130" cy="90" r="24"/>
+      <!-- aperture blades hint -->
+      <path d="M130 66 L150 80 L142 104 L118 104 L110 80 Z"/>
+      <!-- focus distance tick marks around outer ring -->
+      <line x1="130" y1="14" x2="130" y2="22"/>
+      <line x1="130" y1="158" x2="130" y2="166"/>
+      <line x1="54" y1="90" x2="62" y2="90"/>
+      <line x1="198" y1="90" x2="206" y2="90"/>
+      <line x1="76" y1="36" x2="82" y2="42"/>
+      <line x1="178" y1="144" x2="184" y2="138"/>
+    </g>
+  </svg>
+
+  <!-- A7-style mirrorless body (variant 2) -->
+  <svg class="wm-5" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M30 70 Q30 56 44 56 L120 56 L132 36 L196 36 L208 56 L286 56 Q300 56 300 70 L300 150 Q300 164 286 164 L44 164 Q30 164 30 150 Z"/>
+      <path d="M132 36 L132 22 Q132 14 142 14 L186 14 Q196 14 196 22 L196 36"/>
+      <rect x="150" y="6" width="28" height="8"/>
+      <circle cx="164" cy="110" r="54"/>
+      <circle cx="164" cy="110" r="38"/>
+      <circle cx="164" cy="110" r="22"/>
+      <path d="M44 56 Q58 60 60 78 L60 152"/>
+      <circle cx="246" cy="54" r="14"/>
+      <circle cx="74" cy="48" r="6"/>
+    </g>
+  </svg>
+
+  <!-- Telephoto (variant) -->
+  <svg class="wm-6" viewBox="0 0 480 140" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M6 30 L60 30 L60 110 L6 110 Z"/>
+      <path d="M60 30 L92 36 L92 104 L60 110 Z"/>
+      <path d="M92 36 L320 36 L320 104 L92 104 Z"/>
+      <line x1="150" y1="40" x2="150" y2="100"/>
+      <line x1="200" y1="40" x2="200" y2="100"/>
+      <line x1="260" y1="40" x2="260" y2="100"/>
+      <path d="M210 104 L210 128 L270 128 L270 104"/>
+      <path d="M320 50 L370 50 L370 90 L320 90"/>
+      <circle cx="376" cy="70" r="6"/>
+    </g>
+  </svg>
+
+  <!-- Small compact body -->
+  <svg class="wm-7" viewBox="0 0 220 160" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="16" y="36" width="188" height="104" rx="6"/>
+      <circle cx="110" cy="88" r="34"/>
+      <circle cx="110" cy="88" r="22"/>
+      <rect x="96" y="22" width="28" height="14"/>
+      <circle cx="178" cy="50" r="4"/>
+      <circle cx="30" cy="50" r="3"/>
+    </g>
+  </svg>
+
+  <!-- FX-style cage (variant) -->
+  <svg class="wm-8" viewBox="0 0 280 220" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="30" y="60" width="220" height="130" rx="4"/>
+      <path d="M64 60 L64 14 L216 14 L216 60"/>
+      <rect x="118" y="24" width="44" height="10"/>
+      <circle cx="140" cy="125" r="42"/>
+      <circle cx="140" cy="125" r="30"/>
+      <circle cx="50" cy="78" r="3"/>
+      <circle cx="230" cy="78" r="3"/>
+      <line x1="40" y1="110" x2="40" y2="160"/>
+      <line x1="240" y1="110" x2="240" y2="160"/>
+    </g>
+  </svg>
+</div>
+
+<main id="app"></main>
+
+<div class="toast" id="toast">Link copied to clipboard</div>
+
+<script>
+/* ============================================================
+   WILDLIFE SHOT — quiz logic
+   ============================================================ */
+
+const QUESTIONS = [
+  {
+    q: "When do you feel most alive?",
+    options: [
+      { label: "Early morning, before sunrise",                        type: "twilight" },
+      { label: "Late afternoon, in the golden light",                  type: "story"    },
+      { label: "Bright, sunny midday",                                 type: "detail"   },
+      { label: "Just after sunset",                                    type: "twilight" },
+    ],
+  },
+  {
+    q: "How do you move through life?",
+    options: [
+      { label: "Slow and patient — I wait for things",                 type: "patience" },
+      { label: "Quick and instinctive — I react fast",                 type: "patience" },
+      { label: "Quiet and careful — I observe",                        type: "detail"   },
+      { label: "Bold and close — I go all in",                         type: "wanderer" },
+    ],
+  },
+  {
+    q: "Pick a place that calls to you.",
+    options: [
+      { label: "Open golden grassland",                                type: "patience" },
+      { label: "Deep green forest",                                    type: "detail"   },
+      { label: "A flowing river",                                      type: "story"    },
+      { label: "Wide open sky",                                        type: "wanderer" },
+    ],
+  },
+  {
+    q: "What stops your heart?",
+    options: [
+      { label: "A hunter at full speed",                               type: "patience" },
+      { label: "A parent protecting their young",                      type: "story"    },
+      { label: "A thousand animals moving as one",                     type: "wanderer" },
+      { label: "Something no one has ever seen before",                type: "detail"   },
+    ],
+  },
+  {
+    q: "How do you remember a moment?",
+    options: [
+      { label: "One single perfect photo",                             type: "patience" },
+      { label: "A long story unfolding",                               type: "story"    },
+      { label: "Raw and exactly as it was",                            type: "detail"   },
+      { label: "Like a movie scene",                                   type: "twilight" },
+    ],
+  },
+];
+
+const PERSONALITIES = {
+  patience: {
+    title: "The Patience Hunter",
+    tagline: "You wait. The world rewards waiting.",
+    moment: "A cheetah, mid-stride, frozen in golden dust.",
+    feeling: "Held breath.",
+    animalName: "Cheetah",
+    animalEmoji: "\uD83D\uDC06", // 🐆
+    desc: "Your shot is the one no one else stays for. It begins three hours before sunrise, ends in the trembling stillness after a strike, and lives in the millisecond between the heartbeat and the shutter. You don't chase wildlife — you outlast it. Your frame is sharp because your nerves are. The work matters because patience is the rarest language left in photography, and you speak it fluently.",
+    camera: "Sony α1 II",
+    why: "Built for the instant. Blackout-free 30 fps and AI-assisted tracking that holds focus on an eye across a fast-changing frame.",
+  },
+  twilight: {
+    title: "The Twilight Tracker",
+    tagline: "You see in the dark, and the dark sees you back.",
+    moment: "An owl drifts across a violet sky just after dusk.",
+    feeling: "Quiet wonder.",
+    animalName: "Owl",
+    animalEmoji: "\uD83E\uDD89", // 🦉
+    desc: "Your shot lives in the margins of the day — the blue hour, the last firelight, the moment a fox crosses a frosted field at 4:47 a.m. You work where most cameras give up. Where others see noise, you see atmosphere; where they see absence, you find character. Your photographs feel less like documents than like dreams someone remembered too clearly.",
+    camera: "Sony α7S III",
+    why: "Designed for low light. Clean files at extreme ISO and the dynamic range to keep stars and shadows in the same frame.",
+  },
+  detail: {
+    title: "The Detail Seeker",
+    tagline: "The eye, the whisker, the single bead of dew.",
+    moment: "A tiger's eye, held in a single shaft of light.",
+    feeling: "Pure intimacy.",
+    animalName: "Tiger",
+    animalEmoji: "\uD83D\uDC05", // 🐅
+    desc: "Your shot is forensic. It is the slow, almost devotional reading of an animal at close range — the topography of feathers, the architecture of a paw, the geology of a hide. You don't show wildlife so much as honour it. Your work argues, gently, that nothing in nature is ordinary if you look closely enough. And you always look closely enough.",
+    camera: "Sony α7R V",
+    why: "61 megapixels of resolving power and pixel-shift detail capture, paired with focus precision built for stillness.",
+  },
+  story: {
+    title: "The Storyteller",
+    tagline: "Wildlife is a verb in your frame, not a noun.",
+    moment: "A mother elephant turns, calf pressed close to her side.",
+    feeling: "Tender. Fierce.",
+    animalName: "Elephant",
+    animalEmoji: "\uD83D\uDC18", // 🐘
+    desc: "Your shot is a sentence. It has a beginning — the cub stepping into light — a middle, a turning, and a quiet, unmistakable end. You are less interested in the perfect animal than in the perfect moment between them: the glance, the gesture, the small piece of behaviour that turns a photograph into a paragraph. People remember your work because they feel like they were there.",
+    camera: "Sony α7 IV",
+    why: "A balanced all-rounder — fast enough for action, sharp enough for portraits, and quiet enough for the small moments that matter.",
+  },
+  wanderer: {
+    title: "The Wandering Eye",
+    tagline: "Light pack. Long road. Open shutter.",
+    moment: "A lone wolf crests the ridge as the world keeps moving.",
+    feeling: "Wide horizon.",
+    animalName: "Wolf",
+    animalEmoji: "\uD83D\uDC3A", // 🐺
+    desc: "Your shot is wherever you happen to be — and you happen to be far from here. You move light, sleep rough, and trust that the picture finds the photographer who showed up. Your portfolio is a map; your gear is sworn loyalty to whatever you can carry up a ridge. The animals you photograph were never the destination. They are simply the proof you went.",
+    camera: "Sony α6700",
+    why: "Compact, weather-resilient, and quick to react — a camera built to disappear into a backpack and reappear at exactly the right second.",
+  },
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  screen: "start",   // start | quiz | result | history
+  qIndex: 0,
+  answers: [],       // array of personality keys
+  times: [],         // ms taken per question
+  result: null,
+};
+
+const QUESTION_TIME_MS = 15000;
+let qTimerId = null;
+let qStartedAt = 0;
+function clearQTimer(){
+  if(qTimerId){ clearTimeout(qTimerId); qTimerId = null; }
+}
+
+const STORE_KEY = "wildlife_shot_history_v1";
+
+function loadHistory(){
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+  catch(e){ return []; }
+}
+function saveHistory(entry){
+  const list = loadHistory();
+  list.unshift(entry);
+  localStorage.setItem(STORE_KEY, JSON.stringify(list.slice(0, 50)));
+}
+function clearHistory(){
+  localStorage.removeItem(STORE_KEY);
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const app = document.getElementById("app");
+const progressFill = document.getElementById("progressFill");
+const progressBar = document.getElementById("progress");
+
+function transitionTo(nextRender){
+  const cur = app.firstElementChild;
+  if(cur){
+    cur.classList.add("fade-out");
+    setTimeout(() => { app.innerHTML = ""; nextRender(); }, 320);
+  } else {
+    nextRender();
+  }
+}
+
+function setProgress(pct){
+  progressFill.style.width = pct + "%";
+  progressBar.style.opacity = pct > 0 && pct < 100 ? "1" : "0";
+}
+
+/* ---------- start ---------- */
+function renderStart(){
+  state.screen = "start";
+  setProgress(0);
+  const el = document.createElement("section");
+  el.className = "screen start";
+  el.innerHTML = `
+    <div class="glow-orb"></div>
+    <div class="eyebrow">A Field Guide<span class="dot"></span>For Photographers</div>
+    <h1 class="title">What's Your <span class="italic">Wildlife Shot?</span></h1>
+    <p class="subtitle">Five questions. No wrong answers.<br/>Discover the wildlife moment you were born to film &mdash; and the Sony camera that captures it.</p>
+    <button class="btn" id="startBtn">
+      <span>Find Your Shot</span>
+      <span class="arrow">→</span>
+    </button>
+    <button class="footer-link" id="historyLink">View History</button>
+  `;
+  app.appendChild(el);
+  el.querySelector("#startBtn").addEventListener("click", () => {
+    state.qIndex = 0; state.answers = []; state.times = [];
+    transitionTo(renderQuiz);
+  });
+  el.querySelector("#historyLink").addEventListener("click", () => transitionTo(renderHistory));
+}
+
+/* ---------- quiz ---------- */
+function renderQuiz(){
+  state.screen = "quiz";
+  clearQTimer();
+  const i = state.qIndex;
+  const q = QUESTIONS[i];
+  setProgress(((i) / QUESTIONS.length) * 100);
+
+  const el = document.createElement("section");
+  el.className = "screen quiz";
+  el.innerHTML = `
+    <div class="quiz">
+      <div class="q-count"><span class="num">${String(i+1).padStart(2,"0")}</span> &nbsp;of&nbsp; <span class="num">${String(QUESTIONS.length).padStart(2,"0")}</span></div>
+      <h2 class="q-text">${q.q}</h2>
+      <div class="q-timer" aria-hidden="true"><div class="q-timer-fill" id="qTimerFill"></div></div>
+      <div class="options" role="listbox"></div>
+      <div class="quiz-foot">
+        <button id="backBtn" ${i === 0 ? "disabled" : ""}>← Back</button>
+        <span>Choose one</span>
+      </div>
+    </div>
+  `;
+  const advance = () => {
+    if(i + 1 < QUESTIONS.length){
+      state.qIndex = i + 1;
+      transitionTo(renderQuiz);
+    } else {
+      setProgress(100);
+      state.result = computeResult();
+      saveHistory({
+        type: state.result.title,
+        camera: state.result.camera,
+        date: new Date().toISOString(),
+      });
+      transitionTo(renderResult);
+    }
+  };
+
+  const recordTime = () => {
+    const elapsed = Math.min(QUESTION_TIME_MS, Date.now() - qStartedAt);
+    state.times[i] = elapsed;
+  };
+
+  const optsEl = el.querySelector(".options");
+  q.options.forEach((opt, idx) => {
+    const b = document.createElement("button");
+    b.className = "option";
+    b.innerHTML = `
+      <span class="marker">${String.fromCharCode(65 + idx)}</span>
+      <span class="label">${opt.label}</span>
+    `;
+    b.addEventListener("click", () => {
+      if(state.answers[i] !== undefined) return; // already answered
+      // freeze the timer bar at its current position
+      const fill = el.querySelector("#qTimerFill");
+      if(fill){
+        const cs = getComputedStyle(fill).transform;
+        fill.classList.add("paused");
+        fill.classList.remove("run");
+        fill.style.transform = cs === "none" ? "scaleX(1)" : cs;
+      }
+      clearQTimer();
+      recordTime();
+      el.querySelectorAll(".option").forEach(o => o.classList.remove("selected"));
+      b.classList.add("selected");
+      state.answers[i] = opt.type;
+      setTimeout(advance, 280);
+    });
+    optsEl.appendChild(b);
+  });
+
+  app.appendChild(el);
+  el.querySelector("#backBtn").addEventListener("click", () => {
+    if(state.qIndex === 0) return;
+    clearQTimer();
+    state.qIndex -= 1;
+    state.answers.pop();
+    state.times.pop();
+    transitionTo(renderQuiz);
+  });
+
+  // kick off the countdown after the screen fades in
+  const fill = el.querySelector("#qTimerFill");
+  qStartedAt = Date.now();
+  // start at full, then in next frame begin the linear drain
+  fill.style.transform = "scaleX(1)";
+  fill.classList.remove("run","paused");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fill.classList.add("run");
+      fill.style.transform = ""; // let the .run class drive it
+    });
+  });
+  qTimerId = setTimeout(() => {
+    if(state.answers[i] !== undefined) return;
+    // time's up: count as no-answer but record full time + advance
+    state.times[i] = QUESTION_TIME_MS;
+    state.answers[i] = null; // skipped
+    advance();
+  }, QUESTION_TIME_MS + 40);
+}
+
+function computeResult(){
+  const counts = {};
+  state.answers.forEach(t => { if(t) counts[t] = (counts[t] || 0) + 1; });
+  // pick highest; break ties by order of first occurrence in answers
+  let bestKey = state.answers.find(t => t) || "patience";
+  let bestCount = -1;
+  state.answers.forEach(t => {
+    if(!t) return;
+    if(counts[t] > bestCount){ bestCount = counts[t]; bestKey = t; }
+  });
+  return PERSONALITIES[bestKey];
+}
+
+function averageSeconds(){
+  if(!state.times.length) return null;
+  const total = state.times.reduce((a,b) => a + (b || 0), 0);
+  return Math.max(1, Math.round(total / state.times.length / 1000));
+}
+
+/* ---------- result ---------- */
+function renderResult(){
+  state.screen = "result";
+  setProgress(0);
+  const r = state.result;
+  const el = document.createElement("section");
+  el.className = "screen result";
+  el.innerHTML = `
+    <div class="eyebrow"><span class="dot"></span>Your Wildlife Shot<span class="dot"></span></div>
+    <h1 class="result-title">${r.title}</h1>
+    <p class="result-tagline">${r.tagline}</p>
+    <div class="divider"></div>
+
+    <div class="result-trip-wrap">
+      <div class="result-trip">
+        <div class="trip-row">
+          <div class="trip-label">The Moment</div>
+          <div class="trip-value">${r.moment}</div>
+        </div>
+        <div class="trip-row">
+          <div class="trip-label">The Feeling</div>
+          <div class="trip-value feeling">${r.feeling}</div>
+        </div>
+        <div class="trip-row">
+          <div class="trip-label">Your Animal</div>
+          <div class="trip-value animal">${r.animalName}</div>
+        </div>
+      </div>
+    </div>
+    ${(() => { const s = averageSeconds(); return s ? `<p class="avg-time">You answered in an average of <span>${s} second${s===1?"":"s"}</span>.</p>` : ""; })()}
+
+    <div class="camera-card">
+      <div class="kicker">Your Matched Camera</div>
+      <div class="model">${r.camera}</div>
+      <div class="why">${r.why}</div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn" id="againBtn">
+        <span>Try Again</span>
+        <span class="arrow">→</span>
+      </button>
+      <button class="share-link" id="shareBtn">Share Your Result</button>
+    </div>
+    <button class="footer-link" id="historyLink">View History</button>
+  `;
+  app.appendChild(el);
+  el.querySelector("#againBtn").addEventListener("click", () => {
+    state.qIndex = 0; state.answers = []; state.times = []; state.result = null;
+    transitionTo(renderStart);
+  });
+  el.querySelector("#shareBtn").addEventListener("click", () => {
+    const text = `I'm ${r.title}. My wildlife shot belongs to a ${r.camera}.`;
+    const shareData = { title: "What's Your Wildlife Shot?", text };
+    if(navigator.share){
+      navigator.share(shareData).catch(()=>{ copyShare(text); });
+    } else {
+      copyShare(text);
+    }
+  });
+  el.querySelector("#historyLink").addEventListener("click", () => transitionTo(renderHistory));
+}
+
+function copyShare(text){
+  const toast = document.getElementById("toast");
+  try {
+    navigator.clipboard.writeText(text);
+    toast.textContent = "Result copied to clipboard";
+  } catch(e){
+    toast.textContent = "Share unavailable";
+  }
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2200);
+}
+
+/* ---------- history ---------- */
+function renderHistory(){
+  state.screen = "history";
+  setProgress(0);
+  const list = loadHistory();
+  const el = document.createElement("section");
+  el.className = "screen history";
+
+  const items = list.length ? `
+    <ul class="history-list">
+      ${list.map(item => `
+        <li class="history-item">
+          <div class="h-title">${item.type}</div>
+          <div class="h-date">${formatDate(item.date)}</div>
+          <div class="h-cam">${item.camera}</div>
+        </li>
+      `).join("")}
+    </ul>
+  ` : `
+    <div class="history-empty">No shots taken yet.<br/>Your past results will appear here.</div>
+  `;
+
+  el.innerHTML = `
+    <div class="history">
+      <h2>Field Notebook</h2>
+      <p class="sub">A record of the shots you've found.</p>
+      ${items}
+      <div class="history-actions">
+        <button class="btn ghost" id="backHomeBtn"><span>← Back to Start</span></button>
+        <button class="btn" id="newShotBtn"><span>Take Another</span><span class="arrow">→</span></button>
+      </div>
+      ${list.length ? `<button class="clear-link" id="clearBtn">Clear History</button>` : ""}
+    </div>
+  `;
+  app.appendChild(el);
+  el.querySelector("#backHomeBtn").addEventListener("click", () => transitionTo(renderStart));
+  el.querySelector("#newShotBtn").addEventListener("click", () => {
+    state.qIndex = 0; state.answers = []; state.times = [];
+    transitionTo(renderQuiz);
+  });
+  const clearBtn = el.querySelector("#clearBtn");
+  if(clearBtn){
+    clearBtn.addEventListener("click", () => {
+      if(confirm("Clear your wildlife shot history?")){
+        clearHistory();
+        transitionTo(renderHistory);
+      }
+    });
+  }
+}
+
+function formatDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { day:"2-digit", month:"short", year:"numeric" })
+    + " · " + d.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+}
+
+/* boot */
+renderStart();
+</script>
+
+</body>
+</html>

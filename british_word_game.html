@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BLIMEY! British English Word Game</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;900&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #1a0a2e;
+  --bg-light: #2a1a4e;
+  --accent: #e040fb;
+  --accent-light: #ff69b4;
+  --lavender: #b39ddb;
+  --text: #f0e6ff;
+  --muted: #b39ddb;
+  --correct: #4caf50;
+  --wrong: #f44336;
+}
+
+body {
+  background: radial-gradient(ellipse at top, #2a1a4e 0%, #1a0a2e 55%, #0d0518 100%);
+  min-height: 100vh;
+  font-family: 'Nunito', sans-serif;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.app {
+  background: linear-gradient(145deg, #2a1a4e, #1f1240);
+  border-radius: 22px;
+  padding: 36px 36px 30px;
+  max-width: 640px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(224, 64, 251, 0.25), 0 0 0 1px rgba(224, 64, 251, 0.18);
+  position: relative;
+  overflow: hidden;
+}
+
+.app::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #e040fb, #ff69b4, #b39ddb, #e040fb);
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.header h1 {
+  font-family: 'Fredoka One', cursive;
+  font-size: 40px;
+  background: linear-gradient(135deg, #e040fb, #ff69b4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 1.5px;
+  line-height: 1.1;
+}
+
+.header .tagline {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+.screen { animation: slideIn 0.35s ease; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.label {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.difficulty-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.difficulty-btn {
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(224, 64, 251, 0.18);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.difficulty-btn:hover {
+  border-color: var(--accent);
+  background: rgba(224, 64, 251, 0.08);
+}
+
+.difficulty-btn.active {
+  background: linear-gradient(135deg, rgba(224, 64, 251, 0.25), rgba(255, 105, 180, 0.15));
+  border-color: var(--accent);
+  box-shadow: 0 0 18px rgba(224, 64, 251, 0.35);
+}
+
+.difficulty-btn .d-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.difficulty-btn .d-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+.info-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.info-pill {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+  border: 1px solid rgba(179, 157, 219, 0.18);
+}
+
+.info-pill .label { margin-bottom: 6px; }
+
+.info-pill .value {
+  font-family: 'Fredoka One', cursive;
+  font-size: 24px;
+  color: var(--accent-light);
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, #e040fb, #ff69b4);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Fredoka One', cursive;
+  font-size: 20px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 8px 20px rgba(224, 64, 251, 0.4);
+}
+
+.primary-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(224, 64, 251, 0.55); }
+.primary-btn:active { transform: translateY(0); }
+
+.history {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(179, 157, 219, 0.12);
+}
+
+.history-list {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.history-item .h-meta { color: var(--text); }
+.history-item .h-diff { color: var(--muted); font-size: 11px; margin-left: 6px; }
+.history-item .score  { color: var(--accent-light); font-weight: 700; }
+
+.history-empty {
+  color: var(--muted);
+  font-style: italic;
+  text-align: center;
+  font-size: 13px;
+  padding: 18px;
+}
+
+.clear-btn {
+  margin-top: 10px;
+  background: transparent;
+  border: 1px solid rgba(179, 157, 219, 0.3);
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.clear-btn:hover { border-color: var(--accent-light); color: var(--accent-light); }
+
+/* ===== Game screen ===== */
+.game-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+
+.game-meta .round { color: var(--muted); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+.game-meta .score { color: var(--accent-light); font-size: 16px; }
+
+.timer-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.timer-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #ffd54f, #ff5252);
+  background-size: 200% 100%;
+  transition: width 0.08s linear;
+}
+
+.phrase-display {
+  text-align: center;
+  padding: 38px 20px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 16px;
+  margin-bottom: 22px;
+  border: 1px solid rgba(224, 64, 251, 0.22);
+  box-shadow: inset 0 0 30px rgba(224, 64, 251, 0.05);
+}
+
+.phrase-display .phrase {
+  font-family: 'Fredoka One', cursive;
+  font-size: 36px;
+  color: var(--text);
+  letter-spacing: 1px;
+  word-break: break-word;
+}
+
+.choices { display: grid; gap: 11px; }
+
+.choice-btn {
+  padding: 15px 18px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(179, 157, 219, 0.28);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: left;
+}
+
+.choice-btn:hover:not(:disabled) {
+  background: rgba(224, 64, 251, 0.12);
+  border-color: var(--accent);
+  transform: translateX(4px);
+}
+
+.choice-btn.correct {
+  background: rgba(76, 175, 80, 0.28);
+  border-color: var(--correct);
+  animation: pulse 0.55s;
+}
+
+.choice-btn.wrong {
+  background: rgba(244, 67, 54, 0.28);
+  border-color: var(--wrong);
+  animation: shake 0.4s;
+}
+
+.choice-btn:disabled { cursor: not-allowed; opacity: 0.92; }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-7px); }
+  75%      { transform: translateX(7px); }
+}
+
+.feedback {
+  margin-top: 18px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  text-align: center;
+  animation: slideIn 0.3s ease;
+}
+
+.feedback.brilliant {
+  background: rgba(76, 175, 80, 0.14);
+  border: 1px solid var(--correct);
+  color: #a5d6a7;
+}
+
+.feedback.gutted {
+  background: rgba(244, 67, 54, 0.14);
+  border: 1px solid var(--wrong);
+  color: #ef9a9a;
+}
+
+.feedback .verdict {
+  font-family: 'Fredoka One', cursive;
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+.feedback .explanation {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.92;
+  font-weight: 400;
+}
+
+/* ===== Game over ===== */
+.gameover-final { text-align: center; margin-bottom: 24px; }
+
+.gameover-final .big-score {
+  font-family: 'Fredoka One', cursive;
+  font-size: 92px;
+  background: linear-gradient(135deg, #e040fb, #ff69b4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1;
+}
+
+.gameover-final .of-total {
+  color: var(--muted);
+  font-size: 15px;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.gameover-final .verdict {
+  font-family: 'Fredoka One', cursive;
+  font-size: 22px;
+  color: var(--accent-light);
+  margin-top: 18px;
+  padding: 0 16px;
+  line-height: 1.3;
+}
+
+.breakdown {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.stat {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid rgba(179, 157, 219, 0.18);
+}
+
+.stat .stat-value {
+  font-family: 'Fredoka One', cursive;
+  font-size: 32px;
+}
+
+.stat .stat-label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+.stat.correct   .stat-value { color: #81c784; }
+.stat.incorrect .stat-value { color: #ef9a9a; }
+
+/* ===== Mode cards ===== */
+.mode-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.mode-card {
+  padding: 18px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(224, 64, 251, 0.18);
+  border-radius: 14px;
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.mode-card:hover {
+  border-color: var(--accent);
+  background: rgba(224, 64, 251, 0.08);
+  transform: translateY(-2px);
+}
+
+.mode-card.active {
+  background: linear-gradient(135deg, rgba(224, 64, 251, 0.28), rgba(255, 105, 180, 0.18));
+  border-color: var(--accent);
+  box-shadow: 0 0 22px rgba(224, 64, 251, 0.4);
+}
+
+.mode-card .mode-icon {
+  font-size: 30px;
+  margin-bottom: 6px;
+  line-height: 1;
+}
+
+.mode-card .mode-name {
+  font-family: 'Fredoka One', cursive;
+  font-size: 16px;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.mode-card .mode-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+/* ===== Timer pills ===== */
+.timer-pills {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.timer-pill {
+  padding: 12px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(179, 157, 219, 0.25);
+  border-radius: 999px;
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: center;
+}
+
+.timer-pill:hover {
+  border-color: var(--accent-light);
+  background: rgba(255, 105, 180, 0.10);
+}
+
+.timer-pill.active {
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.32), rgba(224, 64, 251, 0.22));
+  border-color: var(--accent-light);
+  box-shadow: 0 0 14px rgba(255, 105, 180, 0.4);
+}
+
+/* ===== Disabled primary button ===== */
+.primary-btn:disabled,
+.primary-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+  box-shadow: none;
+  transform: none;
+}
+
+.primary-btn:disabled:hover,
+.primary-btn[disabled]:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ===== Game-over meta row ===== */
+.gameover-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 10px;
+  margin-bottom: 20px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+}
+
+.gameover-meta .gm-item {
+  background: rgba(255,255,255,0.04);
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(179, 157, 219, 0.15);
+  color: var(--muted);
+}
+
+.gameover-meta .gm-item b {
+  color: var(--accent-light);
+  font-weight: 800;
+  margin-left: 4px;
+}
+
+/* ===== Triple info row (high scores per mode) ===== */
+.info-row.triple .info-pill { padding: 12px 8px; }
+.info-row.triple .info-pill .value { font-size: 20px; }
+.info-row.triple .info-pill .label { font-size: 10px; letter-spacing: 1.5px; }
+
+/* ===== Meaning choice button (mode 2) ===== */
+.choice-btn.meaning {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ===== Hint text under primary button ===== */
+.start-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+  font-style: italic;
+  letter-spacing: 0.5px;
+}
+
+/* scrollbar */
+.history-list::-webkit-scrollbar { width: 6px; }
+.history-list::-webkit-scrollbar-track { background: transparent; }
+.history-list::-webkit-scrollbar-thumb { background: rgba(224, 64, 251, 0.3); border-radius: 3px; }
+
+@media (max-width: 520px) {
+  .app { padding: 26px 22px 22px; }
+  .header h1 { font-size: 32px; }
+  .phrase-display .phrase { font-size: 28px; }
+  .gameover-final .big-score { font-size: 72px; }
+  .info-row, .breakdown { flex-direction: column; }
+  .mode-cards { grid-template-columns: 1fr; }
+  .timer-pills { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>👑 BLIMEY!</h1>
+    <div class="tagline">British English Word Game</div>
+  </div>
+  <div id="screen"></div>
+</div>
+
+<script>
+// ============ WORD BANK ============
+// Shape: { phrase, type, meaning?, decoys?, difficulty, explanation }
+//  - type:       "british" | "nonsense" | "american"
+//  - difficulty: "easy" | "medium" | "hard"
+//  - meaning + decoys are required for "british" items (used by mode 2).
+const wordBank = [
+  // ---------- EASY ----------
+  { phrase: "Gobsmacked",      type: "british",
+    meaning: "Completely astonished or shocked",
+    decoys: ["Slightly irritated by something", "Completely exhausted after a long day"],
+    difficulty: "easy",
+    explanation: "Widely used across the UK to mean utterly speechless with surprise." },
+  { phrase: "Lift",            type: "british",
+    meaning: "An elevator (the lift in a building)",
+    decoys: ["A short friendly nap in the afternoon", "A bus ticket for a single ride"],
+    difficulty: "easy",
+    explanation: "Standard British term for what Americans call an 'elevator'." },
+  { phrase: "Telly",           type: "british",
+    meaning: "Television",
+    decoys: ["A long-distance telephone call", "A small handheld bell"],
+    difficulty: "easy",
+    explanation: "Affectionate British shortening of 'television'." },
+  { phrase: "Fortnight",       type: "british",
+    meaning: "A period of two weeks",
+    decoys: ["A small castle's outer wall", "A type of fortified dessert wine"],
+    difficulty: "easy",
+    explanation: "Common in British speech; less used in American English." },
+  { phrase: "Brolly",          type: "british",
+    meaning: "An umbrella",
+    decoys: ["A small handbag", "A brightly coloured tropical bird"],
+    difficulty: "easy",
+    explanation: "British informal name for an umbrella — essential on a rainy day." },
+  { phrase: "Cheeky",          type: "british",
+    meaning: "Playfully impudent or audacious",
+    decoys: ["Round and plump in shape", "Quiet, shy and reserved"],
+    difficulty: "easy",
+    explanation: "Often a compliment in British English — bold in a charming way." },
+  { phrase: "Chuffed",         type: "british",
+    meaning: "Delighted or very pleased",
+    decoys: ["Cold and shivering all over", "Out of breath from running"],
+    difficulty: "easy",
+    explanation: "A warm British expression of happy satisfaction." },
+  { phrase: "Knackered",       type: "british",
+    meaning: "Completely exhausted",
+    decoys: ["Confused or thoroughly bewildered", "Slightly annoyed with someone"],
+    difficulty: "easy",
+    explanation: "Common British way to say you're utterly worn out." },
+  { phrase: "Cheerio",         type: "british",
+    meaning: "Goodbye",
+    decoys: ["A drinking toast to your health", "A friendly greeting like 'hello'"],
+    difficulty: "easy",
+    explanation: "Classic cheerful British farewell." },
+  { phrase: "Jumper",          type: "british",
+    meaning: "A sweater or pullover",
+    decoys: ["A trampoline performer", "A loose flowing summer dress"],
+    difficulty: "easy",
+    explanation: "Brits wear jumpers; Americans wear sweaters." },
+  { phrase: "Trainers",        type: "british",
+    meaning: "Athletic shoes (sneakers)",
+    decoys: ["Coaches at a sports gym", "Practice exercise mats"],
+    difficulty: "easy",
+    explanation: "What Americans call sneakers, Brits call trainers." },
+  { phrase: "Posh",            type: "british",
+    meaning: "Upper-class, fancy, or elegant",
+    decoys: ["Lazy and slow-moving", "Soft and squishy to touch"],
+    difficulty: "easy",
+    explanation: "British informal term for anything classy or upper-class." },
+
+  // Non-british easy
+  { phrase: "Sidewalk",        type: "american", difficulty: "easy",
+    explanation: "American — British speakers say 'pavement'." },
+  { phrase: "Snargle-frobbed", type: "nonsense", difficulty: "easy",
+    explanation: "Completely made up. Sounds plausible, though." },
+  { phrase: "Trash can",       type: "american", difficulty: "easy",
+    explanation: "American — Brits use 'bin' or 'dustbin'." },
+  { phrase: "Cookie",          type: "american", difficulty: "easy",
+    explanation: "American — Brits call them 'biscuits'." },
+  { phrase: "Flibberton",      type: "nonsense", difficulty: "easy",
+    explanation: "Not a real word in any English variety." },
+  { phrase: "Diaper",          type: "american", difficulty: "easy",
+    explanation: "American — Brits say 'nappy'." },
+  { phrase: "Faucet",          type: "american", difficulty: "easy",
+    explanation: "American — Brits say 'tap'." },
+  { phrase: "Bumblesnotch",    type: "nonsense", difficulty: "easy",
+    explanation: "Not a word — pure invention designed to sound homely." },
+
+  // ---------- MEDIUM ----------
+  { phrase: "Kerfuffle",       type: "british",
+    meaning: "A commotion or noisy fuss",
+    decoys: ["A small woollen winter scarf", "A type of soft tangy cheese"],
+    difficulty: "medium",
+    explanation: "Often used for small but lively disagreements or stirs." },
+  { phrase: "Faff",            type: "british",
+    meaning: "To fuss about and waste time",
+    decoys: ["To brag loudly to friends", "To breathe heavily after exercise"],
+    difficulty: "medium",
+    explanation: "British verb for pottering around inefficiently." },
+  { phrase: "Bonnet",          type: "british",
+    meaning: "The hood of a car",
+    decoys: ["A small loaf of fresh bread", "A traditional wide-brimmed garden hat"],
+    difficulty: "medium",
+    explanation: "Brits call the front lid of a car the 'bonnet'." },
+  { phrase: "Wonky",           type: "british",
+    meaning: "Crooked, unsteady, or not quite right",
+    decoys: ["Very brightly coloured", "Surprisingly quick and clever"],
+    difficulty: "medium",
+    explanation: "Often used for a chair, table, or anything off-kilter." },
+  { phrase: "Miffed",          type: "british",
+    meaning: "Slightly annoyed or put out",
+    decoys: ["Wearing very fancy formal clothes", "Having a mild head cold"],
+    difficulty: "medium",
+    explanation: "A mild British way to describe being a bit upset." },
+  { phrase: "Crisps",          type: "british",
+    meaning: "Thin bagged potato snacks (American 'chips')",
+    decoys: ["Crunchy sweet biscuits with cream filling", "Small flat loaves of fresh bread"],
+    difficulty: "medium",
+    explanation: "In Britain, 'chips' are thick fried potato; 'crisps' are the bagged snack." },
+  { phrase: "Tickety-boo",     type: "british",
+    meaning: "Everything is going splendidly well",
+    decoys: ["Tickling someone playfully", "A very small portion of food"],
+    difficulty: "medium",
+    explanation: "Cheerful, slightly old-fashioned British phrase." },
+  { phrase: "Hoover",          type: "british",
+    meaning: "A vacuum cleaner (or to vacuum)",
+    decoys: ["A small dustbin on wheels", "A type of stiff household broom"],
+    difficulty: "medium",
+    explanation: "From the brand name, now used generically in Britain." },
+  { phrase: "Wellies",         type: "british",
+    meaning: "Tall rubber boots (Wellington boots)",
+    decoys: ["Friendly greetings between neighbours", "Small wells dug in a garden"],
+    difficulty: "medium",
+    explanation: "Essential British footwear for muddy fields and rainy days." },
+  { phrase: "Skive",           type: "british",
+    meaning: "To avoid work or duty",
+    decoys: ["To slide across a frozen pond", "To haggle over a price at market"],
+    difficulty: "medium",
+    explanation: "British slang for cheekily skipping out on responsibilities." },
+  { phrase: "Dodgy",           type: "british",
+    meaning: "Suspicious, unreliable, or of poor quality",
+    decoys: ["Brand new and shining", "Very brightly decorated"],
+    difficulty: "medium",
+    explanation: "Catch-all British term for anything you wouldn't quite trust." },
+
+  // Non-british medium
+  { phrase: "Quibberflick",    type: "nonsense", difficulty: "medium",
+    explanation: "Pure invention. Doesn't exist anywhere." },
+  { phrase: "Gas station",     type: "american", difficulty: "medium",
+    explanation: "American — Brits call it a 'petrol station'." },
+  { phrase: "Apartment",       type: "american", difficulty: "medium",
+    explanation: "American — Brits use 'flat'." },
+  { phrase: "Frizzlewump",     type: "nonsense", difficulty: "medium",
+    explanation: "Sounds British, but is entirely fabricated." },
+  { phrase: "Stroller",        type: "american", difficulty: "medium",
+    explanation: "American — Brits say 'pushchair' or 'pram'." },
+  { phrase: "Frollywink",      type: "nonsense", difficulty: "medium",
+    explanation: "A cheerful-sounding invention — not a real word." },
+  { phrase: "Eggplant",        type: "american", difficulty: "medium",
+    explanation: "American — Brits say 'aubergine'." },
+
+  // ---------- HARD ----------
+  { phrase: "Codswallop",      type: "british",
+    meaning: "Utter nonsense or rubbish talk",
+    decoys: ["A traditional thick fish stew", "A heavy wooden carpenter's mallet"],
+    difficulty: "hard",
+    explanation: "Brilliant British word for dismissing pure rubbish." },
+  { phrase: "Yonks",           type: "british",
+    meaning: "A very long time",
+    decoys: ["A small fluffy household pet", "A traditional country folk dance"],
+    difficulty: "hard",
+    explanation: "As in 'I haven't seen them in yonks!'." },
+  { phrase: "Gormless",        type: "british",
+    meaning: "Lacking sense; vacant or dim-witted",
+    decoys: ["Sticky and sweet to taste", "Walking around without proper shoes"],
+    difficulty: "hard",
+    explanation: "Affectionate-leaning British term for someone clueless." },
+  { phrase: "Bob's your uncle",type: "british",
+    meaning: "And there you have it; easy as that",
+    decoys: ["A surprise visit from a family member", "Politely asking for a small favour"],
+    difficulty: "hard",
+    explanation: "Classic British way to say 'and you're done!'." },
+  { phrase: "Lorry",           type: "british",
+    meaning: "A truck",
+    decoys: ["A long winding story or yarn", "A wide grassy meadow"],
+    difficulty: "hard",
+    explanation: "What Americans call a 'truck', Brits call a 'lorry'." },
+  { phrase: "Blimey",          type: "british",
+    meaning: "An exclamation of surprise",
+    decoys: ["A type of soft cloth flat cap", "A polite waving goodbye gesture"],
+    difficulty: "hard",
+    explanation: "A softened version of the old expression 'God blind me'." },
+  { phrase: "Trolley",         type: "british",
+    meaning: "A shopping cart",
+    decoys: ["A type of cheerful street musician", "A small woollen baby blanket"],
+    difficulty: "hard",
+    explanation: "Brits push trolleys around supermarkets, not carts." },
+
+  // Non-british hard
+  { phrase: "Squiffle-bonk",   type: "nonsense", difficulty: "hard",
+    explanation: "Pure invention designed to sound Cockney." },
+  { phrase: "Vacation",        type: "american", difficulty: "hard",
+    explanation: "American — Brits say 'holiday'." },
+  { phrase: "Mizzlepop",       type: "nonsense", difficulty: "hard",
+    explanation: "Made up. Sounds vaguely Northern, doesn't it?" },
+  { phrase: "Wibblesnork",     type: "nonsense", difficulty: "hard",
+    explanation: "Total fabrication. Not in any dictionary." },
+  { phrase: "Eraser",          type: "american", difficulty: "hard",
+    explanation: "American — Brits say 'rubber' (for pencil erasers)." },
+  { phrase: "Gribblemorp",     type: "nonsense", difficulty: "hard",
+    explanation: "Not a word — invented to sound vaguely old-world." },
+  { phrase: "Mailbox",         type: "american", difficulty: "hard",
+    explanation: "American — Brits use 'postbox' or 'letterbox'." },
+];
+
+const DIFFICULTIES = [
+  { id: 1, name: 'Bloke on the Street',  desc: 'Common British vs American everyday terms.',  pool: ['easy'] },
+  { id: 2, name: 'Proper Brit',          desc: 'Trickier slang, expressions and mixed tiers.', pool: ['easy', 'medium'] },
+  { id: 3, name: 'Right Cockney Geezer', desc: 'Deep cuts — anything in the bank can appear.', pool: ['easy', 'medium', 'hard'] },
+];
+
+const MODES = [
+  { id: 'rubbish',
+    name: 'Real or Rubbish?',
+    icon: '🎯',
+    desc: 'Decide if the word is British, made-up nonsense, or American English.' },
+  { id: 'meanings',
+    name: "What's It Mean?",
+    icon: '📖',
+    desc: 'Shown a real British expression — pick its correct meaning from three options.' },
+];
+
+const TIMERS = [
+  { id: 'none', label: 'No timer',   ms: null  },
+  { id: '5',    label: '5 seconds',  ms: 5000  },
+  { id: '10',   label: '10 seconds', ms: 10000 },
+];
+
+const VERDICTS = [
+  { min: 0, max: 2,  message: "Bless your cotton socks! Best stick to American telly for now." },
+  { min: 3, max: 4,  message: "A right shambles, that. Have another go, eh?" },
+  { min: 5, max: 6,  message: "Not bad at all. You'd hold your own in a London pub quiz." },
+  { min: 7, max: 8,  message: "Proper job! You've clearly spent time across the pond." },
+  { min: 9, max: 10, message: "Cor blimey, you're practically royalty! Tea and crumpets for you." },
+];
+
+// ============ STATE MACHINE ============
+// screens: 'idle' -> 'playing' (with sub-state: locked/unlocked) -> 'gameover'
+const state = {
+  screen: 'idle',
+  difficulty: 1,         // default selection
+  mode: null,            // required: 'rubbish' or 'meanings'
+  timer: null,           // required: 'none' | '5' | '10'
+  totalRounds: 10,
+  round: 0,
+  score: 0,
+  correct: 0,
+  incorrect: 0,
+  current: null,
+  questions: [],
+  meaningOptions: [],    // shuffled answer choices for mode 2
+  timerId: null,
+  timerStart: 0,
+  timerMs: 0,
+  locked: false,
+  lastResult: null,
+};
+
+const FEEDBACK_MS = 2000;
+const HISTORY_KEY = 'britishWordGameHistory';
+const MAX_HISTORY = 10;
+
+// ============ STORAGE ============
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveSession(score, difficultyId, modeId, timerId) {
+  const history = loadHistory();
+  const diff  = DIFFICULTIES.find(d => d.id === difficultyId) || { name: 'Unknown' };
+  const mode  = MODES.find(m => m.id === modeId)              || { name: 'Unknown', icon: '' };
+  const timer = TIMERS.find(t => t.id === timerId)            || { label: 'Unknown' };
+  history.unshift({
+    date: new Date().toISOString(),
+    score,
+    difficulty: diff.name,
+    modeId,
+    mode: mode.name,
+    modeIcon: mode.icon,
+    timerId,
+    timer: timer.label,
+  });
+  history.splice(MAX_HISTORY);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function clearHistory() {
+  if (confirm('Clear all session history?')) {
+    localStorage.removeItem(HISTORY_KEY);
+    render();
+  }
+}
+
+// Per-mode high score: filter history by modeId and take the max.
+function getHighScore(modeId) {
+  return loadHistory()
+    .filter(h => h.modeId === modeId)
+    .reduce((m, s) => Math.max(m, s.score || 0), 0);
+}
+
+// ============ GAME LOGIC ============
+function activePool() {
+  // Items at or below the chosen difficulty.
+  const diff = DIFFICULTIES.find(d => d.id === state.difficulty) || DIFFICULTIES[0];
+  let pool = wordBank.filter(w => diff.pool.includes(w.difficulty));
+  // Mode 2 only uses british items (which carry meaning + decoys).
+  if (state.mode === 'meanings') pool = pool.filter(w => w.type === 'british');
+  return pool;
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickQuestions() {
+  return shuffle(activePool()).slice(0, state.totalRounds);
+}
+
+function buildMeaningOptions(item) {
+  // 3 options: 1 correct meaning + 2 decoys, shuffled.
+  return shuffle([item.meaning, ...item.decoys]);
+}
+
+function setDifficulty(id) {
+  state.difficulty = id;
+  render();
+}
+
+function setMode(id) {
+  state.mode = id;
+  render();
+}
+
+function setTimer(id) {
+  state.timer = id;
+  render();
+}
+
+function canStart() {
+  return state.mode !== null && state.timer !== null && state.difficulty !== null;
+}
+
+function startGame() {
+  if (!canStart()) return;
+  state.questions = pickQuestions();
+  state.round = 0;
+  state.score = 0;
+  state.correct = 0;
+  state.incorrect = 0;
+  state.screen = 'playing';
+  beginRound();
+}
+
+function beginRound() {
+  if (state.round >= state.totalRounds) {
+    endGame();
+    return;
+  }
+  state.current = state.questions[state.round];
+  state.meaningOptions = state.mode === 'meanings'
+    ? buildMeaningOptions(state.current)
+    : [];
+  state.locked = false;
+  state.lastResult = null;
+  render();
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(state.timerId);
+  const t = TIMERS.find(x => x.id === state.timer);
+  if (!t || t.ms === null) {
+    state.timerMs = 0;
+    return; // 'No timer' — no countdown at all.
+  }
+  state.timerMs = t.ms;
+  state.timerStart = Date.now();
+  state.timerId = setInterval(tickTimer, 50);
+}
+
+function tickTimer() {
+  const elapsed   = Date.now() - state.timerStart;
+  const remaining = Math.max(0, state.timerMs - elapsed);
+  const pct = (remaining / state.timerMs) * 100;
+  const bar = document.getElementById('timer-fill');
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.style.backgroundPosition = (100 - pct) + '% 0';
+  }
+  if (remaining <= 0 && !state.locked) {
+    handleAnswer(null); // timeout = wrong
+  }
+}
+
+// In rubbish mode, choice is one of 'british' | 'nonsense' | 'american'.
+// In meanings mode, choice is the meaning-text string the player picked.
+function handleAnswer(choice) {
+  if (state.locked) return;
+  state.locked = true;
+  clearInterval(state.timerId);
+
+  let isCorrect;
+  if (state.mode === 'meanings') {
+    isCorrect = choice !== null && choice === state.current.meaning;
+  } else {
+    isCorrect = choice !== null && choice === state.current.type;
+  }
+
+  state.lastResult = {
+    isCorrect,
+    chosen: choice,
+    correctType: state.current.type,
+    correctMeaning: state.current.meaning || null,
+    explanation: state.current.explanation,
+    timedOut: choice === null,
+  };
+
+  if (isCorrect) { state.score++; state.correct++; }
+  else           { state.incorrect++; }
+
+  render();
+
+  setTimeout(() => {
+    state.round++;
+    beginRound();
+  }, FEEDBACK_MS);
+}
+
+// Bridge for the meaning-mode buttons (they pass an index into shuffled options).
+function handleMeaningChoice(idx) {
+  if (state.locked) return;
+  const choice = state.meaningOptions[idx];
+  if (choice === undefined) return;
+  handleAnswer(choice);
+}
+
+function endGame() {
+  clearInterval(state.timerId);
+  state.screen = 'gameover';
+  saveSession(state.score, state.difficulty, state.mode, state.timer);
+  render();
+}
+
+function backToIdle() {
+  // Preserves mode / timer / difficulty selections per spec.
+  state.screen = 'idle';
+  render();
+}
+
+// ============ HELPERS ============
+function getVerdict(score) {
+  return (VERDICTS.find(v => score >= v.min && score <= v.max) || VERDICTS[0]).message;
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
+         ' · ' +
+         d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// ============ RENDERERS ============
+function renderHistorySection() {
+  const history = loadHistory();
+  if (!history.length) {
+    return `<div class="history-empty">No sessions yet — have a go!</div>`;
+  }
+  const rows = history.map(h => {
+    const modeIcon = h.modeIcon || '';
+    const modeName = h.mode || '—';
+    const timer    = h.timer || '—';
+    const diff     = h.difficulty || '—';
+    return `
+      <div class="history-item">
+        <span class="h-meta">
+          ${escapeHtml(formatDate(h.date))}
+          <span class="h-diff">${escapeHtml(modeIcon)} ${escapeHtml(modeName)} · ${escapeHtml(diff)} · ${escapeHtml(timer)}</span>
+        </span>
+        <span class="score">${h.score}/10</span>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="history-list">${rows}</div>
+    <button class="clear-btn" onclick="clearHistory()">Clear history</button>
+  `;
+}
+
+function renderIdle() {
+  const highRubbish  = getHighScore('rubbish');
+  const highMeanings = getHighScore('meanings');
+  const ready = canStart();
+
+  return `
+    <div class="screen">
+      <span class="label">Choose your game mode</span>
+      <div class="mode-cards">
+        ${MODES.map(m => `
+          <button class="mode-card ${state.mode === m.id ? 'active' : ''}"
+                  onclick="setMode('${m.id}')">
+            <div class="mode-icon">${m.icon}</div>
+            <div class="mode-name">${escapeHtml(m.name)}</div>
+            <div class="mode-desc">${escapeHtml(m.desc)}</div>
+          </button>
+        `).join('')}
+      </div>
+
+      <span class="label">Choose your difficulty</span>
+      <div class="difficulty-buttons">
+        ${DIFFICULTIES.map(d => `
+          <button class="difficulty-btn ${state.difficulty === d.id ? 'active' : ''}"
+                  onclick="setDifficulty(${d.id})">
+            <div class="d-name">${escapeHtml(d.name)}</div>
+            <div class="d-desc">${escapeHtml(d.desc)}</div>
+          </button>
+        `).join('')}
+      </div>
+
+      <span class="label">How long per question?</span>
+      <div class="timer-pills">
+        ${TIMERS.map(t => `
+          <button class="timer-pill ${state.timer === t.id ? 'active' : ''}"
+                  onclick="setTimer('${t.id}')">
+            ⏱ ${escapeHtml(t.label)}
+          </button>
+        `).join('')}
+      </div>
+
+      <div class="info-row triple">
+        <div class="info-pill">
+          <span class="label">Rounds</span>
+          <div class="value">10</div>
+        </div>
+        <div class="info-pill">
+          <span class="label">🎯 High</span>
+          <div class="value">${highRubbish}/10</div>
+        </div>
+        <div class="info-pill">
+          <span class="label">📖 High</span>
+          <div class="value">${highMeanings}/10</div>
+        </div>
+      </div>
+
+      <button class="primary-btn" ${ready ? '' : 'disabled'} onclick="startGame()">
+        ${ready ? 'Start Game →' : 'Start Game'}
+      </button>
+      ${ready ? '' : `<div class="start-hint">Pick a game mode and a timer setting to begin.</div>`}
+
+      <div class="history">
+        <span class="label">Recent sessions</span>
+        ${renderHistorySection()}
+      </div>
+    </div>
+  `;
+}
+
+function renderPlaying() {
+  const q = state.current;
+  const r = state.lastResult;
+
+  // ----- Mode 1: Real or Rubbish? -----
+  const rubbishChoiceClass = (key) => {
+    if (!r) return '';
+    if (key === r.correctType) return 'correct';
+    if (r.chosen === key && !r.isCorrect) return 'wrong';
+    return '';
+  };
+
+  // ----- Mode 2: What's It Mean? -----
+  const meaningChoiceClass = (text) => {
+    if (!r) return '';
+    if (text === r.correctMeaning) return 'correct';
+    if (r.chosen === text && !r.isCorrect) return 'wrong';
+    return '';
+  };
+
+  let feedback = '';
+  if (r) {
+    const headline = r.isCorrect
+      ? 'Brilliant!'
+      : (r.timedOut ? 'Gutted! Out of time.' : 'Gutted!');
+    // For mode 2, reveal the meaning alongside the explanation.
+    const detail = state.mode === 'meanings'
+      ? `${escapeHtml(q.phrase)} — <b>${escapeHtml(r.correctMeaning || '')}</b>. ${escapeHtml(r.explanation)}`
+      : `${escapeHtml(q.phrase)} — ${escapeHtml(r.explanation)}`;
+    feedback = `
+      <div class="feedback ${r.isCorrect ? 'brilliant' : 'gutted'}">
+        <div class="verdict">${headline}</div>
+        <div class="explanation">${detail}</div>
+      </div>
+    `;
+  }
+
+  // Timer bar only when a countdown is active.
+  const timerBar = state.timer !== 'none'
+    ? `<div class="timer-bar"><div class="timer-bar-fill" id="timer-fill" style="width:100%;"></div></div>`
+    : `<div style="height:8px;margin-bottom:22px;"></div>`;
+
+  let choicesHtml;
+  if (state.mode === 'meanings') {
+    choicesHtml = `
+      <div class="choices">
+        ${state.meaningOptions.map((opt, i) => `
+          <button class="choice-btn meaning ${meaningChoiceClass(opt)}"
+                  ${state.locked ? 'disabled' : ''}
+                  onclick="handleMeaningChoice(${i})">
+            ${escapeHtml(opt)}
+          </button>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    choicesHtml = `
+      <div class="choices">
+        <button class="choice-btn ${rubbishChoiceClass('british')}"
+                ${state.locked ? 'disabled' : ''}
+                onclick="handleAnswer('british')">
+          🇬🇧&nbsp; Genuine British slang or expression
+        </button>
+        <button class="choice-btn ${rubbishChoiceClass('nonsense')}"
+                ${state.locked ? 'disabled' : ''}
+                onclick="handleAnswer('nonsense')">
+          🤔&nbsp; Made-up nonsense
+        </button>
+        <button class="choice-btn ${rubbishChoiceClass('american')}"
+                ${state.locked ? 'disabled' : ''}
+                onclick="handleAnswer('american')">
+          🇺🇸&nbsp; American English (not British)
+        </button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="screen">
+      <div class="game-meta">
+        <span class="round">Round ${state.round + 1} / ${state.totalRounds}</span>
+        <span class="score">Score · ${state.score}</span>
+      </div>
+      ${timerBar}
+      <div class="phrase-display">
+        <div class="phrase">${escapeHtml(q.phrase)}</div>
+      </div>
+      ${choicesHtml}
+      ${feedback}
+    </div>
+  `;
+}
+
+function renderGameOver() {
+  const mode  = MODES.find(m => m.id === state.mode)         || { name: '—', icon: '' };
+  const timer = TIMERS.find(t => t.id === state.timer)       || { label: '—' };
+  const diff  = DIFFICULTIES.find(d => d.id === state.difficulty) || { name: '—' };
+  return `
+    <div class="screen">
+      <div class="gameover-final">
+        <div class="big-score">${state.score}</div>
+        <div class="of-total">out of ${state.totalRounds}</div>
+        <div class="verdict">${escapeHtml(getVerdict(state.score))}</div>
+      </div>
+
+      <div class="gameover-meta">
+        <span class="gm-item">${escapeHtml(mode.icon)} Mode <b>${escapeHtml(mode.name)}</b></span>
+        <span class="gm-item">Difficulty <b>${escapeHtml(diff.name)}</b></span>
+        <span class="gm-item">⏱ Timer <b>${escapeHtml(timer.label)}</b></span>
+      </div>
+
+      <div class="breakdown">
+        <div class="stat correct">
+          <div class="stat-value">${state.correct}</div>
+          <div class="stat-label">Correct</div>
+        </div>
+        <div class="stat incorrect">
+          <div class="stat-value">${state.incorrect}</div>
+          <div class="stat-label">Missed</div>
+        </div>
+      </div>
+      <button class="primary-btn" onclick="backToIdle()">Play Again →</button>
+    </div>
+  `;
+}
+
+function render() {
+  const root = document.getElementById('screen');
+  if (state.screen === 'idle')        root.innerHTML = renderIdle();
+  else if (state.screen === 'playing') root.innerHTML = renderPlaying();
+  else if (state.screen === 'gameover') root.innerHTML = renderGameOver();
+}
+
+// Expose handlers used by inline onclick
+window.setDifficulty       = setDifficulty;
+window.setMode             = setMode;
+window.setTimer            = setTimer;
+window.startGame           = startGame;
+window.handleAnswer        = handleAnswer;
+window.handleMeaningChoice = handleMeaningChoice;
+window.backToIdle          = backToIdle;
+window.clearHistory        = clearHistory;
+
+// Boot
+render();
+</script>
+</body>
+</html>

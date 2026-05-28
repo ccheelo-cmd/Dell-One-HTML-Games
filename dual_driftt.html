@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dual Drift</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #151c30;
+    --text: #e6e9f2;
+    --muted: #9aa3b2;
+    --accent: #5b8cff;
+    --danger: #ff5b5b;
+    --ok: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    overscroll-behavior: none;
+  }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  #app {
+    width: min(900px, 95vw);
+    background: var(--panel);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  h1 {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  button, select {
+    background: #1f2842;
+    color: var(--text);
+    border: 1px solid #2b3657;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  button:hover, select:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .stat { font-size: 14px; color: var(--muted); font-weight: bold; }
+  .stat span { color: var(--text); }
+  svg {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16/9;
+    background: #0e1428;
+    border-radius: 12px;
+    display: block;
+  }
+  .instructions {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>
+    <span>Dual Drift</span>
+    <span class="stat">Score: <span id="scoreVal">0</span> &nbsp;|&nbsp; Best: <span id="bestVal">0</span></span>
+  </h1>
+  <div class="controls">
+    <button id="startBtn" class="primary">Start Game</button>
+    <select id="difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+    <span id="msg" style="color: var(--danger); font-weight: bold;"></span>
+  </div>
+  <svg viewBox="0 0 800 450" id="gameCanvas">
+    <!-- centre divider -->
+    <line x1="400" y1="0" x2="400" y2="450" stroke="#ff5b5b" stroke-width="3"/>
+    <!-- left lane dividers -->
+    <line x1="133" y1="0" x2="133" y2="450" stroke="#2b3657" stroke-width="2" stroke-dasharray="6 8"/>
+    <line x1="266" y1="0" x2="266" y2="450" stroke="#2b3657" stroke-width="2" stroke-dasharray="6 8"/>
+    <!-- right lane dividers -->
+    <line x1="533" y1="0" x2="533" y2="450" stroke="#2b3657" stroke-width="2" stroke-dasharray="6 8"/>
+    <line x1="666" y1="0" x2="666" y2="450" stroke="#2b3657" stroke-width="2" stroke-dasharray="6 8"/>
+    <g id="entities"></g>
+  </svg>
+  <div class="instructions">
+    <strong>A / D</strong> — move Left ship &nbsp;|&nbsp; <strong>← / →</strong> — move Right ship
+  </div>
+</div>
+
+<script>
+const entitiesGroup = document.getElementById('entities');
+const startBtn      = document.getElementById('startBtn');
+const diffSel       = document.getElementById('difficulty');
+const scoreEl       = document.getElementById('scoreVal');
+const bestEl        = document.getElementById('bestVal');
+const msgEl         = document.getElementById('msg');
+
+// ── Layout constants ─────────────────────────────────────────────────────────
+const W = 800, H = 450;
+const LEFT_LANES  = [66, 199, 332];   // centre-x of left lanes (3)
+const RIGHT_LANES = [466, 599, 732];  // centre-x of right lanes (3)
+
+// ── Ship SVG builder (small arrow-shaped craft) ──────────────────────────────
+function shipPath(cx, cy, color) {
+  // pointing upward
+  return `<polygon points="${cx},${cy-22} ${cx-13},${cy+14} ${cx},${cy+6} ${cx+13},${cy+14}"
+           fill="${color}" opacity="0.95"/>
+          <polygon points="${cx-6},${cy+6} ${cx+6},${cy+6} ${cx},${cy+18}"
+           fill="${color === '#5b8cff' ? '#7aaaff' : '#ffa07a'}" opacity="0.7"/>`;
+}
+
+// ── Obstacle SVG builder ──────────────────────────────────────────────────────
+function obstacleSVG(id, cx, cy) {
+  return `<g id="obs-${id}">
+    <polygon points="${cx},${cy-16} ${cx+14},${cy+12} ${cx-14},${cy+12}"
+             fill="#ff5b5b" opacity="0.9"/>
+    <polygon points="${cx},${cy-8} ${cx+7},${cy+6} ${cx-7},${cy+6}"
+             fill="#ff9999" opacity="0.6"/>
+  </g>`;
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let raf, isPlaying = false;
+let score = 0, best = 0;
+let leftLane = 1, rightLane = 1;   // 0/1/2
+let obstacles = [];
+let obsId = 0;
+let frameCount = 0;
+let speed, spawnInterval;
+
+const SHIP_Y = 380;
+
+function diffSettings() {
+  switch (diffSel.value) {
+    case 'easy':   return { speed: 3,   spawnInterval: 75  };
+    case 'hard':   return { speed: 6.5, spawnInterval: 35  };
+    default:       return { speed: 4.5, spawnInterval: 52  };
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  let html = '';
+
+  // ships
+  html += shipPath(LEFT_LANES[leftLane],  SHIP_Y, '#5b8cff');
+  html += shipPath(RIGHT_LANES[rightLane], SHIP_Y, '#ff9966');
+
+  // obstacles
+  for (const ob of obstacles) {
+    html += obstacleSVG(ob.id, ob.x, ob.y);
+  }
+
+  entitiesGroup.innerHTML = html;
+}
+
+// ── Game loop ─────────────────────────────────────────────────────────────────
+function loop() {
+  frameCount++;
+
+  // Spawn
+  if (frameCount % spawnInterval === 0) {
+    // randomly pick left or right side, random lane
+    const side  = Math.random() < 0.5 ? 'left' : 'right';
+    const lanes = side === 'left' ? LEFT_LANES : RIGHT_LANES;
+    const lane  = Math.floor(Math.random() * 3);
+    obstacles.push({ id: obsId++, x: lanes[lane], y: -20, side, lane });
+  }
+
+  // Move + collision check
+  const survivors = [];
+  for (const ob of obstacles) {
+    ob.y += speed;
+
+    if (ob.y > H + 20) {
+      // passed safely — award a point
+      score++;
+      scoreEl.textContent = score;
+      continue;
+    }
+
+    // collision zone
+    if (ob.y >= SHIP_Y - 28 && ob.y <= SHIP_Y + 20) {
+      const playerLane = ob.side === 'left' ? leftLane : rightLane;
+      if (ob.lane === playerLane) {
+        endGame('💥 Crash! Game over.');
+        return;
+      }
+    }
+
+    survivors.push(ob);
+  }
+  obstacles = survivors;
+
+  render();
+  raf = requestAnimationFrame(loop);
+}
+
+// ── Start / End ───────────────────────────────────────────────────────────────
+function startGame() {
+  score = 0;
+  frameCount = 0;
+  obstacles = [];
+  leftLane  = 1;
+  rightLane = 1;
+  scoreEl.textContent = '0';
+  msgEl.textContent   = '';
+
+  const s = diffSettings();
+  speed         = s.speed;
+  spawnInterval = s.spawnInterval;
+
+  isPlaying = true;
+  startBtn.textContent = 'Restart';
+  diffSel.disabled = true;
+
+  render();
+  raf = requestAnimationFrame(loop);
+}
+
+function endGame(message) {
+  cancelAnimationFrame(raf);
+  isPlaying = false;
+  diffSel.disabled = false;
+  startBtn.textContent = 'Play Again';
+
+  if (score > best) {
+    best = score;
+    bestEl.textContent = best;
+  }
+
+  msgEl.textContent = `${message}  Score: ${score}`;
+  render();
+}
+
+startBtn.addEventListener('click', startGame);
+
+// ── Keyboard controls ─────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (!isPlaying) return;
+
+  switch (e.key) {
+    case 'a': case 'A':
+      if (leftLane > 0) leftLane--;
+      e.preventDefault(); break;
+    case 'd': case 'D':
+      if (leftLane < 2) leftLane++;
+      e.preventDefault(); break;
+    case 'ArrowLeft':
+      if (rightLane > 0) rightLane--;
+      e.preventDefault(); break;
+    case 'ArrowRight':
+      if (rightLane < 2) rightLane++;
+      e.preventDefault(); break;
+  }
+});
+
+// initial render so ships are visible before game starts
+render();
+</script>
+</body>
+</html>

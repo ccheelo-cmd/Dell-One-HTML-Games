@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Reflex Arena</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b12;--s1:#0e1420;--s2:#141c2e;--s3:#1a2438;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e2e8f8;--muted:#4a6080;--muted2:#6a80a0;
+  --green:#22d3a0;--green-dim:#0a3028;--green-glow:rgba(34,211,160,0.3);
+  --amber:#f59e0b;--amber-dim:#2a1e04;
+  --red:#f43f5e;--red-dim:#2a0810;
+  --blue:#60a5fa;--blue-dim:#0a1a30;
+  --purple:#a78bfa;--purple-dim:#1a0f30;
+  --r:14px;--r-sm:8px;--r-xs:6px;
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+html{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+body{display:flex;align-items:flex-start;justify-content:center;padding:20px 16px 40px;min-height:100vh}
+.app{width:100%;max-width:540px}
+
+/* NAV */
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.logo{font-size:20px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(120deg,var(--green),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo span{-webkit-text-fill-color:var(--muted2);font-weight:400;font-size:13px;margin-left:6px}
+.nav-tabs{display:flex;gap:4px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r-sm);padding:3px}
+.nav-tab{font-size:12px;font-weight:600;padding:5px 12px;border-radius:var(--r-xs);border:none;cursor:pointer;font-family:var(--font);color:var(--muted2);background:transparent;transition:all .15s}
+.nav-tab.active{background:var(--s3);color:var(--text)}
+.nav-tab:hover:not(.active){color:var(--text)}
+
+/* VIEWS */
+.view{display:none}.view.active{display:block}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:14px}
+
+/* HERO */
+.hero{text-align:center;margin-bottom:20px}
+.hero h1{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:6px;line-height:1}
+.hero h1 .g{background:linear-gradient(120deg,var(--green),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:13px;color:var(--muted2)}
+
+/* MODE GRID */
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.mode-card{background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.mode-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.mode-card.selected{border-color:currentColor}
+.mode-card .mode-icon{font-size:24px;margin-bottom:8px}
+.mode-card .mode-name{font-size:13px;font-weight:700;margin-bottom:3px}
+.mode-card .mode-desc{font-size:11px;color:var(--muted2);line-height:1.4}
+.mode-card.m-classic{color:var(--green)}
+.mode-card.m-speed{color:var(--amber)}
+.mode-card.m-endurance{color:var(--blue)}
+.mode-card.m-chaos{color:var(--purple)}
+.mode-card .mode-badge{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.06em}
+.mode-card.m-speed .mode-badge{background:var(--amber-dim);color:var(--amber)}
+.mode-card.m-chaos .mode-badge{background:var(--purple-dim);color:var(--purple)}
+.mode-card.m-endurance .mode-badge{background:var(--blue-dim);color:var(--blue)}
+
+/* SETTINGS ROW */
+.settings-row{display:flex;gap:10px;margin-bottom:14px}
+.setting-box{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px}
+.setting-box label{display:block;font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+select{width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none}
+select option{background:#1a2438}
+
+/* BTN */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:var(--r-sm);font-family:var(--font);font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.01em}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:linear-gradient(135deg,var(--green),#16a07a);color:#001a12;font-size:16px;padding:15px;width:100%}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-ghost{background:var(--s2);color:var(--muted2);font-size:13px;padding:9px 16px;border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-danger{background:var(--red-dim);color:var(--red);font-size:12px;padding:7px 14px;border:1px solid rgba(244,63,94,.2)}
+.btn-danger:hover{background:rgba(244,63,94,.15)}
+
+/* ARENA */
+.arena-wrap{position:relative;margin-bottom:12px}
+.arena{
+  min-height:280px;border-radius:var(--r);border:2px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;user-select:none;transition:background .12s,border-color .12s;
+  position:relative;overflow:hidden;
+  background:var(--s1);
+}
+.arena.state-wait{background:var(--s1)}
+.arena.state-ready{background:var(--green-dim);border-color:var(--green);animation:arenaGo .25s ease}
+.arena.state-early{background:var(--red-dim);border-color:var(--red);animation:arenaShake .3s ease}
+.arena.state-done{background:var(--s2);border-color:var(--border2)}
+@keyframes arenaGo{0%{transform:scale(.98)}100%{transform:scale(1)}}
+@keyframes arenaShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+/* Arena glow ring */
+.arena::after{
+  content:'';position:absolute;inset:-2px;border-radius:calc(var(--r) + 2px);
+  pointer-events:none;
+  transition:opacity .2s;opacity:0;
+  box-shadow:0 0 30px 6px var(--green-glow);
+}
+.arena.state-ready::after{opacity:1}
+
+/* Arena content */
+.arena-target{
+  width:80px;height:80px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;transition:all .15s;margin-bottom:14px;
+  border:2px solid transparent;
+}
+.state-wait .arena-target{background:var(--s3);color:var(--muted)}
+.state-ready .arena-target{background:var(--green-dim);border-color:var(--green);color:var(--green);animation:pulse 1s infinite}
+.state-early .arena-target{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+.state-done .arena-target{background:var(--s3);color:var(--text)}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+
+.arena-msg{font-size:22px;font-weight:800;letter-spacing:-0.5px;text-align:center;margin-bottom:6px}
+.arena-sub{font-size:12px;color:var(--muted2);text-align:center}
+.arena-badge{position:absolute;top:12px;right:12px;background:var(--s3);border:1px solid var(--border);border-radius:20px;font-size:11px;font-weight:600;color:var(--muted2);padding:4px 12px}
+
+/* Chaos mode colors */
+.arena.chaos-1{background:#120820;border-color:var(--purple)}
+.arena.chaos-2{background:#1a0808;border-color:var(--red)}
+.arena.chaos-3{background:#081220;border-color:var(--blue)}
+
+/* Progress bar */
+.progress-bar-wrap{height:4px;background:var(--s2);border-radius:2px;margin-bottom:12px;overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--blue));border-radius:2px;transition:width .3s ease}
+
+/* Round dots */
+.round-dots{display:flex;gap:7px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+.rdot{width:9px;height:9px;border-radius:50%;background:var(--s3);border:1px solid var(--border);transition:all .2s}
+.rdot.done{background:var(--green);border-color:var(--green);box-shadow:0 0 6px var(--green-glow)}
+.rdot.current{background:var(--blue);border-color:var(--blue);animation:blink .8s infinite}
+.rdot.fail{background:var(--red);border-color:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Streak counter */
+.streak-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border);margin-bottom:12px}
+.streak-icon{font-size:18px}
+.streak-label{font-size:11px;color:var(--muted)}
+.streak-val{font-size:16px;font-weight:800;margin-left:auto}
+.streak-bar.hot{border-color:rgba(245,158,11,.3);background:var(--amber-dim)}
+.streak-bar.hot .streak-val{color:var(--amber)}
+.streak-bar.fire{border-color:rgba(244,63,94,.35);background:var(--red-dim);animation:fireGlow .6s ease infinite alternate}
+@keyframes fireGlow{from{box-shadow:0 0 0 rgba(244,63,94,0)}to{box-shadow:0 0 16px rgba(244,63,94,.25)}}
+.streak-bar.fire .streak-val{color:var(--red)}
+
+/* Speed meter (endurance mode) */
+.speed-meter{height:8px;background:var(--s2);border-radius:4px;overflow:hidden;margin-bottom:12px}
+.speed-fill{height:100%;border-radius:4px;transition:width .4s ease;background:var(--green)}
+
+/* RESULTS */
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat-pill{background:var(--s2);border-radius:var(--r-sm);padding:14px 10px;text-align:center;border:1px solid var(--border)}
+.stat-num{font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.rating-card{border-radius:var(--r-sm);padding:16px;margin-bottom:14px;display:flex;align-items:center;gap:14px;border:1px solid var(--border)}
+.rating-emoji{font-size:36px;line-height:1}
+.rating-name{font-size:18px;font-weight:800;letter-spacing:-.3px}
+.rating-desc{font-size:12px;color:var(--muted2);margin-top:3px}
+.round-list .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.round-list .row:last-child{border:none}
+.row-time{font-weight:700;font-family:'Courier New',monospace;font-size:14px}
+.pill{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em}
+.pill-best{background:rgba(34,211,160,.12);color:var(--green)}
+.pill-worst{background:rgba(244,63,94,.12);color:var(--red)}
+.pill-early{background:rgba(245,158,11,.12);color:var(--amber)}
+
+/* HISTORY */
+.hist-empty{text-align:center;color:var(--muted);font-size:13px;padding:20px 0}
+.hist-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.hist-item:last-child{border:none}
+.hist-mode{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.hist-mode-icon{width:28px;height:28px;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;font-size:14px}
+.hist-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.hist-avg{font-size:16px;font-weight:800;font-family:'Courier New',monospace}
+.hist-best{font-size:11px;color:var(--muted);text-align:right;margin-top:2px}
+.hist-list{max-height:260px;overflow-y:auto}
+.hist-list::-webkit-scrollbar{width:3px}
+.hist-list::-webkit-scrollbar-track{background:transparent}
+.hist-list::-webkit-scrollbar-thumb{background:var(--border)}
+
+/* LEADERBOARD */
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.lb-row:last-child{border:none}
+.lb-rank{width:24px;font-size:13px;font-weight:800;color:var(--muted);text-align:center;flex-shrink:0}
+.lb-rank.r1{color:#ffd700;font-size:18px}
+.lb-rank.r2{color:#c0c0c0}
+.lb-rank.r3{color:#cd7f32}
+.lb-name{flex:1;font-size:13px;font-weight:600}
+.lb-time{font-family:'Courier New',monospace;font-weight:800;font-size:15px}
+.lb-mode{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.animate-in{animation:fadeUp .3s ease forwards}
+
+/* Number flash on result */
+@keyframes numFlash{0%{transform:scale(0.7);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.num-flash{animation:numFlash .4s cubic-bezier(.22,.61,.36,1) both}
+
+/* Confetti burst (pure CSS) */
+.confetti-wrap{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;overflow:hidden}
+.confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:fall 1.8s ease forwards}
+@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(120vh) rotate(720deg);opacity:0}}
+
+/* Action row */
+.action-row{display:flex;gap:10px;margin-top:14px}
+
+/* Bonus badge */
+.bonus-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:14px;font-weight:800;color:var(--amber);background:var(--amber-dim);border:1px solid rgba(245,158,11,.3);border-radius:20px;padding:4px 14px;white-space:nowrap;animation:bonusPop .6s ease forwards;pointer-events:none;z-index:10}
+@keyframes bonusPop{0%{transform:translate(-50%,-60%);opacity:0}30%{transform:translate(-50%,-50%);opacity:1}70%{transform:translate(-50%,-50%);opacity:1}100%{transform:translate(-50%,-40%);opacity:0}}
+
+/* Endurance countdown ring */
+.life-icons{display:flex;gap:6px;justify-content:center;margin-bottom:12px;font-size:20px}
+
+/* Responsive */
+@media(max-width:400px){
+  .mode-grid{grid-template-columns:1fr}
+  .podium{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- NAV -->
+  <div class="nav">
+    <div class="logo">REFLEX<span>ARENA</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('play')">Play</button>
+      <button class="nav-tab" onclick="switchTab('history')">History</button>
+      <button class="nav-tab" onclick="switchTab('leaderboard')">Best</button>
+    </div>
+  </div>
+
+  <!-- ═══ PLAY TAB ═══ -->
+  <div class="view active" id="view-play">
+
+    <!-- SETUP SCREEN -->
+    <div id="screen-setup">
+      <div class="hero">
+        <h1><span class="g">Test Your</span><br>Reflexes</h1>
+        <p>Click the moment the target turns green. How fast are you?</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Choose Game Mode</div>
+        <div class="mode-grid">
+          <div class="mode-card m-classic selected" onclick="selectMode('classic',this)">
+            <div class="mode-icon">🎯</div>
+            <div class="mode-name">Classic</div>
+            <div class="mode-desc">5 rounds, fixed delay. Clean and simple.</div>
+          </div>
+          <div class="mode-card m-speed" onclick="selectMode('speed',this)">
+            <div class="mode-badge">Fast</div>
+            <div class="mode-icon">⚡</div>
+            <div class="mode-name">Speed Blitz</div>
+            <div class="mode-desc">10 rapid-fire rounds. Ultra-short delays.</div>
+          </div>
+          <div class="mode-card m-endurance" onclick="selectMode('endurance',this)">
+            <div class="mode-badge">3 Lives</div>
+            <div class="mode-icon">🛡️</div>
+            <div class="mode-name">Endurance</div>
+            <div class="mode-desc">Survive as long as possible. Miss 3 and it's over.</div>
+          </div>
+          <div class="mode-card m-chaos" onclick="selectMode('chaos',this)">
+            <div class="mode-badge">Wild</div>
+            <div class="mode-icon">🌀</div>
+            <div class="mode-name">Chaos Mode</div>
+            <div class="mode-desc">Colours shift, delays randomise. Stay sharp.</div>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="setting-box">
+            <label>Difficulty</label>
+            <select id="sel-diff">
+              <option value="easy">Easy</option>
+              <option value="med" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div class="setting-box">
+            <label>Rounds (classic/blitz)</label>
+            <select id="sel-rounds">
+              <option value="5" selected>5 rounds</option>
+              <option value="10">10 rounds</option>
+              <option value="20">20 rounds</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="startGame()">▶  Start Game</button>
+      </div>
+
+      <!-- Personal best quick view -->
+      <div class="card" id="personal-best-card" style="display:none">
+        <div class="card-title">Your Personal Best</div>
+        <div id="personal-best-content"></div>
+      </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="screen-game" style="display:none">
+
+      <div class="round-dots" id="round-dots"></div>
+
+      <!-- Streak (classic/speed) -->
+      <div class="streak-bar" id="streak-bar">
+        <span class="streak-icon">⚡</span>
+        <span class="streak-label">Streak</span>
+        <span class="streak-val" id="streak-val">0</span>
+      </div>
+
+      <!-- Lives (endurance) -->
+      <div class="life-icons" id="life-icons" style="display:none"></div>
+
+      <!-- Speed meter (endurance difficulty) -->
+      <div class="speed-meter" id="speed-meter" style="display:none">
+        <div class="speed-fill" id="speed-fill" style="width:100%"></div>
+      </div>
+
+      <div class="arena-wrap">
+        <div class="arena state-wait" id="arena" onclick="handleArenaClick()">
+          <div class="arena-badge" id="arena-badge">Round 1</div>
+          <div class="arena-target" id="arena-target">⏳</div>
+          <div class="arena-msg" id="arena-msg">Get ready…</div>
+          <div class="arena-sub" id="arena-sub">Wait for the signal, then tap!</div>
+        </div>
+      </div>
+
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+      </div>
+
+      <button class="btn btn-ghost" style="width:100%" onclick="cancelGame()">✕  Quit Game</button>
+    </div>
+
+    <!-- RESULTS SCREEN -->
+    <div id="screen-results" style="display:none">
+      <div class="card animate-in">
+        <div class="card-title">Session Complete</div>
+
+        <div class="rating-card" id="rating-card">
+          <div class="rating-emoji" id="rating-emoji">🏆</div>
+          <div>
+            <div class="rating-name" id="rating-name">Elite</div>
+            <div class="rating-desc" id="rating-desc">You're in the top tier.</div>
+          </div>
+        </div>
+
+        <div class="podium">
+          <div class="stat-pill">
+            <div class="stat-num num-flash" id="r-avg" style="color:var(--blue)">—</div>
+            <div class="stat-lbl">avg ms</div>
+          </div>
+          <div class="stat-pill">
+            <div class="stat-num num-flash" id="r-best" style="color:var(--green)">—</div>
+            <div class="stat-lbl">best ms</div>
+          </div>
+          <div class="stat-pill">
+            <div class="stat-num num-flash" id="r-streak" style="color:var(--amber)">—</div>
+            <div class="stat-lbl">best streak</div>
+          </div>
+        </div>
+
+        <div class="round-list card-title" style="margin-bottom:8px">Round breakdown</div>
+        <div class="round-list" id="round-list"></div>
+
+        <div class="action-row">
+          <button class="btn btn-primary" style="flex:2" onclick="goSetup()">Play Again</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="copyResult()">📋 Copy</button>
+        </div>
+
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center" id="pb-notice"></div>
+      </div>
+    </div>
+  </div><!-- /view-play -->
+
+  <!-- ═══ HISTORY TAB ═══ -->
+  <div class="view" id="view-history">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="card-title" style="margin:0">Session History</div>
+        <button class="btn btn-danger" onclick="clearHistory()">Clear</button>
+      </div>
+      <div class="hist-list" id="hist-list">
+        <div class="hist-empty">No sessions yet. Play your first game!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LEADERBOARD TAB ═══ -->
+  <div class="view" id="view-leaderboard">
+    <div class="card">
+      <div class="card-title">Personal Best Times</div>
+      <div id="lb-list">
+        <div class="hist-empty">No records yet. Start playing!</div>
+      </div>
+    </div>
+    <div class="card" style="text-align:center;padding:14px">
+      <div style="font-size:11px;color:var(--muted)">Records are based on your saved sessions on this device.</div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- Confetti container -->
+<div class="confetti-wrap" id="confetti-wrap"></div>
+
+<script>
+// ── CONSTANTS ──
+const HIST_KEY = 'reflex_history_v2';
+const MODE_INFO = {
+  classic:   {icon:'🎯', color:'var(--green)',  label:'Classic'},
+  speed:     {icon:'⚡', color:'var(--amber)',  label:'Speed Blitz'},
+  endurance: {icon:'🛡️', color:'var(--blue)',   label:'Endurance'},
+  chaos:     {icon:'🌀', color:'var(--purple)', label:'Chaos Mode'},
+};
+const RATINGS = [
+  {max:180, emoji:'🏆', name:'Elite',      desc:'Top 1% — superhuman reflexes!',      bg:'rgba(250,204,21,.08)',  border:'rgba(250,204,21,.2)'},
+  {max:220, emoji:'⚡', name:'Lightning',  desc:'Blazing fast. You\'re a pro.',         bg:'rgba(34,211,160,.08)',  border:'rgba(34,211,160,.2)'},
+  {max:270, emoji:'🎯', name:'Sharpshooter',desc:'Above average — very solid.',        bg:'rgba(96,165,250,.08)', border:'rgba(96,165,250,.2)'},
+  {max:350, emoji:'👍', name:'Average',    desc:'Right in the middle. Keep training.', bg:'rgba(167,139,250,.08)',border:'rgba(167,139,250,.2)'},
+  {max:500, emoji:'😴', name:'Sleepy',     desc:'A little slow today. Try again?',     bg:'rgba(244,63,94,.08)',  border:'rgba(244,63,94,.2)'},
+  {max:9999,emoji:'🐢', name:'Turtle Mode',desc:'Were you asleep? No worries!',        bg:'rgba(100,100,100,.08)',border:'rgba(100,100,100,.2)'},
+];
+
+// ── STATE ──
+let G = {
+  mode:'classic', diff:'med', totalRounds:5,
+  round:0, times:[], earlyCount:0, lives:3, streak:0, bestStreak:0,
+  phase:'idle', timer:null, startTime:null, enduranceRound:0,
+};
+
+// ── TABS ──
+function switchTab(t){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+t).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if(t==='history') renderHistory();
+  if(t==='leaderboard') renderLeaderboard();
+}
+
+// ── MODE SELECTION ──
+let selectedMode = 'classic';
+function selectMode(m, el){
+  selectedMode = m;
+  document.querySelectorAll('.mode-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ── DELAY RANGES ──
+function getDelay(){
+  const d = document.getElementById('sel-diff').value;
+  const ranges = {
+    easy:  {classic:[1200,4000], speed:[600,2000], endurance:[800,3000], chaos:[400,3500]},
+    med:   {classic:[600,3000],  speed:[300,1500], endurance:[500,2500], chaos:[200,3000]},
+    hard:  {classic:[300,1500],  speed:[150,800],  endurance:[300,1500], chaos:[100,2000]},
+  };
+  const [mn,mx] = ranges[d][G.mode];
+  return mn + Math.random()*(mx-mn);
+}
+
+// ── START ──
+function startGame(){
+  G.mode  = selectedMode;
+  G.diff  = document.getElementById('sel-diff').value;
+  G.totalRounds = G.mode==='speed'
+    ? parseInt(document.getElementById('sel-rounds').value)*2
+    : parseInt(document.getElementById('sel-rounds').value);
+  if(G.mode==='endurance') G.totalRounds = 999;
+  G.round=0; G.times=[]; G.earlyCount=0; G.lives=3; G.streak=0; G.bestStreak=0;
+  G.enduranceRound=0;
+
+  document.getElementById('screen-setup').style.display='none';
+  document.getElementById('screen-results').style.display='none';
+  document.getElementById('screen-game').style.display='block';
+
+  // Streak bar
+  const sb=document.getElementById('streak-bar');
+  if(G.mode==='endurance'){
+    sb.style.display='none';
+    document.getElementById('life-icons').style.display='flex';
+    document.getElementById('speed-meter').style.display='block';
+  } else {
+    sb.style.display='flex';
+    document.getElementById('life-icons').style.display='none';
+    document.getElementById('speed-meter').style.display='none';
+  }
+
+  buildDots();
+  updateLives();
+  nextRound();
+}
+
+function buildDots(){
+  const el=document.getElementById('round-dots');
+  el.innerHTML='';
+  if(G.mode==='endurance'){ el.innerHTML=''; return; }
+  const n=Math.min(G.totalRounds,20);
+  for(let i=0;i<n;i++){
+    const d=document.createElement('div');
+    d.className='rdot'+(i===0?' current':'');
+    d.id='rdot-'+i;
+    el.appendChild(d);
+  }
+}
+function updateDots(failed){
+  if(G.mode==='endurance') return;
+  const n=Math.min(G.totalRounds,20);
+  for(let i=0;i<n;i++){
+    const d=document.getElementById('rdot-'+i);
+    if(!d) continue;
+    if(i<G.round) d.className='rdot '+(failed&&i===G.round-1?'fail':'done');
+    else if(i===G.round) d.className='rdot current';
+    else d.className='rdot';
+  }
+}
+function updateProgress(){
+  const pct = G.mode==='endurance' ? 0 : (G.round/G.totalRounds)*100;
+  document.getElementById('progress-bar').style.width=pct+'%';
+}
+function updateLives(){
+  if(G.mode!=='endurance') return;
+  const el=document.getElementById('life-icons');
+  el.innerHTML='';
+  for(let i=0;i<3;i++){
+    el.innerHTML+= i<G.lives ? '❤️' : '🖤';
+  }
+}
+function updateStreakBar(){
+  const sb=document.getElementById('streak-bar');
+  const sv=document.getElementById('streak-val');
+  sv.textContent=G.streak;
+  sb.classList.remove('hot','fire');
+  if(G.streak>=5) sb.classList.add('fire');
+  else if(G.streak>=3) sb.classList.add('hot');
+}
+
+function setArena(state,icon,msg,sub,chaosClass){
+  const a=document.getElementById('arena');
+  a.className='arena state-'+state+(chaosClass?' '+chaosClass:'');
+  document.getElementById('arena-target').textContent=icon;
+  document.getElementById('arena-msg').textContent=msg;
+  document.getElementById('arena-sub').textContent=sub;
+}
+
+function nextRound(){
+  if(G.mode!=='endurance' && G.round>=G.totalRounds){ showResults(); return; }
+
+  G.enduranceRound++;
+  updateDots();
+  updateProgress();
+
+  const rLabel = G.mode==='endurance'
+    ? `Survived: ${G.enduranceRound-1}  ❤️ ${G.lives}`
+    : `Round ${G.round+1} / ${G.totalRounds}`;
+  document.getElementById('arena-badge').textContent=rLabel;
+
+  // Speed meter (endurance) shrinks window over time
+  if(G.mode==='endurance'){
+    const pct=Math.max(20, 100 - G.enduranceRound*3);
+    document.getElementById('speed-fill').style.width=pct+'%';
+    const colors=['var(--green)','var(--amber)','var(--red)'];
+    document.getElementById('speed-fill').style.background=
+      pct>60?colors[0]:pct>35?colors[1]:colors[2];
+  }
+
+  G.phase='waiting';
+  setArena('wait','⏳','Stay focused…','Wait for the signal, then tap!');
+  clearTimeout(G.timer);
+  G.timer=setTimeout(()=>{
+    G.phase='ready';
+    G.startTime=performance.now();
+    const chaosClass = G.mode==='chaos' ? 'chaos-'+Math.ceil(Math.random()*3) : '';
+    setArena('ready','🟢','TAP NOW!','Go go go!', chaosClass);
+  }, getDelay());
+}
+
+function handleArenaClick(){
+  if(G.phase==='waiting'){
+    clearTimeout(G.timer);
+    G.phase='tooearly';
+    G.streak=0;
+    updateStreakBar();
+    if(G.mode==='endurance'){
+      G.lives--;
+      updateLives();
+      if(G.lives<=0){ endEndurance(); return; }
+    }
+    setArena('early','❌','Too early!','Wait for green before clicking!');
+    G.times.push({ms:null,early:true});
+    G.round++;
+    G.timer=setTimeout(()=>nextRound(), 1600);
+  } else if(G.phase==='ready'){
+    const rt=Math.round(performance.now()-G.startTime);
+    G.phase='done';
+    G.streak++;
+    if(G.streak>G.bestStreak) G.bestStreak=G.streak;
+    updateStreakBar();
+
+    // Bonus badge
+    if(G.streak>=3){
+      showBonus(G.streak>=5?`🔥 ${G.streak}× Streak!`:`⚡ ${G.streak}× Combo!`);
+    }
+
+    G.times.push({ms:rt,early:false});
+    G.round++;
+
+    const rating=getRating(rt);
+    setArena('done','✅',`${rt} ms`,rating.name);
+
+    // Confetti for elite round
+    if(rt<200) spawnConfetti(8);
+
+    if(G.mode==='endurance'){
+      document.getElementById('arena-badge').textContent=`Survived: ${G.enduranceRound}  ❤️ ${G.lives}`;
+      G.timer=setTimeout(()=>nextRound(), 700);
+    } else {
+      G.timer=setTimeout(()=>nextRound(), 900);
+    }
+  }
+}
+
+function endEndurance(){
+  setArena('early','💀','Game Over!',`You survived ${G.enduranceRound-1} rounds!`);
+  G.timer=setTimeout(()=>showResults(), 1800);
+}
+
+function showBonus(text){
+  const a=document.getElementById('arena');
+  const b=document.createElement('div');
+  b.className='bonus-badge';
+  b.textContent=text;
+  a.appendChild(b);
+  setTimeout(()=>b.remove(),700);
+}
+
+function cancelGame(){
+  clearTimeout(G.timer);
+  G.phase='idle';
+  goSetup();
+}
+
+function goSetup(){
+  document.getElementById('screen-game').style.display='none';
+  document.getElementById('screen-results').style.display='none';
+  document.getElementById('screen-setup').style.display='block';
+  renderPersonalBest();
+}
+
+// ── RESULTS ──
+function showResults(){
+  document.getElementById('screen-game').style.display='none';
+  document.getElementById('screen-results').style.display='block';
+
+  const valid = G.times.filter(t=>!t.early).map(t=>t.ms);
+  if(!valid.length){ goSetup(); return; }
+
+  const avg   = Math.round(valid.reduce((a,b)=>a+b,0)/valid.length);
+  const best  = Math.min(...valid);
+  const worst = Math.max(...valid);
+
+  document.getElementById('r-avg').textContent=avg;
+  document.getElementById('r-best').textContent=best;
+  document.getElementById('r-streak').textContent=G.bestStreak;
+
+  const r=getRating(avg);
+  const rc=document.getElementById('rating-card');
+  rc.style.background=r.bg;
+  rc.style.borderColor=r.border;
+  document.getElementById('rating-emoji').textContent=r.emoji;
+  document.getElementById('rating-name').textContent=r.name;
+  document.getElementById('rating-desc').textContent=r.desc;
+
+  // Round list
+  const rl=document.getElementById('round-list');
+  rl.innerHTML=G.times.map((t,i)=>{
+    if(t.early) return `<div class="row"><span style="color:var(--muted)">Round ${i+1}</span><div style="display:flex;align-items:center;gap:8px"><span class="pill pill-early">Early</span><span class="row-time" style="color:var(--amber)">—</span></div></div>`;
+    const isBest = t.ms===best && G.times.findIndex(x=>!x.early&&x.ms===best)===i;
+    const isWorst= t.ms===worst && G.times.map((x,j)=>(!x.early&&x.ms===worst)?j:-1).filter(j=>j>=0).pop()===i;
+    const tag = isBest?'<span class="pill pill-best">Best</span>':isWorst?'<span class="pill pill-worst">Worst</span>':'';
+    return `<div class="row"><span style="color:var(--muted)">Round ${i+1}</span><div style="display:flex;align-items:center;gap:8px">${tag}<span class="row-time">${t.ms} ms</span></div></div>`;
+  }).join('');
+
+  // PB notice
+  const saved=saveSession({mode:G.mode,diff:G.diff,avg,best,worst,streak:G.bestStreak,rounds:valid.length,ts:Date.now()});
+  document.getElementById('pb-notice').textContent=saved.isPB ? '🏆 New personal best for this mode!' : '';
+
+  if(avg<200) spawnConfetti(24);
+  else if(avg<250) spawnConfetti(12);
+}
+
+function getRating(ms){
+  return RATINGS.find(r=>ms<=r.max)||RATINGS[RATINGS.length-1];
+}
+
+// ── PERSIST ──
+function loadHistory(){ try{return JSON.parse(localStorage.getItem(HIST_KEY))||[];}catch{return[];} }
+function saveSession(s){
+  const all=loadHistory();
+  // Check PB for this mode
+  const prev=all.filter(x=>x.mode===s.mode);
+  const isPB=!prev.length||s.best<Math.min(...prev.map(x=>x.best));
+  s.isPB=isPB;
+  all.unshift(s);
+  if(all.length>100) all.length=100;
+  localStorage.setItem(HIST_KEY,JSON.stringify(all));
+  return s;
+}
+function clearHistory(){
+  if(confirm('Clear all history and records?')){
+    localStorage.removeItem(HIST_KEY);
+    renderHistory(); renderLeaderboard();
+  }
+}
+
+function renderHistory(){
+  const all=loadHistory();
+  const el=document.getElementById('hist-list');
+  if(!all.length){ el.innerHTML='<div class="hist-empty">No sessions yet. Play your first game!</div>'; return; }
+  el.innerHTML=all.slice(0,30).map(s=>{
+    const mi=MODE_INFO[s.mode]||MODE_INFO.classic;
+    const d=new Date(s.ts);
+    const ds=d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+    return `<div class="hist-item">
+      <div>
+        <div class="hist-mode">
+          <div class="hist-mode-icon" style="background:rgba(0,0,0,.2);color:${mi.color}">${mi.icon}</div>
+          ${mi.label} · ${s.diff||'med'}${s.isPB?'  🏆':''}
+        </div>
+        <div class="hist-sub">${ds} · ${s.rounds} rounds</div>
+      </div>
+      <div>
+        <div class="hist-avg" style="color:var(--blue)">${s.avg} ms</div>
+        <div class="hist-best">best: ${s.best} ms</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLeaderboard(){
+  const all=loadHistory();
+  const el=document.getElementById('lb-list');
+  if(!all.length){ el.innerHTML='<div class="hist-empty">No records yet. Start playing!</div>'; return; }
+
+  // Best per mode
+  const best={};
+  all.forEach(s=>{
+    if(!best[s.mode]||s.best<best[s.mode].best) best[s.mode]=s;
+  });
+  const rows=Object.values(best).sort((a,b)=>a.best-b.best);
+
+  // Also top 5 all-time bests
+  const top5=[...all].sort((a,b)=>a.best-b.best).slice(0,5);
+
+  el.innerHTML='<div class="card-title" style="margin-bottom:8px">Best by Mode</div>'+
+    rows.map((s,i)=>{
+      const mi=MODE_INFO[s.mode]||MODE_INFO.classic;
+      const rank=['🥇','🥈','🥉'][i]||`${i+1}.`;
+      return `<div class="lb-row">
+        <div class="lb-rank">${rank}</div>
+        <div class="hist-mode-icon" style="background:rgba(0,0,0,.2);color:${mi.color};border-radius:var(--r-xs);width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${mi.icon}</div>
+        <div class="lb-name">${mi.label}<div class="lb-mode">${s.diff} · ${s.rounds} rounds</div></div>
+        <div class="lb-time" style="color:var(--green)">${s.best} ms</div>
+      </div>`;
+    }).join('')+
+
+    '<div class="card-title" style="margin:14px 0 8px">Top 5 Single-Round Bests</div>'+
+    top5.map((s,i)=>{
+      const mi=MODE_INFO[s.mode]||MODE_INFO.classic;
+      const rank=i<3?['🥇','🥈','🥉'][i]:`${i+1}.`;
+      return `<div class="lb-row">
+        <div class="lb-rank">${rank}</div>
+        <div class="hist-mode-icon" style="background:rgba(0,0,0,.2);color:${mi.color};border-radius:var(--r-xs);width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${mi.icon}</div>
+        <div class="lb-name">${mi.label}<div class="lb-mode">${new Date(s.ts).toLocaleDateString()}</div></div>
+        <div class="lb-time" style="color:var(--green)">${s.best} ms</div>
+      </div>`;
+    }).join('');
+}
+
+function renderPersonalBest(){
+  const all=loadHistory();
+  const card=document.getElementById('personal-best-card');
+  const cont=document.getElementById('personal-best-content');
+  if(!all.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  const best=all.reduce((a,b)=>a.best<b.best?a:b);
+  const mi=MODE_INFO[best.mode]||MODE_INFO.classic;
+  cont.innerHTML=`<div style="display:flex;align-items:center;gap:12px">
+    <div style="font-size:32px">🏆</div>
+    <div>
+      <div style="font-size:26px;font-weight:800;color:var(--green);font-family:'Courier New',monospace">${best.best} ms</div>
+      <div style="font-size:12px;color:var(--muted)">${mi.icon} ${mi.label} · ${best.diff} · ${new Date(best.ts).toLocaleDateString()}</div>
+    </div>
+  </div>`;
+}
+
+// ── CONFETTI ──
+function spawnConfetti(n){
+  const wrap=document.getElementById('confetti-wrap');
+  const colors=['#22d3a0','#60a5fa','#f59e0b','#a78bfa','#f43f5e','#fff'];
+  for(let i=0;i<n;i++){
+    const c=document.createElement('div');
+    c.className='confetti-piece';
+    c.style.cssText=`
+      left:${10+Math.random()*80}%;
+      top:${-10-Math.random()*20}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-delay:${Math.random()*0.6}s;
+      animation-duration:${1.4+Math.random()*0.8}s;
+      width:${6+Math.random()*8}px;
+      height:${6+Math.random()*8}px;
+      border-radius:${Math.random()>0.5?'50%':'2px'};
+    `;
+    wrap.appendChild(c);
+    setTimeout(()=>c.remove(), 2600);
+  }
+}
+
+// ── COPY RESULT ──
+function copyResult(){
+  const valid=G.times.filter(t=>!t.early).map(t=>t.ms);
+  if(!valid.length) return;
+  const avg=Math.round(valid.reduce((a,b)=>a+b,0)/valid.length);
+  const best=Math.min(...valid);
+  const mi=MODE_INFO[G.mode]||MODE_INFO.classic;
+  const text=`⚡ Reflex Arena — ${mi.label}\n` +
+    `Avg: ${avg}ms  |  Best: ${best}ms  |  Streak: ${G.bestStreak}×\n` +
+    `Rounds: ${valid.length}  |  Difficulty: ${G.diff}`;
+  if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>alert('Result copied!'));
+}
+
+// ── INIT ──
+renderPersonalBest();
+</script>
+</body>
+</html>

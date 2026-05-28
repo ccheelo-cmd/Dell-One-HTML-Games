@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Probability Gut-Check</title>
+<style>
+  /* ===================== AMBER PHOSPHOR TERMINAL ===================== */
+  :root{
+    --bg:#0b0c07;
+    --bg2:#14150d;
+    --amber:#ffb43c;
+    --amber-dim:#bd8526;
+    --amber-faint:#7a571a;
+    --line:rgba(255,180,60,.28);
+    --line-strong:rgba(255,180,60,.5);
+    --green:#79e08a;
+    --red:#ff6f5e;
+    --glow:0 0 8px rgba(255,180,60,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--amber);
+    font-family:"Consolas","Menlo","DejaVu Sans Mono","Courier New",monospace;
+    font-size:16px;
+    line-height:1.5;
+    min-height:100vh;
+    letter-spacing:.2px;
+    -webkit-font-smoothing:none;
+  }
+  /* CRT vignette + scanlines, restrained */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;
+    background:radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(0,0,0,.55) 100%);
+  }
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0px, rgba(0,0,0,.16) 1px, transparent 1px, transparent 3px);
+    opacity:.55;mix-blend-mode:multiply;
+  }
+  .wrap{max-width:780px;margin:0 auto;padding:30px 20px 70px;position:relative;z-index:1;}
+
+  /* ---- type ---- */
+  h1{
+    font-size:clamp(26px,5.5vw,40px);font-weight:700;margin:0 0 6px;
+    letter-spacing:2px;text-transform:uppercase;text-shadow:var(--glow);
+  }
+  .sub{color:var(--amber-dim);font-size:14px;margin:0 0 26px;max-width:60ch;}
+  h2{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--amber-dim);
+     border-bottom:1px solid var(--line);padding-bottom:6px;margin:34px 0 16px;}
+  .cursor{display:inline-block;width:.6em;height:1.05em;background:var(--amber);
+     margin-left:4px;vertical-align:-2px;box-shadow:var(--glow);animation:blink 1.05s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* ---- generic boxes/buttons ---- */
+  .panel{border:1px solid var(--line);background:rgba(255,180,60,.02);padding:18px;}
+  label.fieldlabel{display:block;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+     color:var(--amber-dim);margin:0 0 8px;}
+  .seg{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;}
+  .seg button{
+    flex:1 1 auto;min-width:64px;background:transparent;color:var(--amber);
+    border:1px solid var(--line-strong);padding:11px 10px;font:inherit;font-size:15px;
+    cursor:pointer;letter-spacing:1px;transition:background .12s,color .12s;
+  }
+  .seg button:hover{background:rgba(255,180,60,.12);}
+  .seg button[aria-pressed="true"]{background:var(--amber);color:#000;font-weight:700;text-shadow:none;}
+  .btn{
+    background:transparent;color:var(--amber);border:1px solid var(--amber);
+    padding:14px 22px;font:inherit;font-size:16px;letter-spacing:2px;text-transform:uppercase;
+    cursor:pointer;transition:background .12s,color .12s;text-shadow:var(--glow);
+  }
+  .btn:hover{background:var(--amber);color:#000;text-shadow:none;}
+  .btn.big{width:100%;margin-top:8px;font-size:18px;padding:16px;}
+  .btn.ghost{border-color:var(--line-strong);text-shadow:none;font-size:13px;padding:9px 14px;letter-spacing:1px;}
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px;}
+  .btn-row .btn{flex:1 1 auto;}
+
+  /* ---- views & transitions ---- */
+  .view{display:none;}
+  .view.active{display:block;animation:fadein .22s ease both;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  /* ---- history ---- */
+  .hist-head{display:flex;justify-content:space-between;align-items:center;}
+  .hist-row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;
+     padding:8px 0;border-bottom:1px dotted var(--line);font-size:13px;}
+  .hist-row .hdate{color:var(--amber-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hist-row b{color:var(--amber);}
+  .hist-row.head{color:var(--amber-faint);border-bottom:1px solid var(--line);
+     text-transform:uppercase;font-size:11px;letter-spacing:1px;}
+  .empty{color:var(--amber-dim);font-size:14px;padding:18px 4px;border:1px dashed var(--line);
+     text-align:center;}
+  .empty .big{font-size:30px;display:block;margin-bottom:6px;}
+
+  /* ---- test view ---- */
+  .qtop{display:flex;justify-content:space-between;align-items:baseline;
+     color:var(--amber-dim);font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;}
+  .timer{height:5px;background:rgba(255,180,60,.12);border:1px solid var(--line);margin-bottom:4px;}
+  .timer > i{display:block;height:100%;background:var(--amber);width:100%;}
+  .timer-num{font-size:12px;color:var(--amber-dim);text-align:right;height:16px;margin-bottom:18px;}
+  .prompt{font-size:clamp(20px,4.5vw,26px);font-weight:700;margin:6px 0 22px;letter-spacing:1px;
+     text-shadow:var(--glow);}
+  .opt{
+    display:block;width:100%;text-align:left;background:rgba(255,180,60,.03);
+    border:1px solid var(--line-strong);padding:18px 18px 18px 60px;margin-bottom:14px;
+    position:relative;cursor:pointer;font:inherit;color:var(--amber);
+    transition:background .12s,border-color .12s;
+  }
+  .opt:hover:not(.locked){background:rgba(255,180,60,.1);}
+  .opt .badge{position:absolute;left:14px;top:50%;transform:translateY(-50%);
+     width:30px;height:30px;border:1px solid var(--amber);display:flex;align-items:center;
+     justify-content:center;font-weight:700;font-size:16px;}
+  .opt .stmt{font-size:16px;line-height:1.4;}
+  .opt .pct{display:none;font-size:30px;font-weight:700;margin-top:10px;letter-spacing:1px;
+     font-variant-numeric:tabular-nums;}
+  .opt.revealed .pct{display:block;}
+  .opt.locked{cursor:default;}
+  .opt.correct{border-color:var(--green);background:rgba(121,224,138,.1);}
+  .opt.correct .badge{border-color:var(--green);color:var(--green);}
+  .opt.correct .pct{color:var(--green);text-shadow:0 0 8px rgba(121,224,138,.5);}
+  .opt.wrongpick{border-color:var(--red);background:rgba(255,111,94,.08);}
+  .opt.wrongpick .badge{border-color:var(--red);color:var(--red);}
+  .opt.wrongpick .pct{color:var(--red);}
+  .opt.dim{opacity:.6;}
+
+  .reveal{display:none;margin-top:6px;}
+  .reveal.show{display:block;animation:fadein .2s ease both;}
+  .verdict{font-size:18px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+  .verdict.ok{color:var(--green);text-shadow:0 0 8px rgba(121,224,138,.4);}
+  .verdict.no{color:var(--red);}
+  .explain{border-left:2px solid var(--amber-faint);padding:4px 0 4px 14px;color:var(--amber);
+     font-size:15px;margin-bottom:8px;}
+  .cattag{display:inline-block;font-size:11px;letter-spacing:1px;text-transform:uppercase;
+     color:#000;background:var(--amber-dim);padding:3px 8px;margin-bottom:18px;}
+
+  /* ---- results ---- */
+  .score-big{font-size:clamp(48px,12vw,84px);font-weight:700;line-height:1;text-shadow:var(--glow);
+     font-variant-numeric:tabular-nums;}
+  .score-line{color:var(--amber-dim);font-size:14px;letter-spacing:2px;text-transform:uppercase;margin-top:6px;}
+  .stats{display:flex;gap:26px;flex-wrap:wrap;margin:20px 0 6px;}
+  .stat .n{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--amber-dim);}
+  .catbar{margin:10px 0;}
+  .catbar .top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;}
+  .catbar .top .nm{text-transform:uppercase;letter-spacing:1px;font-size:12px;}
+  .catbar .top .vv{font-variant-numeric:tabular-nums;color:var(--amber-dim);}
+  .track{height:14px;border:1px solid var(--line);background:rgba(255,180,60,.06);}
+  .track > i{display:block;height:100%;background:var(--amber);}
+  .track > i.low{background:var(--red);}
+  .track > i.mid{background:var(--amber-dim);}
+  .track > i.high{background:var(--green);}
+  .insight{border:1px solid var(--line-strong);background:rgba(255,180,60,.05);
+     padding:16px;margin-top:22px;font-size:15px;line-height:1.5;}
+  .insight b{color:var(--amber);}
+  .kbd-hint{color:var(--amber-faint);font-size:12px;margin-top:18px;letter-spacing:1px;}
+  .foot{color:var(--amber-faint);font-size:11px;margin-top:40px;letter-spacing:1px;}
+</style>
+</head>
+<body class="crt">
+<div class="wrap">
+
+  <!-- ============================ START VIEW ============================ -->
+  <section id="view-start" class="view active" aria-label="Start screen">
+    <h1>Probability Gut-Check<span class="cursor"></span></h1>
+    <p class="sub">Your intuition is wrong more often than you think &mdash; and you still get fooled in real time. Pick faster than you can compute, then face the math. Over many rounds, this finds the kinds of probability you systematically blow.</p>
+
+    <div class="panel">
+      <label class="fieldlabel">Questions per session</label>
+      <div class="seg" id="seg-count" role="group" aria-label="Questions per session">
+        <button data-count="5">5</button>
+        <button data-count="10" aria-pressed="true">10</button>
+        <button data-count="20">20</button>
+      </div>
+
+      <label class="fieldlabel">Time pressure</label>
+      <div class="seg" id="seg-time" role="group" aria-label="Time pressure per question">
+        <button data-time="0" aria-pressed="true">Off</button>
+        <button data-time="10">10s</button>
+        <button data-time="5">5s</button>
+        <button data-time="3">3s</button>
+      </div>
+
+      <button class="btn big" id="btn-start">&#9658; Start session</button>
+      <p class="kbd-hint">Keys: A / &larr; pick left &nbsp;&middot;&nbsp; B / &rarr; pick right &nbsp;&middot;&nbsp; Enter to continue</p>
+    </div>
+
+    <div class="hist-head">
+      <h2>Session log</h2>
+      <button class="btn ghost" id="btn-clear" style="margin-top:18px;">Clear history</button>
+    </div>
+    <div id="history"></div>
+  </section>
+
+  <!-- ============================ TEST VIEW ============================ -->
+  <section id="view-test" class="view" aria-label="Test in progress">
+    <div class="qtop">
+      <span id="q-counter">Q 1 / 10</span>
+      <span id="q-running">SCORE 0</span>
+    </div>
+    <div class="timer" id="timer-wrap" aria-hidden="true"><i id="timer-bar"></i></div>
+    <div class="timer-num" id="timer-num"></div>
+
+    <p class="prompt">Which is <u>more</u> likely?</p>
+
+    <button class="opt" id="opt-a" aria-label="Option A">
+      <span class="badge">A</span>
+      <span class="stmt" id="stmt-a"></span>
+      <span class="pct" id="pct-a"></span>
+    </button>
+    <button class="opt" id="opt-b" aria-label="Option B">
+      <span class="badge">B</span>
+      <span class="stmt" id="stmt-b"></span>
+      <span class="pct" id="pct-b"></span>
+    </button>
+
+    <div class="reveal" id="reveal">
+      <div class="verdict" id="verdict"></div>
+      <div class="cattag" id="cattag"></div>
+      <div class="explain" id="explain"></div>
+      <button class="btn big" id="btn-next">Next &#9658;</button>
+    </div>
+  </section>
+
+  <!-- ============================ RESULTS VIEW ============================ -->
+  <section id="view-results" class="view" aria-label="Results">
+    <h2 style="margin-top:0;">Session results</h2>
+    <div class="score-big"><span id="r-score">0</span> / <span id="r-total">0</span></div>
+    <div class="score-line" id="r-acc">0% accuracy</div>
+
+    <div class="stats">
+      <div class="stat"><div class="n" id="r-avg">0.0s</div><div class="l">Avg response</div></div>
+      <div class="stat"><div class="n" id="r-fast">0.0s</div><div class="l">Fastest</div></div>
+      <div class="stat"><div class="n" id="r-slow">0.0s</div><div class="l">Slowest</div></div>
+    </div>
+
+    <h2>Where you struggled</h2>
+    <div id="r-cats"></div>
+
+    <div class="insight" id="r-insight"></div>
+
+    <div class="btn-row">
+      <button class="btn" id="btn-again">&#9658; Play again</button>
+      <button class="btn ghost" id="btn-home">Back to start</button>
+    </div>
+    <p class="foot">PROBABILITY GUT-CHECK &middot; all data stored locally in your browser &middot; works fully offline</p>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   PROBABILITY GUT-CHECK
+   Single-file, offline. Three views toggled in-place.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   QUESTION BANK  (43 hand-written pairs)
+   Every probability below is computed and double-checked.
+   Fields: a / b  = statements,  pa / pb = true probabilities (decimal),
+           correct = "A" or "B" (the MORE likely option),
+           cat = category tag, exp = one-line explanation.
+   Categories:
+     compound     - "at least one ..." disjunctions over repeated trials
+     conditional  - probability given extra information
+     birthday     - birthday-paradox / coincidence collisions
+     conjunction  - AND vs OR (intersection can't beat union)
+     baserate     - base-rate neglect (medical-test / cab style)
+     independent  - gambler's fallacy / memoryless trials
+   --------------------------------------------------------------------- */
+const QUESTIONS = [
+  // ---- compound ("at least one") ----
+  {a:"Flipping at least one head in 2 coin flips", b:"Rolling a 6 on one die",
+   pa:0.75, pb:1/6, correct:"A", cat:"compound",
+   exp:"At least one in two tries (75%) easily beats a single 1-in-6 shot."},
+  {a:"Rolling at least one 6 in four dice rolls", b:"A fair coin landing heads",
+   pa:1-Math.pow(5/6,4), pb:0.5, correct:"A", cat:"compound",
+   exp:"1−(5/6)^4 ≈ 51.8% — de Méré's winning bet, just over half."},
+  {a:"Rolling at least one double-six in 24 throws of two dice", b:"A fair coin landing heads",
+   pa:1-Math.pow(35/36,24), pb:0.5, correct:"B", cat:"compound",
+   exp:"1−(35/36)^24 ≈ 49.1% — the infamous losing bet, just under a coin flip."},
+  {a:"Rolling at least one 6 in six dice rolls", b:"Getting at least two heads in three flips",
+   pa:1-Math.pow(5/6,6), pb:0.5, correct:"A", cat:"compound",
+   exp:"1−(5/6)^6 ≈ 66.5%; more rolls, more chances."},
+  {a:"Flipping at least one head in three flips", b:"Drawing a face card from a deck",
+   pa:0.875, pb:12/52, correct:"A", cat:"compound",
+   exp:"Three flips give an 87.5% shot at a head; face cards are only ~23%."},
+  {a:"Flipping at least one tail in four flips", b:"Rolling a sum of 7 with two dice",
+   pa:1-1/16, pb:6/36, correct:"A", cat:"compound",
+   exp:"Four flips: only a 1-in-16 chance of zero tails."},
+  {a:"Rolling at least one 1-or-2 in two dice rolls", b:"A fair coin landing heads",
+   pa:1-Math.pow(4/6,2), pb:0.5, correct:"A", cat:"compound",
+   exp:"P(a 1 or 2) is 1/3 per roll; at least one in two ≈ 55.6%."},
+  {a:"Being dealt at least one ace in a 5-card hand", b:"Rolling doubles with two dice",
+   pa:0.341158, pb:6/36, correct:"A", cat:"compound",
+   exp:"About 34% of five-card hands contain an ace."},
+
+  // ---- conditional ----
+  {a:"Two kids, at least one is a boy → both are boys", b:"A single die showing an even number",
+   pa:1/3, pb:0.5, correct:"B", cat:"conditional",
+   exp:"Cases BB, BG, GB are equally likely; only 1 of 3 is BB → 33%."},
+  {a:"Two kids, the elder is a boy → both are boys", b:"Two kids, at least one is a boy → both are boys",
+   pa:0.5, pb:1/3, correct:"A", cat:"conditional",
+   exp:"Naming the elder child as a boy pins it at 1/2; 'at least one' is only 1/3."},
+  {a:"A drawn card is a face card → it is a king", b:"A fair coin landing heads",
+   pa:4/12, pb:0.5, correct:"B", cat:"conditional",
+   exp:"Only 4 of the 12 face cards are kings → 33%."},
+  {a:"Two dice sum to 10 or more → it's a double-six", b:"Drawing a spade from a deck",
+   pa:1/6, pb:13/52, correct:"B", cat:"conditional",
+   exp:"Of the six sums of 10+, just one is boxcars → 17%."},
+  {a:"A number 1–10 is even → it's a multiple of 4", b:"A fair coin landing heads",
+   pa:2/5, pb:0.5, correct:"B", cat:"conditional",
+   exp:"Evens are {2,4,6,8,10}; only 4 and 8 are multiples of 4 → 40%."},
+  {a:"A drawn card is a face card → it is a queen", b:"A drawn card is red → it is a diamond",
+   pa:4/12, pb:13/26, correct:"B", cat:"conditional",
+   exp:"Half of red cards are diamonds; only a third of face cards are queens."},
+  {a:"Monty Hall: you SWITCH doors and win the car", b:"Monty Hall: you STAY and win the car",
+   pa:2/3, pb:1/3, correct:"A", cat:"conditional",
+   exp:"Switching wins 2/3 of the time — the host's reveal carries information."},
+  {a:"A die shows more than 2 → it shows a 6", b:"Drawing a red card from a deck",
+   pa:1/4, pb:0.5, correct:"B", cat:"conditional",
+   exp:"Among rolls above 2 ({3,4,5,6}), only 1 of 4 is a six."},
+  {a:"Two kids, at least one is a girl → both are girls", b:"Drawing a club from a deck",
+   pa:1/3, pb:13/52, correct:"A", cat:"conditional",
+   exp:"Given ≥1 girl, the cases GB/BG/GG make GG 1 of 3 → 33%."},
+
+  // ---- birthday / coincidence ----
+  {a:"In 23 people, at least two share a birthday", b:"Flipping 4 heads in a row",
+   pa:0.5073, pb:1/16, correct:"A", cat:"birthday",
+   exp:"23 people → 50.7%. The number of pairs grows much faster than people."},
+  {a:"In 30 people, at least two share a birthday", b:"A fair coin landing heads",
+   pa:0.7063, pb:0.5, correct:"A", cat:"birthday",
+   exp:"30 people → 70.6%, far past most intuition."},
+  {a:"In 50 people, at least two share a birthday", b:"Rolling at least one 6 in six rolls",
+   pa:0.9704, pb:1-Math.pow(5/6,6), correct:"A", cat:"birthday",
+   exp:"50 people → 97% — nearly certain."},
+  {a:"In 10 people, at least two share a birthday", b:"Rolling doubles with two dice",
+   pa:0.1169, pb:6/36, correct:"B", cat:"birthday",
+   exp:"Only ~11.7% at 10 people — still less than rolling doubles."},
+  {a:"In 23 people, some PAIR shares a birthday", b:"In 23 people, someone shares YOUR birthday",
+   pa:0.5073, pb:1-Math.pow(364/365,22), correct:"A", cat:"birthday",
+   exp:"A matching pair (51%) dwarfs someone matching you specifically (5.9%)."},
+  {a:"In 40 people, at least two share a birthday", b:"Flipping 3 heads in a row",
+   pa:0.8912, pb:1/8, correct:"A", cat:"birthday",
+   exp:"40 people → 89% chance of a shared birthday."},
+  {a:"In 70 people, at least two share a birthday", b:"Rolling a 6 on one die",
+   pa:0.9992, pb:1/6, correct:"A", cat:"birthday",
+   exp:"70 people → 99.9%. Practically guaranteed."},
+
+  // ---- conjunction vs disjunction ----
+  {a:"A drawn card is a red king (red AND king)", b:"A drawn card is red OR a king",
+   pa:2/52, pb:28/52, correct:"B", cat:"conjunction",
+   exp:"A union (red OR king) can never be smaller than its intersection (red king)."},
+  {a:"Rolling a number that is even AND greater than 3", b:"Rolling a number that is even OR greater than 3",
+   pa:2/6, pb:4/6, correct:"B", cat:"conjunction",
+   exp:"OR ({2,4,5,6}=67%) always covers more than AND ({4,6}=33%)."},
+  {a:"Two dice both showing even", b:"At least one of two dice showing even",
+   pa:0.25, pb:0.75, correct:"B", cat:"conjunction",
+   exp:"At least one even (75%) beats both even (25%)."},
+  {a:"Drawing two cards that are both hearts", b:"Drawing two cards with at least one heart",
+   pa:(13/52)*(12/51), pb:1-(39/52)*(38/51), correct:"B", cat:"conjunction",
+   exp:"At least one heart (44%) beats two hearts (5.9%)."},
+  {a:"Rolling a 5 and then a 5", b:"Rolling a 5 at least once in two rolls",
+   pa:1/36, pb:11/36, correct:"B", cat:"conjunction",
+   exp:"Once (30.6%) beats twice (2.8%) — an extra AND only shrinks it."},
+  {a:"A drawn card is a spade AND a face card", b:"A drawn card is a spade OR a face card",
+   pa:3/52, pb:22/52, correct:"B", cat:"conjunction",
+   exp:"Spade OR face (42%) dwarfs spade AND face (5.8%)."},
+  {a:"Two coins both landing heads", b:"At least one head in two coins",
+   pa:0.25, pb:0.75, correct:"B", cat:"conjunction",
+   exp:"At least one head (75%) beats both heads (25%)."},
+
+  // ---- base-rate neglect ----
+  {a:"Disease in 1%; test 90% sensitive, 9% false-positive. You test positive → you have it",
+   b:"A fair coin landing heads",
+   pa:(0.01*0.9)/(0.01*0.9+0.99*0.09), pb:0.5, correct:"B", cat:"baserate",
+   exp:"Base rate wins: a positive test still means only ~9% sick."},
+  {a:"Disease in 1-of-1000; test 99% sensitive, 1% false-positive. Positive → you have it",
+   b:"Rolling a 1 or 2 on one die",
+   pa:(0.001*0.99)/(0.001*0.99+0.999*0.01), pb:2/6, correct:"B", cat:"baserate",
+   exp:"Even a 99% test gives ~9% when the disease is 1-in-1000."},
+  {a:"Trait in 2%; test 95% sensitive, 5% false-positive. Positive → you have it",
+   b:"Drawing a face card from a deck",
+   pa:(0.02*0.95)/(0.02*0.95+0.98*0.05), pb:12/52, correct:"A", cat:"baserate",
+   exp:"≈28% — a 2% base rate with a strong test edges past a face card (~23%)."},
+  {a:"Condition in 0.1%; test 100% sensitive, 5% false-positive. Positive → you have it",
+   b:"Rolling a 6 and then another 6",
+   pa:(0.001*1)/(0.001*1+0.999*0.05), pb:1/36, correct:"B", cat:"baserate",
+   exp:"~2%: a 5% false-positive rate on a 0.1% base rate swamps the true hits."},
+  {a:"85% of cabs are Green, 15% Blue; an 80%-reliable witness says 'Blue' → it was Blue",
+   b:"A fair coin landing heads",
+   pa:(0.15*0.8)/(0.15*0.8+0.85*0.2), pb:0.5, correct:"B", cat:"baserate",
+   exp:"The witness says Blue, but the base rate keeps it only ~41% Blue."},
+  {a:"1% of coins are fake; a detector flags 99% of fakes and 2% of real ones. Flagged → fake",
+   b:"Rolling a sum of 7 with two dice",
+   pa:(0.01*0.99)/(0.01*0.99+0.99*0.02), pb:6/36, correct:"A", cat:"baserate",
+   exp:"≈33% — even a good detector can't beat a 1% base rate to certainty."},
+
+  // ---- independent events / gambler's fallacy ----
+  {a:"After 5 heads in a row, the next TWO flips are both heads", b:"After 5 heads in a row, the next single flip is heads",
+   pa:0.25, pb:0.5, correct:"B", cat:"independent",
+   exp:"Each flip is independent; one head (50%) beats two (25%). The streak is noise."},
+  {a:"After 7 reds on roulette, the next spin is red", b:"After 7 reds, the next two spins are both red",
+   pa:18/37, pb:Math.pow(18/37,2), correct:"A", cat:"independent",
+   exp:"'Due' is a myth — one red (48.6%) still beats two reds (23.7%)."},
+  {a:"After 10 straight heads, the next flip is tails ('it's due')", b:"After 10 straight heads, the next two flips are both tails",
+   pa:0.5, pb:0.25, correct:"A", cat:"independent",
+   exp:"Tails isn't owed; it's still 50% each flip, and one beats two."},
+  {a:"Just rolled double-six → the next roll is double-six again", b:"Just rolled double-six → the next roll sums to 7",
+   pa:1/36, pb:6/36, correct:"B", cat:"independent",
+   exp:"Dice have no memory; 7 is the most common sum (17%) vs another double-six (2.8%)."},
+  {a:"After a long streak of black, the next roulette spin is black", b:"After a long streak of black, the next spin is green (0)",
+   pa:18/37, pb:1/37, correct:"A", cat:"independent",
+   exp:"Streaks don't shift odds; black stays ~48.6%, far above zero (2.7%)."},
+  {a:"Rolling a 6 on each of two dice", b:"Rolling exactly one 6 in two dice",
+   pa:1/36, pb:10/36, correct:"B", cat:"independent",
+   exp:"Exactly one 6 (27.8%) beats two 6s (2.8%)."}
+];
+
+/* category display names + the insight written when a category is the weakest */
+const CAT_INFO = {
+  compound:    {name:"Compound 'at least one'", insight:"You underestimated <b>compound probabilities</b> — chaining trials makes 'at least one' far likelier than a single shot, and humans reliably lowball it."},
+  conditional: {name:"Conditional probability", insight:"<b>Conditional probability</b> tripped you up — new information reshapes the odds more than intuition expects."},
+  birthday:    {name:"Birthday / coincidence", insight:"<b>Coincidence problems</b> fooled you — with many possible pairs, collisions are far likelier than they feel."},
+  conjunction: {name:"Conjunction vs disjunction", insight:"You fell for <b>conjunction/disjunction</b> traps — an AND can never beat its parts, and an OR can never lose to them."},
+  baserate:    {name:"Base-rate neglect", insight:"You <b>neglected base rates</b> — rare things stay rare even after a 'positive' test."},
+  independent: {name:"Independent events", insight:"<b>Gambler's-fallacy</b> framings caught you — coins, dice and wheels have no memory; past results never make an outcome 'due'."}
+};
+
+/* ---------------------- persistence (versioned) ---------------------- */
+const STORAGE_KEY = "pgc_history_v1";
+const MAX_SESSIONS = 50;
+
+function loadHistory(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return [];
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
+  }catch(e){ return []; }
+}
+function saveSession(session){
+  try{
+    let hist = loadHistory();
+    hist.push(session);
+    if(hist.length > MAX_SESSIONS) hist = hist.slice(hist.length - MAX_SESSIONS);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
+  }catch(e){ /* storage unavailable; ignore so the app still runs */ }
+}
+function clearHistory(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+}
+
+/* ----------------------------- helpers ------------------------------ */
+const $ = id => document.getElementById(id);
+
+/* round probabilities sensibly: 1 decimal, but drop a trailing ".0" */
+function fmtPct(p){
+  let v = (p*100);
+  let s = v.toFixed(1);
+  if(s.endsWith(".0")) s = s.slice(0,-2);
+  return s + "%";
+}
+function fmtSec(ms){ return (ms/1000).toFixed(1) + "s"; }
+
+/* Fisher-Yates shuffle (copy) */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function showView(name){
+  ["start","test","results"].forEach(v=>{
+    $("view-"+v).classList.toggle("active", v===name);
+  });
+  window.scrollTo(0,0);
+}
+
+/* ----------------------------- settings ----------------------------- */
+let settings = { count:10, timeLimit:0 };   // timeLimit in seconds; 0 = off
+
+function wireSegments(){
+  $("seg-count").addEventListener("click", e=>{
+    const b = e.target.closest("button"); if(!b) return;
+    settings.count = parseInt(b.dataset.count,10);
+    [...$("seg-count").children].forEach(x=>x.setAttribute("aria-pressed", x===b));
+  });
+  $("seg-time").addEventListener("click", e=>{
+    const b = e.target.closest("button"); if(!b) return;
+    settings.timeLimit = parseInt(b.dataset.time,10);
+    [...$("seg-time").children].forEach(x=>x.setAttribute("aria-pressed", x===b));
+  });
+}
+
+/* ----------------------------- session ------------------------------ */
+let session = null;   // {questions, index, answers[], correctCount}
+
+function startSession(){
+  const pool = shuffle(QUESTIONS).slice(0, settings.count);  // no repeats within a session
+  session = { questions:pool, index:0, answers:[], correctCount:0 };
+  showView("test");
+  renderQuestion();
+}
+
+/* --- per-question state --- */
+let qStart = 0;          // timestamp when question shown
+let answered = false;    // locked after a pick / timeout
+let timerId = null;      // interval handle
+let timeRemaining = 0;   // ms
+
+function clearTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
+
+function renderQuestion(){
+  const q = session.questions[session.index];
+  answered = false;
+
+  $("q-counter").textContent = "Q " + (session.index+1) + " / " + session.questions.length;
+  $("q-running").textContent = "SCORE " + session.correctCount;
+
+  // reset option visuals
+  ["a","b"].forEach(k=>{
+    const opt = $("opt-"+k);
+    opt.className = "opt";
+    opt.removeAttribute("aria-disabled");
+    $("pct-"+k).textContent = "";
+  });
+  $("stmt-a").textContent = q.a;
+  $("stmt-b").textContent = q.b;
+  $("pct-a").textContent = fmtPct(q.pa);
+  $("pct-b").textContent = fmtPct(q.pb);
+
+  $("reveal").classList.remove("show");
+
+  // timer setup
+  clearTimer();
+  if(settings.timeLimit > 0){
+    $("timer-wrap").style.display = "block";
+    $("timer-num").style.display = "block";
+    timeRemaining = settings.timeLimit * 1000;
+    updateTimerUI();
+    timerId = setInterval(()=>{
+      timeRemaining -= 50;
+      if(timeRemaining <= 0){ updateTimerUI(); handleTimeout(); }
+      else updateTimerUI();
+    }, 50);
+  }else{
+    $("timer-wrap").style.display = "none";
+    $("timer-num").style.display = "none";
+  }
+
+  qStart = Date.now();
+}
+
+function updateTimerUI(){
+  const total = settings.timeLimit*1000;
+  const frac = Math.max(0, timeRemaining/total);
+  const bar = $("timer-bar");
+  bar.style.width = (frac*100) + "%";
+  // colour shift as time runs low
+  bar.style.background = frac > 0.5 ? "var(--amber)" : frac > 0.25 ? "var(--amber-dim)" : "var(--red)";
+  $("timer-num").textContent = Math.max(0, timeRemaining/1000).toFixed(1) + "s";
+}
+
+function handleTimeout(){
+  if(answered) return;
+  clearTimer();
+  recordAnswer(null, settings.timeLimit*1000, true);
+}
+
+/* the user picked "A" or "B" */
+function pick(choice){
+  if(answered) return;
+  const rt = Date.now() - qStart;
+  clearTimer();
+  recordAnswer(choice, rt, false);
+}
+
+/* ------------------------- scoring + reveal ------------------------- */
+function recordAnswer(choice, responseMs, timedOut){
+  answered = true;
+  const q = session.questions[session.index];
+  const isCorrect = (choice === q.correct);   // timeout -> choice null -> wrong
+  if(isCorrect) session.correctCount++;
+
+  session.answers.push({
+    cat: q.cat,
+    correct: isCorrect,
+    responseMs: responseMs,
+    timedOut: timedOut
+  });
+
+  revealAnswer(q, choice, isCorrect, timedOut);
+}
+
+function revealAnswer(q, choice, isCorrect, timedOut){
+  // mark correct option green; mark a wrong pick red
+  ["A","B"].forEach(letter=>{
+    const opt = $("opt-"+letter.toLowerCase());
+    opt.classList.add("locked","revealed");
+    opt.setAttribute("aria-disabled","true");
+    if(letter === q.correct) opt.classList.add("correct");
+    else opt.classList.add("dim");
+    if(choice === letter && !isCorrect) opt.classList.add("wrongpick");
+  });
+
+  const verdict = $("verdict");
+  if(timedOut){ verdict.textContent = "⏱ Time! (counts as wrong)"; verdict.className = "verdict no"; }
+  else if(isCorrect){ verdict.textContent = "✓ Correct"; verdict.className = "verdict ok"; }
+  else { verdict.textContent = "✗ Incorrect"; verdict.className = "verdict no"; }
+
+  $("cattag").textContent = CAT_INFO[q.cat].name;
+  $("explain").textContent = q.exp;
+  $("q-running").textContent = "SCORE " + session.correctCount;
+  $("reveal").classList.add("show");
+  $("btn-next").textContent = (session.index+1 >= session.questions.length) ? "See results ▶" : "Next ▶";
+  $("btn-next").focus();
+}
+
+function nextQuestion(){
+  if(!answered) return;
+  if(session.index+1 >= session.questions.length){ finishSession(); }
+  else { session.index++; renderQuestion(); }
+}
+
+/* --------------------------- results -------------------------------- */
+function finishSession(){
+  const ans = session.answers;
+  const total = ans.length;
+  const score = session.correctCount;
+  const accuracy = total ? Math.round((score/total)*100) : 0;
+
+  const times = ans.map(a=>a.responseMs);
+  const avg = times.reduce((s,x)=>s+x,0) / (times.length||1);
+  const fast = Math.min(...times);
+  const slow = Math.max(...times);
+
+  // per-category accuracy
+  const perCat = {};
+  ans.forEach(a=>{
+    if(!perCat[a.cat]) perCat[a.cat] = {correct:0,total:0};
+    perCat[a.cat].total++;
+    if(a.correct) perCat[a.cat].correct++;
+  });
+
+  // ---- persist ----
+  saveSession({
+    ts: Date.now(),
+    score: score,
+    total: total,
+    accuracyPct: accuracy,
+    avgMs: Math.round(avg),
+    perCat: perCat,
+    settings: { count: settings.count, timeLimit: settings.timeLimit }
+  });
+
+  renderResults(score, total, accuracy, avg, fast, slow, perCat);
+  showView("results");
+}
+
+function renderResults(score, total, accuracy, avg, fast, slow, perCat){
+  $("r-score").textContent = score;
+  $("r-total").textContent = total;
+  $("r-acc").textContent = accuracy + "% accuracy";
+  $("r-avg").textContent = fmtSec(avg);
+  $("r-fast").textContent = fmtSec(fast);
+  $("r-slow").textContent = fmtSec(slow);
+
+  // category breakdown bars (sorted worst-first)
+  const rows = Object.keys(perCat).map(cat=>{
+    const c = perCat[cat];
+    return { cat, acc: c.correct/c.total, correct:c.correct, total:c.total };
+  }).sort((x,y)=> x.acc - y.acc);
+
+  const host = $("r-cats");
+  host.innerHTML = "";
+  rows.forEach(r=>{
+    const pct = Math.round(r.acc*100);
+    const cls = r.acc < 0.5 ? "low" : r.acc < 0.8 ? "mid" : "high";
+    const div = document.createElement("div");
+    div.className = "catbar";
+    div.innerHTML =
+      '<div class="top"><span class="nm">'+CAT_INFO[r.cat].name+'</span>'+
+      '<span class="vv">'+r.correct+'/'+r.total+' · '+pct+'%</span></div>'+
+      '<div class="track"><i class="'+cls+'" style="width:'+pct+'%"></i></div>';
+    host.appendChild(div);
+  });
+
+  // ---- plain-language insight ----
+  let insight;
+  if(total === score){
+    insight = "Flawless — that's rare. Either your probability intuition is genuinely calibrated, or you slowed down and did the math. Try harder time pressure.";
+  }else{
+    // weakest category = lowest accuracy, tie-broken by most attempts
+    const worst = rows.reduce((w,r)=>{
+      if(!w) return r;
+      if(r.acc < w.acc) return r;
+      if(r.acc === w.acc && r.total > w.total) return r;
+      return w;
+    }, null);
+    insight = CAT_INFO[worst.cat].insight;
+    if(worst.acc >= 0.8){
+      insight = "Strong across the board. Your relative soft spot was here: " + insight;
+    }
+  }
+  $("r-insight").innerHTML = insight;
+}
+
+/* --------------------------- history UI ----------------------------- */
+function renderHistory(){
+  const host = $("history");
+  const hist = loadHistory();
+  host.innerHTML = "";
+
+  if(hist.length === 0){
+    host.innerHTML =
+      '<div class="empty"><span class="big">—</span>No sessions logged yet.<br>'+
+      'Run a gut-check and your scores will collect here.</div>';
+    return;
+  }
+
+  const head = document.createElement("div");
+  head.className = "hist-row head";
+  head.innerHTML = '<span>Date</span><span>Score</span><span>Acc</span><span>Avg</span>';
+  host.appendChild(head);
+
+  // newest first
+  hist.slice().reverse().forEach(s=>{
+    const d = new Date(s.ts);
+    const dateStr = d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+
+                    d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+    const row = document.createElement("div");
+    row.className = "hist-row";
+    row.innerHTML =
+      '<span class="hdate">'+dateStr+'</span>'+
+      '<span><b>'+s.score+'/'+s.total+'</b></span>'+
+      '<span>'+s.accuracyPct+'%</span>'+
+      '<span>'+fmtSec(s.avgMs)+'</span>';
+    host.appendChild(row);
+  });
+}
+
+/* ----------------------------- wiring ------------------------------- */
+function init(){
+  wireSegments();
+  renderHistory();
+
+  $("btn-start").addEventListener("click", startSession);
+  $("btn-clear").addEventListener("click", ()=>{
+    if(loadHistory().length === 0) return;
+    if(confirm("Clear all saved sessions? This cannot be undone.")){
+      clearHistory(); renderHistory();
+    }
+  });
+
+  $("opt-a").addEventListener("click", ()=>pick("A"));
+  $("opt-b").addEventListener("click", ()=>pick("B"));
+  $("btn-next").addEventListener("click", nextQuestion);
+
+  $("btn-again").addEventListener("click", startSession);
+  $("btn-home").addEventListener("click", ()=>{ renderHistory(); showView("start"); });
+
+  // ---- keyboard accessibility ----
+  document.addEventListener("keydown", e=>{
+    const startActive   = $("view-start").classList.contains("active");
+    const testActive    = $("view-test").classList.contains("active");
+    const resultsActive = $("view-results").classList.contains("active");
+
+    if(startActive){
+      if(e.key === "Enter"){ e.preventDefault(); startSession(); }
+      return;
+    }
+    if(testActive){
+      const k = e.key.toLowerCase();
+      if(!answered){
+        if(k === "a" || e.key === "ArrowLeft"){ e.preventDefault(); pick("A"); }
+        else if(k === "b" || e.key === "ArrowRight"){ e.preventDefault(); pick("B"); }
+      }else if(e.key === "Enter"){ e.preventDefault(); nextQuestion(); }
+      return;
+    }
+    if(resultsActive){
+      if(e.key === "Enter"){ e.preventDefault(); startSession(); }
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
