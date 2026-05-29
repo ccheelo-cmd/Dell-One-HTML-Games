@@ -267,6 +267,14 @@
     color: var(--text);
     letter-spacing: 0.3px;
   }
+
+  .game-creator {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.2px;
+    font-weight: 500;
+  }
+
   .game-desc {
     font-size: 12px;
     color: var(--muted);
@@ -876,6 +884,7 @@ const GAMES = [
     id: 'british', file: 'games/british-slang-quiz.html', name: 'British Slang Quiz',
     art: SVG.britishSlang, bg: 'linear-gradient(135deg,#e040fb,#ff69b4)',
     desc: 'Decode Britain\'s slang — 10 rounds. Get them right, fastest time wins.',
+    creator: 'Joanna',
     mode: 'session', scoring: 'time',
     extract: () => {
       const arr = safeJson(localStorage.getItem('britishWordGameHistory'), []);
@@ -891,6 +900,7 @@ const GAMES = [
     id: 'code', file: 'games/cipher-codebreaker.html', name: 'Cipher Codebreaker',
     art: SVG.cipher, bg: 'linear-gradient(135deg,#00bcd4,#3f51b5)',
     desc: 'Mastermind-style deduction — crack the secret code for the biggest score.',
+    creator: 'Emmanuel',
     mode: 'session', scoring: 'score',
     extract: () => {
       const data = safeJson(localStorage.getItem('cipher_save_v1'), null);
@@ -905,6 +915,7 @@ const GAMES = [
     id: 'defuse', file: 'games/bomb-defusal.html', name: 'Bomb Defusal',
     art: SVG.bomb, bg: 'linear-gradient(135deg,#ff5252,#b71c1c)',
     desc: 'Snip the right wires under pressure — chain correct cuts for a combo multiplier.',
+    creator: 'Enos',
     mode: 'session', scoring: 'score',
     extract: () => {
       const arr = safeJson(localStorage.getItem('defuse_pro_v2'), []);
@@ -919,6 +930,7 @@ const GAMES = [
     id: 'drift', file: 'games/dual-ship-pilot.html', name: 'Dual-Ship Pilot',
     art: SVG.dualShip, bg: 'linear-gradient(135deg,#5b8cff,#ff9966)',
     desc: 'Pilot two ships simultaneously on mirrored lanes — split-attention dodging.',
+    creator: 'Elizaberth',
     mode: 'dom', scoring: 'score',
     extract: (iframeDoc) => {
       if (!iframeDoc) return null;
@@ -933,6 +945,7 @@ const GAMES = [
     id: 'reaction', file: 'games/f1-reaction-test.html', name: 'F1 Reaction Test',
     art: SVG.reaction, bg: 'linear-gradient(135deg,#ffd54f,#ff5722)',
     desc: 'F1 lights-out start — five lights, then GO. How few milliseconds can you hit?',
+    creator: 'Chibesa',
     mode: 'session', scoring: 'time',
     extract: () => {
       const arr = safeJson(localStorage.getItem('f1_reaction_v1'), []);
@@ -946,6 +959,7 @@ const GAMES = [
     id: 'pattern', file: 'games/grid-pattern-memory.html', name: 'Grid Pattern Memory',
     art: SVG.gridPattern, bg: 'linear-gradient(135deg,#00e5ff,#a3ff57)',
     desc: 'Cells light up across a grid — memorise the pattern and tap them back.',
+    creator: 'Boyd',
     mode: 'session', scoring: 'score',
     extract: () => {
       const arr = safeJson(localStorage.getItem('pmtest_history'), []);
@@ -959,6 +973,7 @@ const GAMES = [
     id: 'probability', file: 'games/probability-intuition.html', name: 'Probability Intuition',
     art: SVG.probability, bg: 'linear-gradient(135deg,#ffb43c,#bd8526)',
     desc: 'Gut-check the odds — accuracy first, then your average answer speed.',
+    creator: 'Choolwe',
     mode: 'session', scoring: 'time',
     extract: () => {
       const arr = safeJson(localStorage.getItem('pgc_history_v1'), []);
@@ -974,6 +989,7 @@ const GAMES = [
     id: 'stroop', file: 'games/stroop-color-conflict.html', name: 'Stroop Color Conflict',
     art: SVG.stroop, bg: 'linear-gradient(135deg,#ab47bc,#7e57c2)',
     desc: 'Classic Stroop — pick the ink colour, ignore the word. Accuracy then speed.',
+    creator: 'Boldwin',
     mode: 'session', scoring: 'time',
     extract: () => {
       const arr = safeJson(localStorage.getItem('stroop_history_v1'), []);
@@ -989,6 +1005,7 @@ const GAMES = [
     id: 'symbol', file: 'games/symbol-sequence-recall.html', name: 'Symbol Sequence Recall',
     art: SVG.symbolSeq, bg: 'linear-gradient(135deg,#c8f564,#7a9c3a)',
     desc: 'Watch the symbols flash in order, then reproduce the sequence from memory.',
+    creator: 'Sarudzai',
     mode: 'session', scoring: 'score',
     extract: () => {
       const arr = safeJson(localStorage.getItem('symbol_echo_history_v1'), []);
@@ -1002,6 +1019,7 @@ const GAMES = [
     id: 'wordspan', file: 'games/working-memory-span.html', name: 'Working Memory Span',
     art: SVG.memorySpan, bg: 'linear-gradient(135deg,#7ee8a2,#5bc4f5)',
     desc: 'Hold the list in your head — how many words can you recall back in order?',
+    creator: 'Ronald',
     mode: 'session', scoring: 'score',
     extract: () => {
       const arr = safeJson(localStorage.getItem('wordSpanHistory'), []);
@@ -1276,6 +1294,7 @@ function renderGames() {
         </div>
         <div class="game-body">
           <div class="game-name">${escapeHtml(g.name)}</div>
+          <div class="game-creator">by ${escapeHtml(g.creator)}</div>
           <div class="game-desc">${escapeHtml(g.desc)}</div>
           ${bestHtml}
           <div class="auto-indicator">Auto-capture enabled</div>
