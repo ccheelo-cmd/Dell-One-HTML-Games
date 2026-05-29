@@ -425,23 +425,38 @@
     gap: 12px;
     flex-wrap: wrap;
   }
-  .lb-filter {
+  .lb-tabs {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
   }
-  .lb-filter select {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
+  .lb-tab {
+    padding: 8px 16px;
+    background: transparent;
+    border: 2px solid var(--border);
     border-radius: 8px;
-    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--text);
+    font-weight: 500;
+    transition: 0.2s;
+    white-space: nowrap;
     font-family: inherit;
     font-size: 13px;
-    cursor: pointer;
-    outline: none;
+    --tab-color: #a259ff;
   }
-  .lb-filter select:focus { border-color: var(--neon-1); }
+  .lb-tab:hover {
+    border-color: var(--tab-color);
+    color: var(--tab-color);
+  }
+  .lb-tab.active {
+    border-color: var(--tab-color);
+    color: var(--tab-color);
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+    box-shadow: inset 0 0 16px rgba(255,255,255,0.03), 0 0 12px rgba(255,255,255,0.05);
+  }
 
   .clear-btn {
     background: transparent;
@@ -620,20 +635,8 @@
 
   <!-- Leaderboard panel -->
   <div class="panel" id="panel-leaderboard">
-    <div class="info-banner">
-      <span>📊</span>
-      <span>
-        Each game ranks its own way — <strong>endless games by score, timed games by accuracy then speed</strong>.
-        Finishing position earns <strong>league points</strong> (1st = 25, 2nd = 18…); the grey value is the points that run earned.
-        Pick a game to see its board, or see everyone's <strong>Total Score</strong> for the overall standing.
-      </span>
-    </div>
+    <div class="lb-tabs" id="lb-tabs"></div>
     <div class="lb-controls">
-      <div class="lb-filter">
-        <select id="filter-game">
-          <option value="all">All Games</option>
-        </select>
-      </div>
       <button class="clear-btn" id="clear-all">Clear All Scores</button>
     </div>
     <div class="lb-table-wrap">
@@ -654,9 +657,17 @@
 
   <!-- Totals panel -->
   <div class="panel" id="panel-totals">
+    <div style="margin-bottom: 24px; padding: 16px; background: rgba(0,255,229,0.08); border: 1px solid var(--border); border-radius: 8px;">
+      <div style="font-size: 13px; color: var(--muted); line-height: 1.6;">
+        <strong style="color: var(--text);">How League Points Work:</strong><br/>
+        Each game ranks players by its own metric (score games by points, timed games by accuracy then speed).
+        Your finishing position in each game earns <strong>league points</strong> — 1st place = 25 pts, 2nd = 18, 3rd = 15, and so on.
+        The totals below sum your league points across all games, creating one fair ranking even though the games score differently.
+      </div>
+    </div>
     <div class="lb-controls">
       <div style="color:var(--muted);font-size:13px;letter-spacing:1px;">
-        League points earned across every game — your finish position in each game adds up here
+        Your cumulative league points across every game
       </div>
     </div>
     <div class="lb-table-wrap">
@@ -906,17 +917,29 @@ const GAMES = [
     }
   },
   {
-    id: 'wordspan', file: 'working-memory-span.html', name: 'Working Memory Span',
-    art: SVG.memorySpan, bg: 'linear-gradient(135deg,#7ee8a2,#5bc4f5)',
-    desc: 'Hold the list in your head — how many words can you recall back in order?',
-    mode: 'session', scoring: 'score',
+    id: 'reaction', file: 'f1-reaction-test.html', name: 'F1 Reaction Test',
+    art: SVG.reaction, bg: 'linear-gradient(135deg,#ffd54f,#ff5722)',
+    desc: 'F1 lights-out start — five lights, then GO. How few milliseconds can you hit?',
+    mode: 'session', scoring: 'time',
     extract: () => {
-      const arr = safeJson(localStorage.getItem('wordSpanHistory'), []);
+      const arr = safeJson(localStorage.getItem('f1_reaction_v1'), []);
       if (!arr.length) return null;
       const e = arr[0];
-      const span = e.peakSpan || 0;
-      const acc  = e.accuracy || 0;
-      return { metric: span, tiebreak: 0, sig: e.date, label: `Span ${span} · ${acc}%` };
+      const best = e.best || 9999;
+      return { metric: 100, tiebreak: best, sig: e.ts, label: `${best}ms` };
+    }
+  },
+  {
+    id: 'pattern', file: 'grid-pattern-memory.html', name: 'Grid Pattern Memory',
+    art: SVG.gridPattern, bg: 'linear-gradient(135deg,#00e5ff,#a3ff57)',
+    desc: 'Cells light up across a grid — memorise the pattern and tap them back.',
+    mode: 'session', scoring: 'score',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('pmtest_history'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      const raw = e.score || 0;
+      return { metric: raw, tiebreak: 0, sig: e.ts, label: `${raw.toLocaleString()} · Grade ${e.grade}` };
     }
   },
   {
@@ -932,20 +955,6 @@ const GAMES = [
       const t = e.avgMs || 0;
       return { metric: acc, tiebreak: t, sig: e.ts,
                label: `${e.score}/${e.total} · ${acc}%${t ? ' · ' + secs(t) : ''}` };
-    }
-  },
-  {
-    id: 'reaction', file: 'f1-reaction-test.html', name: 'F1 Reaction Test',
-    art: SVG.reaction, bg: 'linear-gradient(135deg,#ffd54f,#ff5722)',
-    desc: 'F1 lights-out start — five lights, then GO. How few milliseconds can you hit?',
-    mode: 'session', scoring: 'time',
-    extract: () => {
-      const arr = safeJson(localStorage.getItem('f1_reaction_v1'), []);
-      if (!arr.length) return null;
-      const e = arr[0];
-      const best = e.best || 9999;
-      // Pure speed: everyone's "accuracy" is 100, so best reaction time decides.
-      return { metric: 100, tiebreak: best, sig: e.ts, label: `${best}ms` };
     }
   },
   {
@@ -977,16 +986,17 @@ const GAMES = [
     }
   },
   {
-    id: 'pattern', file: 'grid-pattern-memory.html', name: 'Grid Pattern Memory',
-    art: SVG.gridPattern, bg: 'linear-gradient(135deg,#00e5ff,#a3ff57)',
-    desc: 'Cells light up across a grid — memorise the pattern and tap them back.',
+    id: 'wordspan', file: 'working-memory-span.html', name: 'Working Memory Span',
+    art: SVG.memorySpan, bg: 'linear-gradient(135deg,#7ee8a2,#5bc4f5)',
+    desc: 'Hold the list in your head — how many words can you recall back in order?',
     mode: 'session', scoring: 'score',
     extract: () => {
-      const arr = safeJson(localStorage.getItem('pmtest_history'), []);
+      const arr = safeJson(localStorage.getItem('wordSpanHistory'), []);
       if (!arr.length) return null;
       const e = arr[0];
-      const raw = e.score || 0;
-      return { metric: raw, tiebreak: 0, sig: e.ts, label: `${raw.toLocaleString()} · Grade ${e.grade}` };
+      const span = e.peakSpan || 0;
+      const acc  = e.accuracy || 0;
+      return { metric: span, tiebreak: 0, sig: e.date, label: `Span ${span} · ${acc}%` };
     }
   },
 ];
@@ -1402,32 +1412,22 @@ function leagueTable() {
 }
 
 function renderLeaderboard() {
-  const filter = $('filter-game').value;
+  const activeTab = document.querySelector('.lb-tab.active');
+  const gameId = activeTab ? activeTab.dataset.game : (GAMES[0]?.id || null);
   const table = leagueTable();
   const tbody = $('lb-body');
 
-  let rows;
-  if (filter !== 'all') {
-    // Single game: rows already ranked by that game's metric.
-    rows = table[filter] || [];
-  } else {
-    // All games: every player's per-game standing, ordered by points earned.
-    rows = Object.values(table).flat()
-      .sort((a, b) => b.pts - a.pts || (b.ts || 0) - (a.ts || 0));
-  }
+  const rows = (table[gameId] || []).slice(0, 10);
 
   if (!rows.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No scores posted yet — play a game and your score will appear here automatically.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = rows.slice(0, 100).map((r, i) => {
-    // In a single-game view the medal reflects that game's finish position;
-    // in the all-games view it reflects this list's order.
-    const rank = filter !== 'all' ? r.rank : i + 1;
-    const rankCls = rank <= 3 ? `rank-${rank}` : '';
+  tbody.innerHTML = rows.map((r) => {
+    const rankCls = r.rank <= 3 ? `rank-${r.rank}` : '';
     return `<tr>
-      <td class="rank-cell ${rankCls}">${trophyFor(rank)}</td>
+      <td class="rank-cell ${rankCls}">${trophyFor(r.rank)}</td>
       <td class="player-cell">${escapeHtml(r.player)}</td>
       <td class="game-cell">${escapeHtml(r.game)}</td>
       <td class="score-cell">${escapeHtml(r.label)}<span class="raw">+${r.pts} pts</span></td>
@@ -1477,14 +1477,27 @@ function renderTotals() {
    ════════════════════════════════════════════════════════════════════ */
 
 function setupFilter() {
-  const sel = $('filter-game');
-  GAMES.forEach(g => {
-    const opt = document.createElement('option');
-    opt.value = g.id;
-    opt.textContent = g.name;
-    sel.appendChild(opt);
+  const tabsContainer = $('lb-tabs');
+  const gameColors = {
+    british: '#e040fb', code: '#00bcd4', defuse: '#ff5252', drift: '#5b8cff',
+    reaction: '#ffd54f', pattern: '#00e5ff', probability: '#ffb43c',
+    stroop: '#ab47bc', symbol: '#c8f564', wordspan: '#7ee8a2'
+  };
+
+  GAMES.forEach((g, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'lb-tab' + (idx === 0 ? ' active' : '');
+    btn.dataset.game = g.id;
+    btn.textContent = g.name;
+    const color = gameColors[g.id] || '#a259ff';
+    btn.style.setProperty('--tab-color', color);
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderLeaderboard();
+    });
+    tabsContainer.appendChild(btn);
   });
-  sel.addEventListener('change', renderLeaderboard);
 }
 
 $('clear-all').addEventListener('click', async () => {

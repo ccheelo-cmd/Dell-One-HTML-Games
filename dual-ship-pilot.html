@@ -84,11 +84,10 @@
   </h1>
   <div class="controls">
     <button id="startBtn" class="primary">Start Game</button>
-    <select id="difficulty">
-      <option value="easy">Easy</option>
-      <option value="medium" selected>Medium</option>
-      <option value="hard">Hard</option>
-    </select>
+    <label style="color: var(--muted); font-size: 14px;">
+      <input type="checkbox" id="mediumStart" style="margin-right: 6px;">
+      Start at Medium Speed
+    </label>
     <span id="msg" style="color: var(--danger); font-weight: bold;"></span>
   </div>
   <svg viewBox="0 0 800 450" id="gameCanvas">
@@ -110,7 +109,7 @@
 <script>
 const entitiesGroup = document.getElementById('entities');
 const startBtn      = document.getElementById('startBtn');
-const diffSel       = document.getElementById('difficulty');
+const mediumCheckbox = document.getElementById('mediumStart');
 const scoreEl       = document.getElementById('scoreVal');
 const bestEl        = document.getElementById('bestVal');
 const msgEl         = document.getElementById('msg');
@@ -147,15 +146,19 @@ let obstacles = [];
 let obsId = 0;
 let frameCount = 0;
 let speed, spawnInterval;
+let initialSpeed;  // set at game start based on checkbox
 
 const SHIP_Y = 380;
 
-function diffSettings() {
-  switch (diffSel.value) {
-    case 'easy':   return { speed: 3,   spawnInterval: 75  };
-    case 'hard':   return { speed: 6.5, spawnInterval: 35  };
-    default:       return { speed: 4.5, spawnInterval: 52  };
-  }
+// Progressive difficulty: speed increases every N frames, spawn rate tightens
+function getGameSettings(frame, startFast) {
+  const baseSpeed = startFast ? 3.5 : 2.2;  // medium start or very slow
+  const speedIncrease = baseSpeed * 0.0008; // gradual acceleration per frame
+  const currentSpeed = baseSpeed + speedIncrease * frame;
+  // Tighten spawn interval as speed increases (min 30, max 70)
+  const baseSpawn = startFast ? 55 : 70;
+  const spawnInterval = Math.max(30, baseSpawn - frame * 0.02);
+  return { speed: Math.min(currentSpeed, 7.5), spawnInterval };
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -178,8 +181,13 @@ function render() {
 function loop() {
   frameCount++;
 
+  // Update speed and spawn interval based on elapsed time
+  const settings = getGameSettings(frameCount, initialSpeed > 2.5);
+  speed = settings.speed;
+  spawnInterval = settings.spawnInterval;
+
   // Spawn
-  if (frameCount % spawnInterval === 0) {
+  if (frameCount % Math.round(spawnInterval) === 0) {
     // randomly pick left or right side, random lane
     const side  = Math.random() < 0.5 ? 'left' : 'right';
     const lanes = side === 'left' ? LEFT_LANES : RIGHT_LANES;
@@ -226,13 +234,13 @@ function startGame() {
   scoreEl.textContent = '0';
   msgEl.textContent   = '';
 
-  const s = diffSettings();
-  speed         = s.speed;
+  initialSpeed = mediumCheckbox.checked ? 3.5 : 2.2;
+  const s = getGameSettings(0, initialSpeed > 2.5);
+  speed = s.speed;
   spawnInterval = s.spawnInterval;
 
   isPlaying = true;
   startBtn.textContent = 'Restart';
-  diffSel.disabled = true;
 
   render();
   raf = requestAnimationFrame(loop);
@@ -241,7 +249,6 @@ function startGame() {
 function endGame(message) {
   cancelAnimationFrame(raf);
   isPlaying = false;
-  diffSel.disabled = false;
   startBtn.textContent = 'Play Again';
 
   if (score > best) {
