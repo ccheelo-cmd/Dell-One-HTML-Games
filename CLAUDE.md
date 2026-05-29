@@ -4,21 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A folder of standalone HTML mini-games built by different team members, glued together by [hub.html](hub.html) — an arcade-style connector that iframes each game and auto-captures their scores into a unified leaderboard. There is **no build system, no package.json, no tests, no framework** — every file is a self-contained HTML document with inline CSS/JS that runs by opening it in a browser.
+**Arcadius Hub** — a collection of 10 standalone HTML mini-games built by the Analysts of Arcadius, glued together by [index.html](index.html) — an arcade-style connector that iframes each game and auto-captures their scores into a unified leaderboard. There is **no build system, no package.json, no tests, no framework** — every file is a self-contained HTML document with inline CSS/JS that runs by opening it in a browser.
 
 ## Running it
 
-Open `hub.html` in a browser. For development, serve the folder over HTTP so iframe sandboxing works consistently:
+Open `index.html` in a browser. For development, serve the folder over HTTP so iframe sandboxing works consistently:
 
 ```powershell
-python -m http.server 8000      # then visit http://localhost:8000/hub.html
+python -m http.server 8000      # then visit http://localhost:8000/index.html
 ```
 
 The games also work standalone — open any `*.html` directly. Each game persists its own history to `localStorage` under a per-game key.
 
 ## Architecture: how the hub auto-captures scores
 
-The hub treats each game as a black box and only reads its `localStorage`. The contract lives in the `GAMES` array inside [hub.html](hub.html):
+The hub treats each game as a black box and only reads its `localStorage`. The contract lives in the `GAMES` array inside [index.html](index.html), ordered alphabetically by game name:
 
 ```js
 { id, file, name, art, bg, desc, mode, scoring, extract }
@@ -54,13 +54,27 @@ Data-layer functions: `syncScores()` (pull into cache), `postRemoteScore()` (wri
 
 Full one-time setup (create project, run SQL, paste 2 keys, host on GitHub Pages) is in [LEADERBOARD-SETUP.md](LEADERBOARD-SETUP.md). Note: the `scores` table columns changed when the two scoring types were introduced — if a project ran the older schema, drop the table first (the SQL file says how).
 
+## Leaderboard structure
+
+The **Leaderboard** tab shows tabbed game boards — click a game name to see its top 10 finishers. Each tab is colored to match the game's visual theme.
+
+The **Total Score** tab displays the cumulative league points across all games, with an explanation of how league points work (F1-style: 1st = 25 pts, 2nd = 18, etc.). This is the overall ranking.
+
+## Dual-Ship Pilot: progressive difficulty
+
+Dual-Ship Pilot (`drift`) no longer has difficulty levels. Instead, the game progressively accelerates:
+- Starts at very slow (baseSpeed 2.2) by default, or medium (3.5) if "Start at Medium Speed" checkbox is selected
+- Speed increases gradually each frame: `speed = baseSpeed + (baseSpeed * 0.0008) * frame`, capped at 7.5
+- Spawn interval tightens as speed increases, from 70 (or 55 for medium start) down to a minimum of 30
+- To reset scores when changing the difficulty system, run: `delete from public.scores where game_id = 'drift';`
+
 ## Adding a new game
 
 1. Drop the HTML file in the root with a descriptive kebab-case name (e.g. `reaction-grid-trainer.html`).
-2. Add an entry to the `GAMES` array in [hub.html](hub.html). The `extract()` must read from whatever `localStorage` key the game writes to — open the game's source and grep for `localStorage.setItem` to find the key and shape (and whether it's `unshift` newest-first or `push` newest-last).
+2. Add an entry to the `GAMES` array in [index.html](index.html), keeping the array sorted alphabetically by `name`. The `extract()` must read from whatever `localStorage` key the game writes to — open the game's source and grep for `localStorage.setItem` to find the key and shape (and whether it's `unshift` newest-first or `push` newest-last).
 3. Choose `scoring`: `'score'` for endless games (return `metric` = raw score, `tiebreak` = 0) or `'time'` for bounded/accuracy games (return `metric` = accuracy 0–100, `tiebreak` = ms). Keep the native readout in `label`. No normalization — league points handle cross-game comparison automatically.
 4. Add an SVG to the `SVG` map at the top of the array and reference it as `art: SVG.yourGame`.
-5. Update the games-count tagline in the header.
+5. Update the games-count in the tagline — currently "10 Games · Shared Team Leaderboard · Auto Capture".
 
 ## Intentionally excluded from the hub
 
