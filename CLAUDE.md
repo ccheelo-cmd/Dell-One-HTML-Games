@@ -9,14 +9,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Repository structure:**
 ```
 ├── index.html                    (main hub)
-├── games/                        (all 10 game files)
+├── games/                        (all 14 game files)
 │   ├── british-slang-quiz.html
 │   ├── bomb-defusal.html
-│   └── ... (8 more games)
+│   └── ... (12 more games)
+├── sql/                          (database scripts)
+│   ├── supabase-setup.sql        (initial database schema)
+│   └── delete-dual-ship-scores.sql
 ├── CLAUDE.md                     (this file)
-├── LEADERBOARD-SETUP.md          (Supabase setup guide)
-├── supabase-setup.sql            (database schema)
-└── delete-dual-ship-scores.sql   (cleanup script)
+└── LEADERBOARD-SETUP.md          (Supabase setup guide)
 ```
 
 ## Running it
@@ -83,11 +84,76 @@ Dual-Ship Pilot (`drift`) no longer has difficulty levels. Instead, the game pro
 
 ## Adding a new game
 
-1. Drop the HTML file in the root with a descriptive kebab-case name (e.g. `reaction-grid-trainer.html`).
-2. Add an entry to the `GAMES` array in [index.html](index.html), keeping the array sorted alphabetically by `name`. The `extract()` must read from whatever `localStorage` key the game writes to — open the game's source and grep for `localStorage.setItem` to find the key and shape (and whether it's `unshift` newest-first or `push` newest-last).
-3. Choose `scoring`: `'score'` for endless games (return `metric` = raw score, `tiebreak` = 0) or `'time'` for bounded/accuracy games (return `metric` = accuracy 0–100, `tiebreak` = ms). Keep the native readout in `label`. No normalization — league points handle cross-game comparison automatically.
-4. Add an SVG to the `SVG` map at the top of the array and reference it as `art: SVG.yourGame`.
-5. Update the games-count in the tagline — currently "10 Games · Shared Team Leaderboard · Auto Capture".
+**Step 1: Create the game HTML**
+- Write your game as a standalone HTML file with inline CSS/JS (no external dependencies).
+- Save it in the [games/](games/) folder with a descriptive **kebab-case** filename (e.g., `memory-tiles.html`).
+- The game should persist its best score to `localStorage` so the hub can auto-capture it. Example:
+  ```js
+  localStorage.setItem('my_game_v1', JSON.stringify({ score: 150, date: Date.now() }));
+  ```
+
+**Step 2: Register the game in [index.html](index.html)**
+Open [index.html](index.html) and find the `GAMES` array (around line 858). Add an entry following this template:
+```js
+{
+  id: 'my-game',                      // unique lowercase id for leaderboard
+  file: 'games/memory-tiles.html',    // path to your HTML file
+  name: 'Memory Tiles',               // display name (will appear on cards & tabs)
+  art: SVG.yourGameIcon,              // SVG icon (see step 4)
+  bg: 'linear-gradient(135deg,#00bcd4,#3f51b5)',  // card background color
+  desc: 'Match pairs of tiles. Speed wins.',       // short description
+  mode: 'session',                    // 'session' = poll localStorage during play
+  scoring: 'score',                   // see step 3
+  extract: () => {
+    const arr = JSON.parse(localStorage.getItem('my_game_v1') || '[]');
+    if (!arr.length) return null;
+    const e = arr[0];  // or arr[arr.length - 1] if using push instead of unshift
+    return { 
+      metric: e.score || 0,           // ranking number (higher = better)
+      tiebreak: 0,                    // 0 for score games, ms for time games
+      sig: e.date,                    // unique identifier (timestamp or hash)
+      label: `${e.score} pts`         // human-readable display
+    };
+  }
+}
+```
+Keep the `GAMES` array **sorted alphabetically by `name`**.
+
+**Step 3: Choose your scoring type**
+- **`'score'`** — endless games that climb to infinity. Rank by raw points (higher = better).
+  - Return: `metric` = raw score, `tiebreak` = 0, `label` = e.g. "1,250 pts"
+  - Examples: Bomb Defusal, Cipher Codebreaker
+- **`'time'`** — bounded games everyone can ace (e.g., quizzes, accuracy challenges). Rank by accuracy first, then speed.
+  - Return: `metric` = accuracy 0–100, `tiebreak` = ms (lower = better), `label` = e.g. "8/10 · 5.2s"
+  - Examples: British Slang Quiz, Stroop Color Conflict
+
+**Step 4: Add an SVG icon**
+- Create a simple SVG icon (100×100 viewBox).
+- Add it to the `SVG` object near the top of [index.html](index.html):
+  ```js
+  yourGameIcon: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <!-- your SVG content here -->
+  </svg>`,
+  ```
+- Reference it in your GAMES entry as `art: SVG.yourGameIcon`.
+
+**Step 5: Test & debug**
+1. Open [index.html](index.html) in a browser.
+2. Serve via HTTP: `python -m http.server 8000`, then visit `http://localhost:8000`
+3. Play your game and verify the score is captured in the leaderboard.
+4. Open browser DevTools → Application → Local Storage to verify your game's key is being written.
+
+**Step 6: Commit & push**
+```powershell
+git add games/your-game.html index.html
+git commit -m "Add Your Game Name"
+git push
+```
+
+**Notes:**
+- The hub auto-detects new games from the GAMES array—no database changes needed.
+- League points are awarded automatically by finishing position, so don't worry about normalization.
+- If you need to reset scores for a game later, add a SQL cleanup script to [sql/](sql/) following the pattern in `delete-dual-ship-scores.sql`.
 
 ## Intentionally excluded from the hub
 
