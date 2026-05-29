@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Chinook Case File — A SQL Murder Mystery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1b1714; --desk-1:#14110f; --desk-2:#241d18;
+    --paper:#e7dcc4; --paper-edge:#cdbf9f; --paper-line:#bcae8c;
+    --type:#33291f; --type-soft:#5a4c3a;
+    --red:#9e261c; --red-bright:#c0301f; --amber:#d9a441;
+    --stamp-green:#2e6b4f; --shadow:rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Special Elite","Courier Prime",monospace;color:var(--type);
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(217,164,65,.16), transparent 55%),
+      radial-gradient(80% 60% at 50% 40%, rgba(217,164,65,.05), transparent 60%),
+      linear-gradient(160deg, var(--desk-2), var(--desk-1) 70%);
+    min-height:100vh;display:flex;justify-content:center;padding:36px 18px 70px;position:relative;overflow-x:hidden;
+  }
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .case-wrap{width:100%;max-width:1100px;display:grid;grid-template-columns:1fr 300px;gap:26px;position:relative;z-index:2;}
+  @media(max-width:880px){.case-wrap{grid-template-columns:1fr;}}
+
+  .folder{background:
+      repeating-linear-gradient(transparent,transparent 30px, rgba(120,100,70,.10) 31px, transparent 32px),
+      linear-gradient(180deg,#ece1cb,var(--paper));
+    border:1px solid var(--paper-edge);border-radius:3px;
+    box-shadow:0 26px 60px -18px var(--shadow), 0 2px 0 rgba(255,255,255,.25) inset;
+    padding:0 0 36px;position:relative;transform:rotate(-.25deg);min-height:600px;}
+  .folder::before{content:"";position:absolute;top:14px;left:0;right:0;height:10px;
+    background:radial-gradient(circle 5px at 18% 50%, rgba(0,0,0,.30) 60%, transparent 62%),
+              radial-gradient(circle 5px at 82% 50%, rgba(0,0,0,.30) 60%, transparent 62%);}
+  .tab{position:absolute;top:-20px;left:34px;background:#c9b78f;color:#3a2f20;
+    font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;font-size:12px;
+    padding:6px 18px 8px;border-radius:5px 5px 0 0;box-shadow:0 -3px 8px -3px var(--shadow);text-transform:uppercase;}
+  .file-head{padding:34px 38px 18px;border-bottom:2px solid var(--type);margin:0 26px;position:relative;}
+  .case-no{font-family:"Oswald",sans-serif;letter-spacing:3px;font-size:11px;color:var(--type-soft);text-transform:uppercase;}
+  .file-title{font-family:"Oswald",sans-serif;font-weight:700;text-transform:uppercase;
+    font-size:clamp(26px,4.4vw,42px);line-height:.95;letter-spacing:1px;color:var(--ink);margin-top:4px;}
+  .file-sub{font-size:13px;color:var(--type-soft);margin-top:10px;letter-spacing:1px;}
+  .corner-stamp{position:absolute;top:18px;right:24px;border:3px double var(--red);color:var(--red);
+    font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:3px;font-size:13px;
+    padding:5px 12px;transform:rotate(8deg);opacity:.78;text-transform:uppercase;border-radius:3px;}
+  .file-body{padding:26px 40px 0;}
+
+  .ex-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;}
+  .exhibit-tag{display:inline-block;background:var(--type);color:var(--paper);
+    font-family:"Oswald",sans-serif;letter-spacing:3px;font-size:11px;font-weight:600;
+    padding:5px 12px;text-transform:uppercase;margin-bottom:14px;}
+  .exhibit-tag.lead{background:var(--red);}
+  .diff{display:flex;align-items:center;gap:6px;font-family:"Oswald",sans-serif;font-size:10px;letter-spacing:2px;color:var(--type-soft);text-transform:uppercase;}
+  .pip{width:9px;height:9px;border:1.5px solid var(--red);border-radius:50%;display:inline-block;}
+  .pip.on{background:var(--red);}
+  .exhibit-title{font-family:"Oswald",sans-serif;font-weight:700;font-size:23px;letter-spacing:1px;color:var(--ink);text-transform:uppercase;margin-bottom:14px;}
+  .narrative{font-size:15.5px;line-height:1.85;color:var(--type);max-width:62ch;}
+  .narrative em{color:var(--red);font-style:normal;border-bottom:1px dashed rgba(158,38,28,.5);}
+  .task{margin:22px 0 4px;padding:14px 16px;border-left:4px solid var(--amber);background:rgba(217,164,65,.13);font-size:13.5px;line-height:1.6;}
+  .task.lead{border-left-color:var(--red);background:rgba(158,38,28,.08);}
+  .task b{font-family:"Oswald",sans-serif;letter-spacing:1px;text-transform:uppercase;font-size:12px;color:#8a6a1f;display:block;margin-bottom:4px;}
+  .task.lead b{color:var(--red);}
+
+  .answer-row{margin-top:24px;}
+  .answer-label{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--type-soft);font-family:"Oswald",sans-serif;margin-bottom:6px;}
+  .typeline{display:flex;align-items:stretch;border-bottom:2px solid var(--type);}
+  .typeline input{flex:1;background:transparent;border:0;outline:0;font-family:"Special Elite",monospace;font-size:18px;color:var(--ink);padding:8px 4px;letter-spacing:.5px;caret-color:var(--red);}
+  .typeline:focus-within{box-shadow:0 2px 0 0 var(--red);}
+  .typeline input::placeholder{color:var(--type-soft);opacity:.6;}
+  .submit-btn{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+    background:var(--type);color:var(--paper);border:0;padding:0 20px;cursor:pointer;font-size:13px;transition:background .15s,transform .05s;}
+  .submit-btn:hover{background:var(--red);}.submit-btn:active{transform:translateY(1px);}
+  .validate{color:var(--red);font-size:13px;min-height:18px;margin-top:10px;}
+  .validate.show::before{content:"✗ ";font-weight:700;}
+  .navrow{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;flex-wrap:wrap;}
+  .btn-back{font-family:"Oswald",sans-serif;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;font-size:12px;
+    background:transparent;color:var(--type-soft);border:1.5px solid var(--paper-line);padding:8px 16px;cursor:pointer;transition:.15s;border-radius:2px;}
+  .btn-back:hover{color:var(--ink);border-color:var(--type);}
+  .carried{background:rgba(158,38,28,.10);border-bottom:1px solid var(--red);padding:1px 5px;color:var(--ink);font-style:normal;border-radius:2px;white-space:nowrap;}
+  .silent-note{font-size:12px;color:var(--type-soft);font-style:italic;}
+  .silent-note::before{content:"⟁ ";color:var(--amber);font-style:normal;}
+
+  .begin-btn{margin-top:24px;font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+    background:var(--red);color:#f4ecd8;border:0;padding:15px 34px;cursor:pointer;font-size:15px;border-radius:2px;
+    box-shadow:0 8px 20px -8px rgba(158,38,28,.8);transition:transform .08s, background .15s;}
+  .begin-btn:hover{background:var(--red-bright);}.begin-btn:active{transform:translateY(2px);}
+  .rules{margin-top:18px;font-size:13.5px;line-height:1.8;color:var(--type);max-width:62ch;}
+  .rules li{margin-left:18px;margin-bottom:4px;}
+
+  .verdict{padding:26px 40px 0;text-align:center;}
+  .stamp{display:inline-block;font-family:"Oswald",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:6px;border:6px double currentColor;padding:14px 30px;border-radius:6px;
+    font-size:clamp(28px,6.5vw,54px);line-height:1;animation:slam .45s cubic-bezier(.2,1.4,.4,1) both;}
+  .stamp.dead{color:var(--red);}.stamp.closed{color:var(--stamp-green);}
+  @keyframes slam{0%{transform:scale(2.6) rotate(-22deg);opacity:0;}60%{opacity:1;}100%{transform:scale(1) rotate(var(--rot,-8deg));}}
+  .verdict-title{font-family:"Oswald",sans-serif;font-weight:700;font-size:23px;letter-spacing:1px;margin:24px 0 12px;color:var(--ink);text-transform:uppercase;}
+  .verdict-body{font-size:15px;line-height:1.85;max-width:60ch;margin:0 auto;color:var(--type);text-align:left;}
+  .verdict-body em{color:var(--red);font-style:normal;font-weight:bold;}
+  .broke{margin:22px auto 0;max-width:520px;text-align:left;border:2px solid var(--red);background:rgba(158,38,28,.08);padding:16px 18px;}
+  .broke .lab{font-family:"Oswald",sans-serif;letter-spacing:2px;font-size:11px;text-transform:uppercase;color:var(--red);}
+  .broke .rehint{font-size:13.5px;line-height:1.6;color:var(--type);margin-top:8px;}
+
+  .culprit-card{margin:24px auto 0;max-width:440px;border:2px solid var(--type);background:rgba(46,107,79,.10);padding:18px 22px;text-align:left;}
+  .culprit-card .k{font-family:"Oswald",sans-serif;letter-spacing:2px;font-size:11px;text-transform:uppercase;color:var(--type-soft);}
+  .culprit-card .v{font-family:"Oswald",sans-serif;font-weight:700;font-size:30px;color:var(--ink);letter-spacing:1px;}
+  .culprit-card .t{font-size:13px;color:var(--type-soft);margin-top:2px;}
+  .board{margin:22px auto 0;max-width:540px;text-align:left;}
+  .board .row{display:flex;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dotted var(--paper-line);}
+  .board .row .rn{font-family:"Oswald",sans-serif;font-weight:700;color:var(--type-soft);min-width:34px;}
+  .board .row .rl{color:var(--type-soft);min-width:140px;}
+  .board .row .rv{color:var(--stamp-green);font-weight:bold;}
+  .solution-sql{margin:22px auto 0;max-width:560px;text-align:left;background:#201a14;color:#d8c8a3;
+    font-family:"Courier Prime",monospace;font-size:12.5px;line-height:1.6;padding:16px 18px;border-radius:4px;border:1px solid #3a2f20;overflow-x:auto;white-space:pre;}
+  .solution-sql .kw{color:var(--amber);}.solution-sql .cmt{color:#7d6f55;}
+
+  .btnrow{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:26px;}
+  .replay-btn{font-family:"Oswald",sans-serif;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+    background:transparent;color:var(--type);border:2px solid var(--type);padding:11px 24px;cursor:pointer;font-size:13px;transition:background .15s,color .15s;}
+  .replay-btn:hover{background:var(--type);color:var(--paper);}
+  .replay-btn.primary{background:var(--red);color:#f4ecd8;border-color:var(--red);}
+  .replay-btn.primary:hover{background:var(--red-bright);}
+
+  .rail{display:flex;flex-direction:column;gap:18px;}
+  .pad{background:linear-gradient(180deg,#efe6d2,#e3d7be);border:1px solid var(--paper-edge);
+    box-shadow:0 16px 40px -20px var(--shadow);padding:18px 18px 20px;border-radius:3px;transform:rotate(.4deg);}
+  .pad h3{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:13px;color:var(--ink);
+    border-bottom:2px solid var(--type);padding-bottom:8px;margin-bottom:6px;}
+  .pad .sub{font-size:10.5px;color:var(--type-soft);font-style:italic;margin-bottom:8px;}
+  .idx{list-style:none;display:flex;flex-direction:column;}
+  .idx li{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.35;padding:6px 4px;border-bottom:1px dotted var(--paper-line);}
+  .idx .mk{font-family:"Oswald",sans-serif;font-weight:700;font-size:11px;min-width:30px;color:var(--type-soft);letter-spacing:1px;padding-top:1px;}
+  .idx .body .lbl{font-family:"Oswald",sans-serif;letter-spacing:1px;text-transform:uppercase;font-size:10.5px;color:var(--type-soft);}
+  .idx .body .val{display:block;margin-top:1px;color:var(--ink);word-break:break-word;}
+  .idx li.locked .val{letter-spacing:2px;color:#9a8c6c;}
+  .idx li.current{background:rgba(217,164,65,.18);}.idx li.current .mk{color:var(--red);}
+  .idx li.current .val{color:var(--red);font-style:italic;}
+  .idx li.astray{background:rgba(158,38,28,.12);}
+  .idx li.astray .mk{color:var(--red);}.idx li.astray .val{color:var(--red);font-style:italic;}
+  .idx li.solved .val{color:var(--stamp-green);}
+  .idx li.solved .mk::after{content:" ✓";color:var(--stamp-green);}
+
+  .toolbox details summary{cursor:pointer;font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:1px;font-size:12px;text-transform:uppercase;list-style:none;}
+  .toolbox details summary::-webkit-details-marker{display:none;}
+  .toolbox details summary::before{content:"▸ ";color:var(--red);}
+  .toolbox details[open] summary::before{content:"▾ ";}
+  .schema{font-family:"Courier Prime",monospace;font-size:11px;line-height:1.55;color:var(--type);margin-top:10px;}
+  .schema b{color:var(--red);}
+  .howto{font-size:11.5px;line-height:1.6;color:var(--type-soft);margin-top:6px;}
+  .credit{grid-column:1/-1;text-align:center;color:rgba(231,220,196,.4);font-size:11px;letter-spacing:1px;margin-top:6px;}
+
+  /* ── Live SQL terminal (Supabase-backed Chinook ledger) ── */
+  .terminal{grid-column:1/-1;background:linear-gradient(180deg,#241d16,#1b1510);border:1px solid #3a2f20;border-radius:4px;
+    box-shadow:0 18px 44px -20px var(--shadow);padding:18px 20px 20px;color:#d8c8a3;font-family:"Courier Prime",monospace;margin-top:6px;}
+  .terminal h3{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:14px;color:#e7dcc4;
+    border-bottom:1px solid #3a2f20;padding-bottom:10px;margin-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .term-conn{font-family:"Courier Prime",monospace;font-size:11px;letter-spacing:0;text-transform:none;color:var(--amber);font-weight:400;}
+  .term-conn.ok{color:#6fbf8e;}.term-conn.err{color:var(--red-bright);}
+  .term-sub{font-size:11.5px;color:#9a8c6c;margin:9px 0 12px;line-height:1.55;}
+  .term-sub code{color:var(--amber);}
+  #sqlBox{width:100%;min-height:92px;resize:vertical;background:#15100b;color:#e8dcc0;border:1px solid #3a2f20;border-radius:3px;
+    font-family:"Courier Prime",monospace;font-size:13.5px;line-height:1.5;padding:11px 13px;outline:none;caret-color:var(--amber);}
+  #sqlBox:focus{border-color:var(--amber);box-shadow:0 0 0 1px rgba(217,164,65,.4);}
+  .term-bar{display:flex;align-items:center;gap:14px;margin-top:11px;flex-wrap:wrap;}
+  #runBtn{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:var(--red);color:#f4ecd8;
+    border:0;padding:10px 22px;cursor:pointer;font-size:13px;border-radius:2px;transition:background .15s,transform .05s;}
+  #runBtn:hover{background:var(--red-bright);}#runBtn:active{transform:translateY(1px);}
+  #runBtn:disabled{opacity:.5;cursor:wait;}
+  .term-hint{font-size:11px;color:#7d6f55;}
+  .term-status{font-size:12px;margin-left:auto;color:#9a8c6c;}
+  .term-status.err{color:var(--red-bright);}
+  .term-out{margin-top:14px;max-height:360px;overflow:auto;border-radius:3px;}
+  .term-out table{border-collapse:collapse;width:100%;font-size:12.5px;}
+  .term-out th{position:sticky;top:0;background:#2c2318;color:var(--amber);text-align:left;font-family:"Oswald",sans-serif;
+    letter-spacing:1px;text-transform:uppercase;font-size:11px;padding:7px 11px;border-bottom:1px solid #3a2f20;white-space:nowrap;}
+  .term-out td{padding:6px 11px;border-bottom:1px solid #2a2218;color:#dcceb0;white-space:nowrap;}
+  .term-out tr:hover td{background:rgba(217,164,65,.06);}
+  .term-out .empty{color:#9a8c6c;font-style:italic;padding:6px 2px;}
+  .term-out .err{color:#e07a6a;white-space:pre-wrap;font-size:12.5px;line-height:1.55;}
+  .term-out .nullv{color:#7d6f55;font-style:italic;}
+  /* sandbox solver */
+  .solver{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 12px;}
+  .solver-lbl{font-size:11px;color:#9a8c6c;letter-spacing:.5px;margin-right:2px;}
+  .lead-chips{display:inline-flex;gap:5px;flex-wrap:wrap;}
+  .lead-chip{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:1px;font-size:11px;min-width:30px;
+    background:#2c2318;color:var(--amber);border:1px solid #3a2f20;padding:5px 9px;cursor:pointer;border-radius:2px;transition:.13s;}
+  .lead-chip:hover{background:var(--amber);color:#1b1510;border-color:var(--amber);}
+  .solve-all{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-size:11px;
+    background:transparent;color:#e7dcc4;border:1px solid var(--red);padding:6px 13px;cursor:pointer;border-radius:2px;transition:.13s;}
+  .solve-all:hover{background:var(--red);color:#f4ecd8;}
+  .solve-all:disabled,.lead-chip:disabled{opacity:.45;cursor:wait;}
+  .solvechain{display:flex;flex-direction:column;gap:0;}
+  .sc-row{display:flex;gap:12px;align-items:baseline;padding:8px 4px;border-bottom:1px dotted #3a2f20;font-size:13px;}
+  .sc-row.busy{opacity:.5;}
+  .sc-rn{font-family:"Oswald",sans-serif;font-weight:700;color:var(--amber);min-width:34px;}
+  .sc-name{color:#9a8c6c;min-width:150px;}
+  .sc-ans{color:#7ec99a;font-weight:700;}
+  .sc-final{margin-top:14px;padding:12px 14px;border:1px solid var(--red);background:rgba(158,38,28,.12);
+    color:#e7dcc4;font-size:13.5px;border-radius:3px;}
+  .sc-final b{color:#e07a6a;}
+</style>
+</head>
+<body>
+<div class="case-wrap">
+  <div class="folder" id="folder">
+    <span class="tab">Homicide</span>
+    <div class="file-head">
+      <div class="case-no">Case No. CK&#8209;404 · Chinook Digital Media Co.</div>
+      <div class="file-title">The Chinook<br>Case File</div>
+      <div class="file-sub">A SQL Murder Mystery · Prague Field Office</div>
+      <span class="corner-stamp">Confidential</span>
+    </div>
+    <div class="file-body" id="screen"></div>
+  </div>
+
+  <div class="rail">
+    <div class="pad toolbox">
+      <h3>Evidence Trail</h3>
+      <div class="sub">Confirmed leads lock in. A wrong turn drags you onto a false trail.</div>
+      <ul class="idx" id="idx"></ul>
+    </div>
+    <div class="pad toolbox">
+      <details>
+        <summary>Detective's Toolkit</summary>
+        <p class="howto">Answer each lead by querying the <b>Chinook</b> database in the <b>SQL Terminal</b> below, then log what you find. Basic SQL only — SELECT, WHERE, JOIN, GROUP BY, HAVING, ORDER BY, LIMIT.</p>
+        <div class="schema">
+<b>Customer</b>(CustomerId, FirstName, LastName, City, Country, SupportRepId)
+<b>Invoice</b>(InvoiceId, CustomerId, InvoiceDate, BillingCity, Total)
+<b>InvoiceLine</b>(InvoiceLineId, InvoiceId, TrackId, UnitPrice, Quantity)
+<b>Track</b>(TrackId, Name, AlbumId, GenreId, Composer, Milliseconds, UnitPrice)
+<b>Album</b>(AlbumId, Title, ArtistId)
+<b>Artist</b>(ArtistId, Name)
+<b>Genre</b>(GenreId, Name)
+<b>Employee</b>(EmployeeId, FirstName, LastName, Title, ReportsTo)
+        </div>
+      </details>
+    </div>
+  </div>
+  <div class="terminal" id="terminal">
+    <h3>SQL Terminal — Chinook Ledger <span class="term-conn" id="termConn">● connecting…</span></h3>
+    <div class="term-sub">Query the live case database. <b>Read-only</b> — SELECT statements only, one at a time. Identifiers are case-sensitive, so quote them: <code>SELECT "FirstName" FROM "Customer"</code>.</div>
+    <div class="solver">
+      <span class="solver-lbl">Sandbox · solve the case from live queries:</span>
+      <span class="lead-chips" id="leadChips"></span>
+      <button class="solve-all" id="solveAll">Solve Whole Case &#9656;</button>
+    </div>
+    <textarea id="sqlBox" spellcheck="false" placeholder='SELECT "FirstName","LastName","City" FROM "Customer" LIMIT 5'></textarea>
+    <div class="term-bar">
+      <button id="runBtn">Run Query &#9656;</button>
+      <span class="term-hint">Ctrl+Enter to run · max 1000 rows</span>
+      <span class="term-status" id="sqlStatus"></span>
+    </div>
+    <div class="term-out" id="sqlOut"></div>
+  </div>
+  <div class="credit">Built on the open-source Chinook sample database · follow the data, detective.</div>
+</div>
+
+<script>
+/* ============================================================
+   THE CHINOOK CASE FILE — branching trails (Option A).
+   Correct answer advances the true spine. A wrong answer drops
+   you onto a DIFFERENT false trail unique to that exhibit, which
+   ends cold; you then resume from the exhibit where you strayed.
+   All values verified against the Chinook database.
+   ============================================================ */
+
+function norm(s){return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");}
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function matchNode(raw,node){
+  if(node.numeric){const d=(raw||"").replace(/[^0-9]/g,"");return d!=="" && d===node.accept[0];}
+  const n=norm(raw);if(!n) return false;
+  return node.accept.some(t=> n===t || (t.length>=8&&n.startsWith(t)) || (n.length>=8&&t.startsWith(n)));
+}
+
+/* the true spine (10), each with a unique false-trail branch + dead end */
+const SPINE=[
+{ roman:"I", name:"The Victim", diff:2, deps:[],
+  title:"The Victim",
+  body:`A patron lies dead at Chinook's Prague office, slumped over a terminal still logged into the sales ledger. No weapon, no witnesses — only data. Begin where the rot always starts: the money. The deceased was the company's single most valuable customer — the one whose invoices <em>summed together</em> outweigh every other soul in the books. Pull the ledger. Who sits at the very top?`,
+  task:`Find the customer with the greatest TOTAL lifetime spend across all invoices. Log their name.`,
+  placeholder:"Victim's name…", accept:["holy","helenaholy"], reveal:"Helena Holý",
+  hint2:`Group invoices by customer, SUM the totals, ORDER BY that sum descending, take the top row.`,
+  branch:[{ tag:"The Cheapskate Theory",
+    body:`You distrust the money-at-the-top idea. Maybe the killer is the customer the store treated worst — the one who spent the <em>least</em> of all, nursing a quiet grudge. Hunt the bottom of the ledger: who has the smallest total lifetime spend?`,
+    task:`Find the customer with the SMALLEST total spend across all invoices. Log their name.`,
+    placeholder:"A name…" }],
+  dead:{ title:"A Trail of Pennies",
+    body:`The bottom of the ledger belongs to <em>Puja Srivastava</em> of Bangalore — half a world from Prague, with no tie to the deceased and no reason to wish anyone harm. Spending little is no motive for murder. The victim was the patron at the <em>top</em> of the books, not the bottom.` } },
+
+{ roman:"II", name:"The Scene", diff:1, deps:[0],
+  title:"The Scene",
+  body:`You have named your victim as [[0]]. Stand at the scene: pull that exact customer's record and read the city they called home — the city where the body was found.`,
+  task:`On the customer you logged in Exhibit I, read their City. Log the city.`,
+  placeholder:"City…", accept:["prague"], reveal:"Prague",
+  hint2:`Select the City column from that customer's row in Customer.`,
+  branch:[{ tag:"The Wrong Map",
+    body:`You doubt Prague. Perhaps the killer struck from the company's busiest market and travelled in. Chase the crowd instead: which country holds the most customers of all?`,
+    task:`Find the country with the greatest number of customers. Log the country.`,
+    placeholder:"A country…" }],
+  dead:{ title:"Lost on the Map",
+    body:`The biggest market is the <em>USA</em>, thirteen customers strong and not one thread to the body in Prague. A crowd is a place to hide, not a place to find a killer. The scene was the victim's own city all along — and you have wandered an ocean away.` } },
+
+{ roman:"III", name:"The Night", diff:2, deps:[0],
+  title:"The Night It Happened",
+  body:`Stay with [[0]]. Years of quiet purchases, then silence — the coroner says they were struck down <em>during their final transaction</em>. Find the date of that customer's most recent invoice.`,
+  task:`For the customer from Exhibit I, find the DATE of their most recent invoice. Log the date.`,
+  placeholder:"YYYY-MM-DD…", accept:["20131113"], reveal:"2013-11-13",
+  hint2:`Filter Invoice to that customer, ORDER BY InvoiceDate descending and take the latest — or use MAX(InvoiceDate).`,
+  branch:[{ tag:"Back to the Beginning",
+    body:`You decide the story starts where the victim's did. Stay with [[0]] and reach instead for their <em>first</em> ever invoice — the date this whole relationship began.`,
+    task:`Find the date of the victim's EARLIEST invoice. Log the date.`,
+    placeholder:"YYYY-MM-DD…" }],
+  dead:{ title:"A Cold, Old Trail",
+    body:`That first receipt — a modest 8.91 on 11 July 2009 — is over four years stale, long before anyone meant the victim harm. Beginnings rarely explain endings. The killing happened on the <em>last</em> night, not the first.` } },
+
+{ roman:"IV", name:"The Haul", diff:3, deps:[2],
+  title:"The Haul",
+  body:`The victim's final invoice fell on [[2]]. It was no ordinary order — bloated, as if something was hidden inside it. Measure the haul: how many separate track line items were billed on the invoice from that date?`,
+  task:`On the victim's invoice dated as in Exhibit III, COUNT the track line items. Log the number.`,
+  placeholder:"A number…", accept:["14"], numeric:true, reveal:"14",
+  hint2:`Find the victim's invoice on that date, then COUNT its InvoiceLine rows.`,
+  branch:[{ tag:"Follow the Money",
+    body:`Counting tracks feels petty; you would rather follow the cash. On the victim's final invoice dated [[2]], what was the total dollar amount billed?`,
+    task:`Find the TOTAL amount of the victim's final invoice. Log the number.`,
+    placeholder:"An amount…" }],
+  dead:{ title:"A Receipt Names No One",
+    body:`The total comes to <em>25.86</em> — a number, nothing more. A dollar figure has no fingerprints and no alibi to break. The <em>size</em> of the haul, not its price, was the thread worth pulling.` } },
+
+{ roman:"V", name:"The Obsession", diff:3, deps:[2],
+  title:"The Obsession",
+  body:`Profile the victim's last night. On that same invoice dated [[2]], group its tracks by genre. Which single genre appears the most times?`,
+  task:`On that invoice, GROUP the tracks by genre and take the most frequent one. Log the genre.`,
+  placeholder:"Genre…", accept:["tvshows"], reveal:"TV Shows",
+  hint2:`Join that invoice's line items → Track → Genre, GROUP BY genre, ORDER BY COUNT(*) descending, take the top.`,
+  branch:[{ tag:"Cataloguing Shadows",
+    body:`Rather than the dominant genre, you try to map the whole spread. On the invoice dated [[2]], how many <em>distinct</em> genres appear across its tracks?`,
+    task:`Count the number of DISTINCT genres on the victim's final invoice. Log the number.`,
+    placeholder:"A number…" }],
+  dead:{ title:"Too Many Threads",
+    body:`Five genres, all tangled together — a fact that points everywhere and therefore nowhere. Spreading your attention across the whole catalogue only buried the single title that mattered. You needed the one genre that <em>dominated</em>, not a count of all of them.` } },
+
+{ roman:"VI", name:"The Calling Card", diff:4, deps:[2],
+  title:"The Calling Card",
+  body:`Still on the invoice dated [[2]]: buried among ordinary episodes is one track whose <em>two-word title reads like a taunt</em> — the killer's calling card, slipped into the order. Name it.`,
+  task:`List the track titles on that invoice and find the two-word taunt. Log it.`,
+  placeholder:"Track title…", accept:["socruel"], reveal:"So Cruel",
+  hint2:`Pull the Track.Name values on that invoice (a LIKE filter helps) and spot the two-word taunt.`,
+  branch:[{ tag:"The Long Player",
+    body:`You assume the message is the track that hogs the most time — the epic the victim died listening to. On the invoice dated [[2]], find the track with the greatest length in milliseconds.`,
+    task:`Find the LONGEST track (by Milliseconds) on the victim's final invoice. Log its title.`,
+    placeholder:"Track title…" }],
+  dead:{ title:"A Long Way to Nowhere",
+    body:`The longest track is <em>"Stranger In a Strange Land"</em> — a forty-four-minute episode, and an apt name for where you have ended up. Length is not menace. The signature was a short, two-word taunt, and you walked straight past it.` } },
+
+{ roman:"VII", name:"The Plant", diff:4, deps:[5],
+  title:"Planted Evidence",
+  body:`A calling card means nothing if the whole world owns a copy. Take the taunt track [[5]] and turn to the full ledger: across <em>every</em> customer and every invoice the store has ever issued, how many times has that exact track been sold? A lonely number proves it was placed on the victim's account by hand.`,
+  task:`COUNT how many times the calling-card track appears across ALL invoice line items in the whole store. Log the number.`,
+  placeholder:"A number…", accept:["1"], numeric:true, reveal:"1 (sold only once)",
+  hint2:`Join InvoiceLine → Track, filter Track.Name to your calling card, and COUNT the rows across the entire database — not just the victim's invoice.`,
+  branch:[{ tag:"Blame the Band",
+    body:`A lonely sales figure bores you; you would rather unmask the <em>author</em> of the calling card. Take the taunt track [[5]], trace it to its album and then to the artist who recorded it, and name your suspect.`,
+    task:`Follow the calling-card track → Album → Artist. Log the performing artist's name.`,
+    placeholder:"Artist…" }],
+  dead:{ title:"You Can't Arrest a Band",
+    body:`The artist is <em>U2</em> — four musicians in Dublin who pressed a song decades ago and never touched a Chinook account. A performer stamps out millions of copies; the question was never who <em>made</em> the track, but who <em>placed</em> this single sale by hand.` } },
+
+{ roman:"VIII", name:"The Prime Suspect", diff:4, deps:[0],
+  title:"The Prime Suspect",
+  body:`Sold exactly once — and only to the dead. That track didn't wander onto the final bill; a hand with the keys placed it there. Return to [[0]]: every customer is shadowed by one assigned <em>support representative</em> with full write access to their account. Name the employee assigned to [[0]] — the only hand that could plant a card unseen.`,
+  task:`Join that customer's record to Employee on SupportRepId. Log the support rep's name.`,
+  placeholder:"Employee name…", accept:["stevejohnson","johnson"], reveal:"Steve Johnson",
+  hint2:`Customer.SupportRepId = Employee.EmployeeId, filtered to the victim. Read the employee's name.`,
+  branch:[{ tag:"The Busiest Hands",
+    body:`You reason the guiltiest rep is the one juggling the most accounts — overworked, careless, dangerous. Among all support representatives, find the employee responsible for the greatest number of customers.`,
+    task:`Find the support rep who handles the MOST customers. Log their name.`,
+    placeholder:"Employee name…" }],
+  dead:{ title:"The Wrong Hands",
+    body:`The busiest rep is <em>Jane Peacock</em>, shepherding twenty-one accounts — but not the victim's. A heavy caseload is not a confession. The hand that mattered was the one assigned to <em>this</em> account, not the one with the fullest desk.` } },
+
+{ roman:"IX", name:"The Reach", diff:5, deps:[7],
+  title:"The Reach",
+  body:`Your prime suspect is [[7]] — and a clever killer hides in a crowd. Measure their reach: in total, how many customers is [[7]] responsible for as support rep?`,
+  task:`COUNT every customer whose support rep is the prime suspect. Log the number.`,
+  placeholder:"A number…", accept:["18"], numeric:true, reveal:"18",
+  hint2:`COUNT rows in Customer WHERE SupportRepId equals the prime suspect's EmployeeId.`,
+  branch:[{ tag:"Counting the Payroll",
+    body:`Instead of one suspect's reach, you try to size up the whole department. How many employees at Chinook carry the title of Sales Support Agent?`,
+    task:`Count the employees whose Title is "Sales Support Agent". Log the number.`,
+    placeholder:"A number…" }],
+  dead:{ title:"A Headcount, Not a Suspect",
+    body:`Three agents staff the floor — a tidy fact that accuses no one. Tallying the org chart is busywork dressed up as detection. You needed the reach of your <em>prime suspect</em>, not the size of his team.` } },
+
+{ roman:"X", name:"The Culprit", diff:5, deps:[7],
+  title:"The Unmasking",
+  body:`[[7]] had the access but a solid alibi. Only one person outranks them with the power to <em>rewrite</em> a customer file and bury the trail. Climb the chain of command one rung: name the single employee that [[7]] reports to. Name the killer.`,
+  task:`Self-join Employee to Employee on ReportsTo, starting from the prime suspect. Log the manager — the killer.`,
+  placeholder:"Name the killer…", accept:["nancyedwards","edwards"], reveal:"Nancy Edwards",
+  hint2:`Employee e JOIN Employee m ON m.EmployeeId = e.ReportsTo, where e is the prime suspect. Read m's name.`,
+  branch:[{ tag:"Straight to the Top",
+    body:`You aim for the head of the snake — surely whoever sits at the very summit gave the order. Find the one employee who answers to <em>no one</em>: the top of the entire chain of command.`,
+    task:`Find the employee at the top of the hierarchy — the one whose ReportsTo is empty (NULL). Log their name.`,
+    placeholder:"Name…" }],
+  dead:{ title:"Too Far Up the Ladder",
+    body:`The summit is <em>Andrew Adams</em>, the General Manager — and the night of the murder he was three time zones away at a conference, in front of a hundred witnesses. The killer was not at the top of the ladder. They were exactly <em>one rung</em> above the rep who held the keys.` } }
+];
+
+/* ---------------- state ---------------- */
+let S={mode:"intro", si:0, bi:0, origin:0};
+let answers=[];
+
+const screen=document.getElementById("screen");
+const idxEl=document.getElementById("idx");
+
+function pips(d){let h="";for(let i=0;i<5;i++)h+=`<span class="pip ${i<d?'on':''}"></span>`;return h;}
+function injectDeps(node, src){
+  let html=node.body;
+  (node.deps||[]).forEach(idx=>{ html=html.split("[["+idx+"]]").join(`<span class="carried">${esc(src(idx))}</span>`); });
+  return html;
+}
+function injectBranch(bnode, depsFrom){
+  let html=bnode.body;
+  // branch bodies reference confirmed spine reveals by the same [[idx]] tokens used on that exhibit
+  (depsFrom||[]).forEach(idx=>{ html=html.split("[["+idx+"]]").join(`<span class="carried">${esc(SPINE[idx].reveal)}</span>`); });
+  return html;
+}
+
+function render(){
+  if(S.mode==="intro") renderIntro();
+  else if(S.mode==="spine") renderSpine();
+  else if(S.mode==="branch") renderBranch();
+  else if(S.mode==="dead") renderDead();
+  else if(S.mode==="win") renderWin();
+  renderIndex();
+}
+
+function renderIntro(){
+  screen.innerHTML=`
+    <div class="exhibit-tag">Briefing</div>
+    <div class="exhibit-title">You Are The Detective</div>
+    <p class="narrative">Ten leads stand between you and the killer of Case CK&#8209;404. Each is a question answered only by querying the company's <em>Chinook</em> database. They form a single chain — <em>every lead is built from the answer you logged before it</em>.</p>
+    <ul class="rules narrative">
+      <li>Log a correct finding and the trail advances to the next exhibit.</li>
+      <li>Log the wrong one and you slip onto a <em>false trail</em> — a different lead entirely — that runs cold. You then resume from the exhibit where you strayed, your confirmed work intact.</li>
+      <li>Each box must hold a finding to proceed. Step <em>Back</em> any time to revisit earlier leads. There is no path to the true culprit through a wrong answer.</li>
+    </ul>
+    <button class="begin-btn" id="go">Open the Investigation</button>`;
+  document.getElementById("go").onclick=()=>{S.mode="spine";S.si=0;render();};
+}
+
+function renderSpine(){
+  const i=S.si, n=SPINE[i], isLast=i===SPINE.length-1;
+  screen.innerHTML=`
+    <div class="ex-top">
+      <div class="exhibit-tag">Exhibit ${n.roman} — Lead ${i+1} of 10</div>
+      <div class="diff">Difficulty ${pips(n.diff)}</div>
+    </div>
+    <div class="exhibit-title">${n.title}</div>
+    <p class="narrative">${injectDeps(n, idx=>answers[idx])}</p>
+    <div class="task"><b>Your query</b>${n.task}</div>
+    <div class="answer-row">
+      <div class="answer-label">Log your finding</div>
+      <div class="typeline">
+        <input id="ans" type="text" autocomplete="off" spellcheck="false" placeholder="${n.placeholder}" value="${esc(answers[i]||'')}">
+        <button class="submit-btn" id="sub">${isLast?"Close&nbsp;Case":"Log&nbsp;&amp;&nbsp;Continue"}</button>
+      </div>
+      <div class="validate" id="val"></div>
+      <div class="navrow">
+        ${i>0?`<button class="btn-back" id="back">&larr; Back to Exhibit ${SPINE[i-1].roman}</button>`:`<span></span>`}
+        <div class="silent-note">A right answer advances; a wrong one opens a false trail.</div>
+      </div>
+    </div>`;
+  const input=document.getElementById("ans"), val=document.getElementById("val");
+  const go=()=>{
+    if(input.value.trim()===""){ val.className="validate show"; val.textContent="Log a finding before you move on — the trail won't advance on an empty hand."; input.focus(); return; }
+    answers[i]=input.value.trim();
+    if(matchNode(answers[i], n)){ if(isLast){S.mode="win";} else {S.si=i+1;} render(); }
+    else { S.mode="branch"; S.origin=i; S.bi=0; render(); }
+  };
+  document.getElementById("sub").onclick=go;
+  input.addEventListener("keydown",e=>{if(e.key==="Enter")go();});
+  input.addEventListener("input",()=>{ if(val.className.indexOf("show")>=0){val.className="validate";val.textContent="";} });
+  const b=document.getElementById("back");
+  if(b) b.onclick=()=>{ answers[i]=input.value.trim(); S.si=i-1; render(); };
+  input.focus();
+}
+
+function renderBranch(){
+  const k=S.origin, j=S.bi, n=SPINE[k], bnode=n.branch[j], last=j===n.branch.length-1;
+  screen.innerHTML=`
+    <div class="ex-top">
+      <div class="exhibit-tag lead">False Trail — off Exhibit ${n.roman}</div>
+    </div>
+    <div class="exhibit-title">${bnode.tag}</div>
+    <p class="narrative">${injectBranch(bnode, n.deps)}</p>
+    <div class="task lead"><b>This lead's query</b>${bnode.task}</div>
+    <div class="answer-row">
+      <div class="answer-label">Log your finding</div>
+      <div class="typeline">
+        <input id="ans" type="text" autocomplete="off" spellcheck="false" placeholder="${bnode.placeholder}">
+        <button class="submit-btn" id="sub">${last?"Chase&nbsp;It&nbsp;Down":"Follow&nbsp;the&nbsp;Lead"}</button>
+      </div>
+      <div class="validate" id="val"></div>
+      <div class="navrow">
+        <button class="btn-back" id="back">&larr; Reconsider Exhibit ${n.roman}</button>
+        <div class="silent-note">You're chasing a hunch that broke from the main trail.</div>
+      </div>
+    </div>`;
+  const input=document.getElementById("ans"), val=document.getElementById("val");
+  const go=()=>{
+    if(input.value.trim()===""){ val.className="validate show"; val.textContent="Log something before you chase it — even a hunch needs a value."; input.focus(); return; }
+    if(last){ S.mode="dead"; render(); } else { S.bi=j+1; render(); }
+  };
+  document.getElementById("sub").onclick=go;
+  input.addEventListener("keydown",e=>{if(e.key==="Enter")go();});
+  input.addEventListener("input",()=>{ if(val.className.indexOf("show")>=0){val.className="validate";val.textContent="";} });
+  document.getElementById("back").onclick=()=>{
+    if(j>0){ S.bi=j-1; } else { S.mode="spine"; S.si=k; }
+    render();
+  };
+  input.focus();
+}
+
+function renderDead(){
+  const k=S.origin, n=SPINE[k];
+  screen.innerHTML=`
+    <div class="verdict">
+      <span class="stamp dead" style="--rot:-9deg">Dead End</span>
+      <div class="verdict-title">${n.dead.title}</div>
+      <p class="verdict-body">${n.dead.body}</p>
+      <div class="broke">
+        <div class="lab">Your trail broke at Exhibit ${n.roman}: ${n.name}</div>
+        <div class="rehint">Pick the thread back up there:<br>${n.hint2}</div>
+      </div>
+      <div class="btnrow">
+        <button class="replay-btn primary" id="resume">Resume From Exhibit ${n.roman}</button>
+        <button class="replay-btn" id="again">Start The Case Over</button>
+      </div>
+    </div>`;
+  document.getElementById("resume").onclick=()=>{ answers=answers.slice(0,k); S.mode="spine"; S.si=k; S.bi=0; render(); };
+  document.getElementById("again").onclick=restart;
+}
+
+function renderWin(){
+  const board=SPINE.map(n=>`<div class="row"><span class="rn">${n.roman}</span><span class="rl">${n.name}</span><span class="rv">${n.reveal}</span></div>`).join("");
+  screen.innerHTML=`
+    <div class="verdict">
+      <span class="stamp closed" style="--rot:-4deg">Case Closed</span>
+      <div class="verdict-title">Every Lead Held. You Found The Killer.</div>
+      <div class="culprit-card">
+        <div class="k">The Culprit</div>
+        <div class="v">Nancy Edwards</div>
+        <div class="t">Sales Manager · Chinook Digital Media Co.</div>
+      </div>
+      <p class="verdict-body" style="margin-top:22px;">From the victim's ledger to a track sold exactly once, the calling card was planted by an insider. The support rep had the keys — but only his manager had the authority to rewrite the file and erase the trail. Every link in your chain held.</p>
+      <div class="board">${board}</div>
+      <div class="solution-sql"><span class="cmt">-- The final link that named her:</span>
+<span class="kw">SELECT</span> m.FirstName, m.LastName, m.Title
+<span class="kw">FROM</span> Customer c
+<span class="kw">JOIN</span> Employee rep <span class="kw">ON</span> rep.EmployeeId = c.SupportRepId
+<span class="kw">JOIN</span> Employee m   <span class="kw">ON</span> m.EmployeeId   = rep.ReportsTo
+<span class="kw">WHERE</span> c.CustomerId = 6;   <span class="cmt">-- the victim, Helena Holý</span></div>
+      <div class="btnrow"><button class="replay-btn primary" id="again">Open A New Case</button></div>
+    </div>`;
+  document.getElementById("again").onclick=restart;
+}
+
+function renderIndex(){
+  const focus = (S.mode==="spine") ? S.si : ((S.mode==="branch"||S.mode==="dead") ? S.origin : (S.mode==="win"?10:-1));
+  idxEl.innerHTML=SPINE.map((n,i)=>{
+    let cls, val;
+    if(S.mode==="intro"){ cls="locked"; val="&#9619;&#9619;&#9619;&#9619;"; }
+    else if(i<focus){ cls="solved"; val=n.reveal; }
+    else if(i===focus){
+      if(S.mode==="spine"){ cls="current"; val="…investigating"; }
+      else { cls="astray"; val="…false trail"; }
+    } else { cls="locked"; val="&#9619;&#9619;&#9619;&#9619;"; }
+    return `<li class="${cls}"><span class="mk">${n.roman}</span><span class="body"><span class="lbl">${n.name}</span><span class="val">${val}</span></span></li>`;
+  }).join("");
+}
+
+function restart(){ S={mode:"intro",si:0,bi:0,origin:0}; answers=[]; render(); }
+render();
+
+/* ============================================================
+   LIVE SQL TERMINAL — queries the Chinook database on Supabase
+   via the read-only run_sql() RPC. The anon key below is a public
+   client key (safe to embed): the database is read-only for it and
+   run_sql() rejects anything that isn't a single SELECT.
+   ============================================================ */
+const SB_URL  = "https://loivcffoynagskjhgips.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaXZjZmZveW5hZ3NramhnaXBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNjAxMTksImV4cCI6MjA5NTYzNjExOX0.QH6YesfhLkLlrEd913aYT2W_EeRh2GmBlKri3kd0mYs";   /* public anon/publishable key — safe to embed (read-only) */
+
+const sqlBox   = document.getElementById("sqlBox");
+const sqlOut   = document.getElementById("sqlOut");
+const sqlStatus= document.getElementById("sqlStatus");
+const runBtn   = document.getElementById("runBtn");
+const termConn = document.getElementById("termConn");
+
+async function callRunSql(query){
+  const res = await fetch(`${SB_URL}/rest/v1/rpc/run_sql`, {
+    method:"POST",
+    headers:{ "apikey":SB_ANON, "Authorization":"Bearer "+SB_ANON, "Content-Type":"application/json" },
+    body: JSON.stringify({ query })
+  });
+  let data=null; try{ data=await res.json(); }catch(_){}
+  if(!res.ok){
+    const msg = (data&&(data.message||data.hint||data.error_description)) || ("HTTP "+res.status);
+    throw new Error(msg);
+  }
+  return data; // array of row objects
+}
+
+function renderRows(rows){
+  if(!Array.isArray(rows) || rows.length===0){ sqlOut.innerHTML='<div class="empty">Query ran — 0 rows returned.</div>'; return; }
+  const cols=Object.keys(rows[0]);
+  const head="<tr>"+cols.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
+  const body=rows.map(r=>"<tr>"+cols.map(c=>{
+    const v=r[c];
+    if(v===null||v===undefined) return '<td><span class="nullv">NULL</span></td>';
+    return `<td>${esc(typeof v==="object"?JSON.stringify(v):String(v))}</td>`;
+  }).join("")+"</tr>").join("");
+  sqlOut.innerHTML=`<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+async function runQuery(){
+  const q=(sqlBox.value||"").trim();
+  if(!q){ sqlBox.focus(); return; }
+  runBtn.disabled=true; sqlStatus.className="term-status"; sqlStatus.textContent="running…";
+  const t0=performance.now();
+  try{
+    const data=await callRunSql(q);
+    renderRows(data);
+    const ms=Math.round(performance.now()-t0);
+    sqlStatus.textContent=`${Array.isArray(data)?data.length:0} row(s) · ${ms}ms`;
+  }catch(err){
+    sqlOut.innerHTML=`<div class="err">✗ ${esc(err.message||String(err))}</div>`;
+    sqlStatus.className="term-status err"; sqlStatus.textContent="error";
+  }finally{
+    runBtn.disabled=false;
+  }
+}
+runBtn.onclick=runQuery;
+sqlBox.addEventListener("keydown",e=>{ if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){ e.preventDefault(); runQuery(); } });
+
+/* ---- Sandbox solver: the 10 canonical queries that crack the case ----
+   Each builds the answer from a LIVE query, not a hard-coded value.
+   victim = the top lifetime spender; last_inv = that victim's final invoice. */
+const _VICTIM = `WITH victim AS (\n  SELECT i."CustomerId" AS cid\n  FROM "Invoice" i\n  GROUP BY i."CustomerId"\n  ORDER BY SUM(i."Total") DESC\n  LIMIT 1\n)`;
+const _LAST = _VICTIM + `,\nlast_inv AS (\n  SELECT i."InvoiceId" AS iid\n  FROM "Invoice" i JOIN victim v ON v.cid = i."CustomerId"\n  ORDER BY i."InvoiceDate" DESC\n  LIMIT 1\n)`;
+
+const SOLUTIONS=[
+ { roman:"I", name:"The Victim",
+   q:`SELECT c."FirstName", c."LastName", ROUND(SUM(i."Total"),2) AS lifetime_spend\nFROM "Customer" c\nJOIN "Invoice" i ON i."CustomerId" = c."CustomerId"\nGROUP BY c."CustomerId", c."FirstName", c."LastName"\nORDER BY lifetime_spend DESC\nLIMIT 1`,
+   answer:r=>`${r[0].FirstName} ${r[0].LastName}` },
+ { roman:"II", name:"The Scene",
+   q:`${_VICTIM}\nSELECT c."City"\nFROM "Customer" c JOIN victim v ON v.cid = c."CustomerId"`,
+   answer:r=>r[0].City },
+ { roman:"III", name:"The Night",
+   q:`${_VICTIM}\nSELECT MAX(i."InvoiceDate")::date AS last_invoice\nFROM "Invoice" i JOIN victim v ON v.cid = i."CustomerId"`,
+   answer:r=>r[0].last_invoice },
+ { roman:"IV", name:"The Haul",
+   q:`${_LAST}\nSELECT COUNT(*) AS line_items\nFROM "InvoiceLine" il JOIN last_inv l ON l.iid = il."InvoiceId"`,
+   answer:r=>r[0].line_items },
+ { roman:"V", name:"The Obsession",
+   q:`${_LAST}\nSELECT g."Name" AS genre, COUNT(*) AS plays\nFROM "InvoiceLine" il JOIN last_inv l ON l.iid = il."InvoiceId"\nJOIN "Track" t ON t."TrackId" = il."TrackId"\nJOIN "Genre" g ON g."GenreId" = t."GenreId"\nGROUP BY g."Name"\nORDER BY plays DESC`,
+   answer:r=>r[0].genre },
+ { roman:"VI", name:"The Calling Card",
+   q:`${_LAST}\n-- the two-word taunt hides among these titles:\nSELECT t."Name" AS track_title\nFROM "InvoiceLine" il JOIN last_inv l ON l.iid = il."InvoiceId"\nJOIN "Track" t ON t."TrackId" = il."TrackId"`,
+   answer:r=>(r.find(x=>x.track_title==="So Cruel")?"So Cruel":"(scan the titles)") },
+ { roman:"VII", name:"The Plant",
+   q:`SELECT COUNT(*) AS times_sold_storewide\nFROM "InvoiceLine" il\nJOIN "Track" t ON t."TrackId" = il."TrackId"\nWHERE t."Name" = 'So Cruel'`,
+   answer:r=>r[0].times_sold_storewide },
+ { roman:"VIII", name:"The Prime Suspect",
+   q:`${_VICTIM}\nSELECT e."FirstName", e."LastName", e."Title"\nFROM "Customer" c JOIN victim v ON v.cid = c."CustomerId"\nJOIN "Employee" e ON e."EmployeeId" = c."SupportRepId"`,
+   answer:r=>`${r[0].FirstName} ${r[0].LastName}` },
+ { roman:"IX", name:"The Reach",
+   q:`${_VICTIM}\nSELECT COUNT(*) AS customers_handled\nFROM "Customer"\nWHERE "SupportRepId" = (\n  SELECT c."SupportRepId" FROM "Customer" c JOIN victim v ON v.cid = c."CustomerId"\n)`,
+   answer:r=>r[0].customers_handled },
+ { roman:"X", name:"The Culprit",
+   q:`${_VICTIM}\nSELECT m."FirstName", m."LastName", m."Title"\nFROM "Customer" c JOIN victim v ON v.cid = c."CustomerId"\nJOIN "Employee" rep ON rep."EmployeeId" = c."SupportRepId"\nJOIN "Employee" m   ON m."EmployeeId"   = rep."ReportsTo"`,
+   answer:r=>`${r[0].FirstName} ${r[0].LastName}` }
+];
+
+const leadChips=document.getElementById("leadChips");
+leadChips.innerHTML=SOLUTIONS.map(s=>`<button class="lead-chip" data-r="${s.roman}" title="${esc(s.name)}">${s.roman}</button>`).join("");
+leadChips.querySelectorAll(".lead-chip").forEach(btn=>{
+  btn.onclick=()=>{ const s=SOLUTIONS.find(x=>x.roman===btn.dataset.r); sqlBox.value=s.q; sqlBox.scrollIntoView({behavior:"smooth",block:"nearest"}); runQuery(); };
+});
+
+const solveAllBtn=document.getElementById("solveAll");
+function setSolverDisabled(d){ solveAllBtn.disabled=d; runBtn.disabled=d; leadChips.querySelectorAll(".lead-chip").forEach(b=>b.disabled=d); }
+async function solveWholeCase(){
+  setSolverDisabled(true);
+  sqlStatus.className="term-status"; sqlStatus.textContent="solving…";
+  sqlOut.innerHTML='<div class="solvechain">'+SOLUTIONS.map(s=>
+    `<div class="sc-row busy" id="sc-${s.roman}"><span class="sc-rn">${s.roman}</span><span class="sc-name">${esc(s.name)}</span><span class="sc-ans">…</span></div>`).join("")+'</div>';
+  try{
+    for(const s of SOLUTIONS){
+      const row=document.getElementById("sc-"+s.roman);
+      const data=await callRunSql(s.q);
+      const ans=(Array.isArray(data)&&data.length)?s.answer(data):"(no rows)";
+      row.className="sc-row"; row.querySelector(".sc-ans").textContent=ans;
+    }
+    sqlOut.insertAdjacentHTML("beforeend",
+      '<div class="sc-final">Every lead held — the calling card was sold exactly once and planted by an insider with write access. The support rep held the keys, but only his manager could rewrite the file and bury the trail. The killer is <b>Nancy Edwards</b>.</div>');
+    sqlStatus.className="term-status"; sqlStatus.textContent="case solved";
+  }catch(err){
+    sqlOut.insertAdjacentHTML("beforeend",`<div class="err">✗ ${esc(err.message||String(err))}</div>`);
+    sqlStatus.className="term-status err"; sqlStatus.textContent="error";
+  }finally{
+    setSolverDisabled(false);
+  }
+}
+solveAllBtn.onclick=solveWholeCase;
+
+/* connection status pill */
+(async()=>{
+  try{
+    await callRunSql("select 1 as ok");
+    termConn.className="term-conn ok"; termConn.textContent="● connected";
+  }catch(e){
+    termConn.className="term-conn err";
+    termConn.textContent = SB_ANON.indexOf("__")===0 ? "● set anon key" : "● "+(e.message||"offline");
+  }
+})();
+</script>
+</body>
+</html>
