@@ -871,7 +871,7 @@ function loadHistory() {
   catch { return []; }
 }
 
-function saveSession(score, difficultyId, modeId, timerId) {
+function saveSession(score, difficultyId, modeId, timerId, timeMs) {
   const history = loadHistory();
   const diff  = DIFFICULTIES.find(d => d.id === difficultyId) || { name: 'Unknown' };
   const mode  = MODES.find(m => m.id === modeId)              || { name: 'Unknown', icon: '' };
@@ -879,6 +879,7 @@ function saveSession(score, difficultyId, modeId, timerId) {
   history.unshift({
     date: new Date().toISOString(),
     score,
+    timeMs: timeMs ?? null,   // total ms to finish the quiz (for speed-based hub ranking)
     difficulty: diff.name,
     modeId,
     mode: mode.name,
@@ -958,6 +959,7 @@ function startGame() {
   state.score = 0;
   state.correct = 0;
   state.incorrect = 0;
+  state.startedAt = Date.now();   // total elapsed time, for speed-based ranking
   state.screen = 'playing';
   beginRound();
 }
@@ -1048,7 +1050,8 @@ function handleMeaningChoice(idx) {
 function endGame() {
   clearInterval(state.timerId);
   state.screen = 'gameover';
-  saveSession(state.score, state.difficulty, state.mode, state.timer);
+  const elapsedMs = state.startedAt ? Date.now() - state.startedAt : null;
+  saveSession(state.score, state.difficulty, state.mode, state.timer, elapsedMs);
   render();
 }
 

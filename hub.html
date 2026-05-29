@@ -589,7 +589,7 @@
       <div class="brand-mark"><span>★</span></div>
       <div>
         <h1>Arcade Hub</h1>
-        <div class="tagline">10 Games · 1 Leaderboard · Auto Capture</div>
+        <div class="tagline">10 Games · Shared Team Leaderboard · Auto Capture</div>
       </div>
     </div>
     <div class="player-box">
@@ -611,8 +611,8 @@
       <span>⚡</span>
       <span>
         <strong>Auto-capture is live.</strong>
-        Play any game — your score is detected and posted to the leaderboard automatically.
-        Make sure your player name is set above first.
+        Play any game — your score is detected and posted to the shared team leaderboard
+        automatically, so everyone competes on one board. Set your player name above first.
       </span>
     </div>
     <div class="game-grid" id="game-grid"></div>
@@ -623,8 +623,9 @@
     <div class="info-banner">
       <span>📊</span>
       <span>
-        Scores are <strong>normalized 0–1000 per game</strong> so they're comparable across the arcade.
-        The grey value next to each score shows the game's native readout.
+        Each game ranks its own way — <strong>endless games by score, timed games by accuracy then speed</strong>.
+        Finishing position earns <strong>league points</strong> (1st = 25, 2nd = 18…); the grey value is the points that run earned.
+        Pick a game to see its board, or see everyone's <strong>Total Score</strong> for the overall standing.
       </span>
     </div>
     <div class="lb-controls">
@@ -642,7 +643,7 @@
             <th>Rank</th>
             <th>Player</th>
             <th>Game</th>
-            <th>Score</th>
+            <th>Result · Pts</th>
             <th>Date</th>
           </tr>
         </thead>
@@ -655,7 +656,7 @@
   <div class="panel" id="panel-totals">
     <div class="lb-controls">
       <div style="color:var(--muted);font-size:13px;letter-spacing:1px;">
-        Combined scores across every game in the hub
+        League points earned across every game — your finish position in each game adds up here
       </div>
     </div>
     <div class="lb-table-wrap">
@@ -665,7 +666,7 @@
             <th>Rank</th>
             <th>Player</th>
             <th>Games Played</th>
-            <th>Total Score</th>
+            <th>League Points</th>
             <th>Last Played</th>
           </tr>
         </thead>
@@ -695,19 +696,54 @@
 'use strict';
 
 /* ════════════════════════════════════════════════════════════════════
-   GAME REGISTRY
-   Each game declares how to extract its "latest score" from
-   localStorage (or DOM for non-persisting games). The hub polls these
-   while the iframe is open and auto-posts new entries to the
-   leaderboard.
+   SHARED LEADERBOARD CONFIG (Supabase)
+   ─────────────────────────────────────────────────────────────────────
+   Paste your project's URL + public anon key below so every teammate's
+   scores land on one shared board. Get them from:
+     Supabase Dashboard → Project Settings → API
+   Leave the placeholders as-is to run in local-only mode (scores stay in
+   this browser's localStorage — handy for testing or playing offline).
+   See LEADERBOARD-SETUP.md for the full one-time setup.
+   ════════════════════════════════════════════════════════════════════ */
 
-   - extract(): returns { points, sig, label } or null
-     - points: numeric score for the unified leaderboard (higher = better)
-     - sig:    unique identifier of this entry (used to detect new ones)
-     - label:  human-readable score string ("7/10", "142ms", "Grade A")
+const SUPABASE_URL      = 'https://oixbfqyfiyiyzeigngqr.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_trDrxW3VeyqDlap6PqU5Vw_oQFVLOAv';
+
+// Remote mode turns on only when both values look real (not the placeholders).
+const REMOTE = /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(SUPABASE_URL)
+  && typeof SUPABASE_ANON_KEY === 'string'
+  && SUPABASE_ANON_KEY.length > 20
+  && !SUPABASE_ANON_KEY.includes('YOUR_');
+
+/* ════════════════════════════════════════════════════════════════════
+   GAME REGISTRY
+   Each game declares how to extract its "latest run" from localStorage
+   (or DOM for non-persisting games). The hub polls these while the iframe
+   is open and auto-posts new runs to the leaderboard.
+
+   Two scoring philosophies, because forcing every game onto one scale
+   doesn't make sense (a quiz is "out of 10"; an endless game climbs to
+   infinity):
+
+   - scoring: 'score'  → ENDLESS games. Rank by raw points, higher = better.
+   - scoring: 'time'   → BOUNDED games (everyone can ace them). Rank by
+                          ACCURACY first, then TIME (faster breaks ties).
+
+   - extract(): returns { metric, tiebreak, sig, label } or null
+     - metric:   primary ranking number, higher = better.
+                 • 'score' games → the raw score.
+                 • 'time'  games → accuracy 0–100.
+     - tiebreak: secondary, lower = better (only used by 'time' games → ms).
+                 'score' games pass 0.
+     - sig:      unique id of this run (used to detect a NEW run while polling).
+     - label:    human-readable native readout ("8/10 · 12.3s", "142ms", "3,400 pts").
    - mode:
-     - 'session' : poll localStorage during play; any new entry posts
-     - 'dom'     : poll iframe DOM; post on close (used for Dual Drift)
+     - 'session' : poll localStorage during play; any new run posts
+     - 'dom'     : poll iframe DOM; post on close (used for Dual-Ship Pilot)
+
+   Final standings use LEAGUE POINTS: each game awards F1-style points by
+   finish position (25/18/15/12/10/8/6/4/2/1), summed across games. So the
+   two metrics never have to be compared directly — only ranks are.
    ════════════════════════════════════════════════════════════════════ */
 
 function safeJson(raw, fallback) {
@@ -716,15 +752,6 @@ function safeJson(raw, fallback) {
 }
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-
-/* ────────────────────────────────────────────────────────────────
-   UNIFIED SCORING (0–1000 per game)
-   Every game's extract() returns `points` on the same 0–1000 scale
-   so cross-game totals are meaningful:
-     1000 ≈ elite   700 ≈ excellent   400 ≈ average   100 ≈ beginner
-   `label` keeps the game's native readout (10/10, 250ms, Grade A…)
-   so per-game leaderboards still show what the player actually did.
-   ──────────────────────────────────────────────────────────────── */
 
 const SVG = {
   britishSlang: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" stroke="#fff" stroke-width="2.5" stroke-linejoin="round">
@@ -817,141 +844,149 @@ const SVG = {
   </svg>`
 };
 
+// Pretty-print milliseconds as seconds for labels (e.g. 12345 → "12.3s").
+const secs = ms => (ms / 1000).toFixed(ms < 10000 ? 2 : 1) + 's';
+
 const GAMES = [
   {
     id: 'british', file: 'british-slang-quiz.html', name: 'British Slang Quiz',
     art: SVG.britishSlang, bg: 'linear-gradient(135deg,#e040fb,#ff69b4)',
-    desc: 'Decode Britain\'s slang — 10 multiple-choice rounds, accuracy is everything.',
-    mode: 'session',
+    desc: 'Decode Britain\'s slang — 10 rounds. Get them right, fastest time wins.',
+    mode: 'session', scoring: 'time',
     extract: () => {
       const arr = safeJson(localStorage.getItem('britishWordGameHistory'), []);
       if (!arr.length) return null;
       const e = arr[0];
-      const raw = e.score || 0;
-      return { points: clamp(raw * 100, 0, 1000), sig: e.date, label: `${raw}/10` };
+      if (e.timeMs == null) return null;          // older runs lack timing; skip
+      const score = e.score || 0;                 // 0–10 correct
+      return { metric: score * 10, tiebreak: e.timeMs, sig: e.date,
+               label: `${score}/10 · ${secs(e.timeMs)}` };
     }
   },
   {
     id: 'code', file: 'cipher-codebreaker.html', name: 'Cipher Codebreaker',
     art: SVG.cipher, bg: 'linear-gradient(135deg,#00bcd4,#3f51b5)',
-    desc: 'Mastermind-style deduction — crack the secret code in as few guesses as possible.',
-    mode: 'session',
+    desc: 'Mastermind-style deduction — crack the secret code for the biggest score.',
+    mode: 'session', scoring: 'score',
     extract: () => {
       const data = safeJson(localStorage.getItem('cipher_save_v1'), null);
       const hist = data && Array.isArray(data.history) ? data.history : [];
       if (!hist.length) return null;
       const e = hist[0];
       const raw = e.score || 0;
-      return { points: clamp(Math.round(raw / 3), 0, 1000), sig: e.date, label: `${raw} raw` };
+      return { metric: raw, tiebreak: 0, sig: e.date, label: `${raw.toLocaleString()} pts` };
     }
   },
   {
     id: 'defuse', file: 'bomb-defusal.html', name: 'Bomb Defusal',
     art: SVG.bomb, bg: 'linear-gradient(135deg,#ff5252,#b71c1c)',
     desc: 'Snip the right wires under pressure — chain correct cuts for a combo multiplier.',
-    mode: 'session',
+    mode: 'session', scoring: 'score',
     extract: () => {
       const arr = safeJson(localStorage.getItem('defuse_pro_v2'), []);
       if (!arr.length) return null;
       const e = arr[0];
-      const gradeMap = { S: 1000, A: 800, B: 600, C: 400, D: 200 };
-      const points = gradeMap[e.grade] ?? 100;
-      return { points, sig: e.date, label: `Grade ${e.grade || '?'} · ${e.score} raw` };
+      const raw = e.score || 0;
+      return { metric: raw, tiebreak: 0, sig: e.date,
+               label: `${raw.toLocaleString()} · Grade ${e.grade || '?'}` };
     }
   },
   {
     id: 'drift', file: 'dual-ship-pilot.html', name: 'Dual-Ship Pilot',
     art: SVG.dualShip, bg: 'linear-gradient(135deg,#5b8cff,#ff9966)',
     desc: 'Pilot two ships simultaneously on mirrored lanes — split-attention dodging.',
-    mode: 'dom',
+    mode: 'dom', scoring: 'score',
     extract: (iframeDoc) => {
       if (!iframeDoc) return null;
       const el = iframeDoc.getElementById('bestVal');
       if (!el) return null;
       const raw = parseInt(el.textContent, 10) || 0;
       if (raw <= 0) return null;
-      return { points: clamp(raw * 25, 0, 1000), sig: String(raw), label: `${raw} pickups` };
+      return { metric: raw, tiebreak: 0, sig: String(raw), label: `${raw} pickups` };
     }
   },
   {
     id: 'wordspan', file: 'working-memory-span.html', name: 'Working Memory Span',
     art: SVG.memorySpan, bg: 'linear-gradient(135deg,#7ee8a2,#5bc4f5)',
     desc: 'Hold the list in your head — how many words can you recall back in order?',
-    mode: 'session',
+    mode: 'session', scoring: 'score',
     extract: () => {
       const arr = safeJson(localStorage.getItem('wordSpanHistory'), []);
       if (!arr.length) return null;
       const e = arr[0];
       const span = e.peakSpan || 0;
       const acc  = e.accuracy || 0;
-      const points = clamp(span * 100 + Math.round(acc / 2), 0, 1000);
-      return { points, sig: e.date, label: `Span ${span} · ${acc}%` };
+      return { metric: span, tiebreak: 0, sig: e.date, label: `Span ${span} · ${acc}%` };
     }
   },
   {
     id: 'probability', file: 'probability-intuition.html', name: 'Probability Intuition',
     art: SVG.probability, bg: 'linear-gradient(135deg,#ffb43c,#bd8526)',
-    desc: 'Gut-check the odds — rapid-fire probability puzzles under a time limit.',
-    mode: 'session',
+    desc: 'Gut-check the odds — accuracy first, then your average answer speed.',
+    mode: 'session', scoring: 'time',
     extract: () => {
       const arr = safeJson(localStorage.getItem('pgc_history_v1'), []);
       if (!arr.length) return null;
-      const e = arr[arr.length - 1];
+      const e = arr[arr.length - 1];               // pushed newest-last
       const acc = e.accuracyPct ?? Math.round(100 * (e.score || 0) / (e.total || 1));
-      return { points: clamp(Math.round(acc * 10), 0, 1000), sig: e.ts, label: `${e.score}/${e.total} · ${acc}%` };
+      const t = e.avgMs || 0;
+      return { metric: acc, tiebreak: t, sig: e.ts,
+               label: `${e.score}/${e.total} · ${acc}%${t ? ' · ' + secs(t) : ''}` };
     }
   },
   {
     id: 'reaction', file: 'f1-reaction-test.html', name: 'F1 Reaction Test',
     art: SVG.reaction, bg: 'linear-gradient(135deg,#ffd54f,#ff5722)',
     desc: 'F1 lights-out start — five lights, then GO. How few milliseconds can you hit?',
-    mode: 'session',
+    mode: 'session', scoring: 'time',
     extract: () => {
       const arr = safeJson(localStorage.getItem('f1_reaction_v1'), []);
       if (!arr.length) return null;
       const e = arr[0];
-      const best = e.best || 999;
-      const points = clamp(Math.round((400 - best) * 4), 0, 1000);
-      return { points, sig: e.ts, label: `${best}ms` };
+      const best = e.best || 9999;
+      // Pure speed: everyone's "accuracy" is 100, so best reaction time decides.
+      return { metric: 100, tiebreak: best, sig: e.ts, label: `${best}ms` };
     }
   },
   {
     id: 'stroop', file: 'stroop-color-conflict.html', name: 'Stroop Color Conflict',
     art: SVG.stroop, bg: 'linear-gradient(135deg,#ab47bc,#7e57c2)',
-    desc: 'Classic Stroop — pick the ink colour, ignore what the word says.',
-    mode: 'session',
+    desc: 'Classic Stroop — pick the ink colour, ignore the word. Accuracy then speed.',
+    mode: 'session', scoring: 'time',
     extract: () => {
       const arr = safeJson(localStorage.getItem('stroop_history_v1'), []);
       if (!arr.length) return null;
-      const e = arr[arr.length - 1];
+      const e = arr[0];                            // unshift → newest-first
       const acc = e.accuracy || 0;
-      return { points: clamp(Math.round(acc * 10), 0, 1000), sig: e.ts, label: `${acc}% (${e.correct}/${e.trials})` };
+      const t = e.avgRT || 0;
+      return { metric: acc, tiebreak: t, sig: e.ts,
+               label: `${acc}%${t ? ' · ' + secs(t) : ''}` };
     }
   },
   {
     id: 'symbol', file: 'symbol-sequence-recall.html', name: 'Symbol Sequence Recall',
     art: SVG.symbolSeq, bg: 'linear-gradient(135deg,#c8f564,#7a9c3a)',
     desc: 'Watch the symbols flash in order, then reproduce the sequence from memory.',
-    mode: 'session',
+    mode: 'session', scoring: 'score',
     extract: () => {
       const arr = safeJson(localStorage.getItem('symbol_echo_history_v1'), []);
       if (!arr.length) return null;
-      const e = arr[arr.length - 1];
+      const e = arr[0];                            // unshift → newest-first
       const raw = e.score || 0;
-      return { points: clamp(raw, 0, 1000), sig: e.ts, label: `${raw} raw` };
+      return { metric: raw, tiebreak: 0, sig: e.ts, label: `${raw.toLocaleString()} pts` };
     }
   },
   {
     id: 'pattern', file: 'grid-pattern-memory.html', name: 'Grid Pattern Memory',
     art: SVG.gridPattern, bg: 'linear-gradient(135deg,#00e5ff,#a3ff57)',
     desc: 'Cells light up across a grid — memorise the pattern and tap them back.',
-    mode: 'session',
+    mode: 'session', scoring: 'score',
     extract: () => {
       const arr = safeJson(localStorage.getItem('pmtest_history'), []);
       if (!arr.length) return null;
       const e = arr[0];
       const raw = e.score || 0;
-      return { points: clamp(raw, 0, 1000), sig: e.ts, label: `Grade ${e.grade} · ${raw} raw` };
+      return { metric: raw, tiebreak: 0, sig: e.ts, label: `${raw.toLocaleString()} · Grade ${e.grade}` };
     }
   },
 ];
@@ -965,17 +1000,78 @@ const LS_SCORES = 'hub_scores_v1';
 
 const $ = id => document.getElementById(id);
 
-function loadScores() {
-  return safeJson(localStorage.getItem(LS_SCORES), []);
+/* In-memory score cache the UI renders from. Source of truth is Supabase
+   when REMOTE is on, otherwise this browser's localStorage. */
+let SCORES = [];
+let remoteWarned = false;
+
+// Synchronous accessor used by all the render functions.
+function loadScores() { return SCORES; }
+
+function loadLocalScores() {
+  const arr = safeJson(localStorage.getItem(LS_SCORES), []);
+  // Drop pre-scoring-rework entries (old normalized {score} shape) so they
+  // don't pollute the new metric/tiebreak ranking. They're rewritten on next save.
+  return Array.isArray(arr) ? arr.filter(s => s && typeof s.metric === 'number') : [];
 }
-function saveScores(arr) {
-  localStorage.setItem(LS_SCORES, JSON.stringify(arr));
+function saveLocalScores(arr) { localStorage.setItem(LS_SCORES, JSON.stringify(arr)); }
+
+function loadPlayer() { return localStorage.getItem(LS_PLAYER) || ''; }
+function savePlayer(name) { localStorage.setItem(LS_PLAYER, name); }
+
+const REST_HEADERS = () => ({
+  'apikey': SUPABASE_ANON_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+  'Content-Type': 'application/json'
+});
+const REST_BASE = () => SUPABASE_URL.replace(/\/$/, '') + '/rest/v1';
+
+// Pull the shared board (best score per player per game) into SCORES.
+async function syncScores() {
+  if (!REMOTE) { SCORES = loadLocalScores(); return; }
+  try {
+    const res = await fetch(
+      REST_BASE() + '/scores?select=player,game_id,game,kind,metric,tiebreak,label,created_at',
+      { headers: REST_HEADERS() }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    SCORES = rows.map(r => ({
+      player: r.player, gameId: r.game_id, game: r.game,
+      kind: r.kind, metric: r.metric, tiebreak: r.tiebreak,
+      label: r.label, ts: Date.parse(r.created_at)
+    }));
+    remoteWarned = false;
+  } catch (e) {
+    if (!remoteWarned) { toast('⚠ Can\'t reach the leaderboard server', 'warn'); remoteWarned = true; }
+    // Keep whatever we already had rather than blanking the board.
+  }
 }
-function loadPlayer() {
-  return localStorage.getItem(LS_PLAYER) || '';
+
+// Post one run through the guarded submit_score() RPC. The server keeps only
+// each player's best per game (max metric; for 'time' games, fastest among ties).
+async function postRemoteScore(entry) {
+  const res = await fetch(REST_BASE() + '/rpc/submit_score', {
+    method: 'POST',
+    headers: REST_HEADERS(),
+    body: JSON.stringify({
+      p_player:   entry.player,
+      p_game_id:  entry.gameId,
+      p_game:     entry.game,
+      p_kind:     entry.kind,
+      p_metric:   entry.metric,
+      p_tiebreak: entry.tiebreak,
+      p_label:    entry.label
+    })
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
 }
-function savePlayer(name) {
-  localStorage.setItem(LS_PLAYER, name);
+
+async function refreshAndRender() {
+  await syncScores();
+  renderLeaderboard();
+  renderTotals();
+  renderGames();
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -1076,28 +1172,55 @@ function readExtract(game) {
   }
 }
 
-function autoPostScore(game, result) {
+// Is run `n` a better result than `o` for a game of the given scoring kind?
+// Higher metric always wins; for 'time' games, equal metric (accuracy) → lower time wins.
+function isBetterRun(n, o, kind) {
+  if (n.metric !== o.metric) return n.metric > o.metric;
+  if (kind === 'time') return (n.tiebreak ?? Infinity) < (o.tiebreak ?? Infinity);
+  return false;
+}
+
+async function autoPostScore(game, result) {
   const name = playerInput.value.trim();
   if (!name) {
     toast('⚠ Set your player name to save scores', 'warn');
     return;
   }
 
-  const scores = loadScores();
-  scores.push({
+  const entry = {
     player: name,
     gameId: game.id,
     game: game.name,
-    score: Math.round(result.points),
-    label: result.label || String(result.points),
+    kind: game.scoring,
+    metric: Math.round(result.metric),
+    tiebreak: Math.round(result.tiebreak || 0),
+    label: result.label || String(result.metric),
     ts: Date.now()
-  });
-  saveScores(scores);
+  };
+  const captured = `✓ ${game.name}: ${entry.label} captured`;
 
-  toast(`✓ ${game.name}: ${result.label || result.points + ' pts'} captured`);
-  renderLeaderboard();
-  renderTotals();
-  renderGames(); // refresh "best" badges
+  if (REMOTE) {
+    try {
+      await postRemoteScore(entry);
+      toast(captured);
+      await refreshAndRender();   // pull back the authoritative best-per-game board
+    } catch (e) {
+      toast('⚠ Could not save your score to the leaderboard', 'warn');
+    }
+  } else {
+    // Local mode mirrors the server rule: keep one best row per player per game.
+    const scores = loadLocalScores();
+    const key = name.toLowerCase();
+    const idx = scores.findIndex(s => s.gameId === entry.gameId && s.player.toLowerCase() === key);
+    if (idx === -1) scores.push(entry);
+    else if (isBetterRun(entry, scores[idx], game.scoring)) scores[idx] = entry;
+    saveLocalScores(scores);
+    SCORES = scores;
+    toast(captured);
+    renderLeaderboard();
+    renderTotals();
+    renderGames(); // refresh "best" badges
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -1107,11 +1230,13 @@ function autoPostScore(game, result) {
 function bestForGame(gameId) {
   const name = playerInput.value.trim().toLowerCase();
   if (!name) return null;
+  const game = GAMES.find(g => g.id === gameId);
+  const kind = game ? game.scoring : 'score';
   const mine = loadScores().filter(s =>
     s.gameId === gameId && s.player.toLowerCase() === name
   );
   if (!mine.length) return null;
-  return mine.reduce((a, b) => (b.score > a.score ? b : a));
+  return mine.reduce((a, b) => (isBetterRun(b, a, kind) ? b : a));
 }
 
 function renderGames() {
@@ -1119,7 +1244,7 @@ function renderGames() {
   grid.innerHTML = GAMES.map(g => {
     const best = bestForGame(g.id);
     const bestHtml = best
-      ? `<div class="best-score">Your best: <strong>${escapeHtml(best.label || best.score)}</strong></div>`
+      ? `<div class="best-score">Your best: <strong>${escapeHtml(best.label || String(best.metric))}</strong></div>`
       : '';
     return `
       <div class="game-card" data-id="${g.id}">
@@ -1216,9 +1341,14 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     $('panel-' + tab.dataset.panel).classList.add('active');
-    if (tab.dataset.panel === 'leaderboard') renderLeaderboard();
-    if (tab.dataset.panel === 'totals') renderTotals();
-    if (tab.dataset.panel === 'games') renderGames();
+    if (REMOTE) {
+      // Re-pull the shared board so you see teammates' latest scores.
+      refreshAndRender();
+    } else {
+      if (tab.dataset.panel === 'leaderboard') renderLeaderboard();
+      if (tab.dataset.panel === 'totals') renderTotals();
+      if (tab.dataset.panel === 'games') renderGames();
+    }
   });
 });
 
@@ -1233,46 +1363,93 @@ function trophyFor(rank) {
   return '#' + rank;
 }
 
+/* ── League points ──────────────────────────────────────────────────
+   Each game ranks its players by that game's own metric, then awards
+   F1-style points by finish position. Summing league points is how the
+   overall standing stays fair across games scored two different ways.
+   ──────────────────────────────────────────────────────────────────── */
+
+const LEAGUE_PTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]; // 1st…10th
+function leaguePts(rankIdx) {
+  return rankIdx < LEAGUE_PTS.length ? LEAGUE_PTS[rankIdx] : 1; // 11th+ → 1 (participation)
+}
+
+function scoringOf(gameId) {
+  const g = GAMES.find(x => x.id === gameId);
+  return g ? g.scoring : 'score';
+}
+
+// Order one game's rows best-first: metric desc, then (time games) tiebreak asc,
+// then earliest achieved as a final stable tiebreak.
+function rankRows(rows, kind) {
+  return rows.slice().sort((a, b) => {
+    if (b.metric !== a.metric) return b.metric - a.metric;
+    if (kind === 'time') return (a.tiebreak ?? Infinity) - (b.tiebreak ?? Infinity);
+    return (a.ts || 0) - (b.ts || 0);
+  });
+}
+
+// → { gameId: [ { ...row, rank, pts } ] }, every game's rows ranked + scored.
+function leagueTable() {
+  const byGame = {};
+  loadScores().forEach(s => { (byGame[s.gameId] = byGame[s.gameId] || []).push(s); });
+  const out = {};
+  for (const gid in byGame) {
+    out[gid] = rankRows(byGame[gid], scoringOf(gid))
+      .map((row, i) => ({ ...row, rank: i + 1, pts: leaguePts(i) }));
+  }
+  return out;
+}
+
 function renderLeaderboard() {
   const filter = $('filter-game').value;
-  const scores = loadScores();
-  let rows = scores.slice().sort((a, b) => b.score - a.score);
-  if (filter !== 'all') rows = rows.filter(r => r.gameId === filter);
-
+  const table = leagueTable();
   const tbody = $('lb-body');
+
+  let rows;
+  if (filter !== 'all') {
+    // Single game: rows already ranked by that game's metric.
+    rows = table[filter] || [];
+  } else {
+    // All games: every player's per-game standing, ordered by points earned.
+    rows = Object.values(table).flat()
+      .sort((a, b) => b.pts - a.pts || (b.ts || 0) - (a.ts || 0));
+  }
+
   if (!rows.length) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No scores posted yet — play a game and your score will appear here automatically.</td></tr>';
     return;
   }
 
   tbody.innerHTML = rows.slice(0, 100).map((r, i) => {
-    const rank = i + 1;
+    // In a single-game view the medal reflects that game's finish position;
+    // in the all-games view it reflects this list's order.
+    const rank = filter !== 'all' ? r.rank : i + 1;
     const rankCls = rank <= 3 ? `rank-${rank}` : '';
-    const rawLabel = r.label && r.label !== String(r.score)
-      ? `<span class="raw">${escapeHtml(r.label)}</span>`
-      : '';
     return `<tr>
       <td class="rank-cell ${rankCls}">${trophyFor(rank)}</td>
       <td class="player-cell">${escapeHtml(r.player)}</td>
       <td class="game-cell">${escapeHtml(r.game)}</td>
-      <td class="score-cell">${formatScore(r.score)}${rawLabel}</td>
+      <td class="score-cell">${escapeHtml(r.label)}<span class="raw">+${r.pts} pts</span></td>
       <td class="date-cell">${formatDate(r.ts)}</td>
     </tr>`;
   }).join('');
 }
 
 function renderTotals() {
-  const scores = loadScores();
+  const table = leagueTable();
   const byPlayer = {};
-  scores.forEach(s => {
-    const key = s.player.toLowerCase();
-    if (!byPlayer[key]) {
-      byPlayer[key] = { player: s.player, total: 0, games: new Set(), last: 0 };
-    }
-    byPlayer[key].total += s.score;
-    byPlayer[key].games.add(s.gameId);
-    if (s.ts > byPlayer[key].last) byPlayer[key].last = s.ts;
-  });
+  for (const gid in table) {
+    table[gid].forEach(r => {
+      const key = r.player.toLowerCase();
+      if (!byPlayer[key]) {
+        byPlayer[key] = { player: r.player, total: 0, games: new Set(), last: 0 };
+      }
+      byPlayer[key].total += r.pts;
+      byPlayer[key].games.add(gid);
+      if (r.ts > byPlayer[key].last) byPlayer[key].last = r.ts;
+    });
+  }
 
   const rows = Object.values(byPlayer).sort((a, b) => b.total - a.total);
   const tbody = $('totals-body');
@@ -1289,7 +1466,7 @@ function renderTotals() {
       <td class="rank-cell ${rankCls}">${trophyFor(rank)}</td>
       <td class="player-cell">${escapeHtml(r.player)}</td>
       <td class="game-cell">${r.games.size} game${r.games.size !== 1 ? 's' : ''}</td>
-      <td class="score-cell">${formatScore(r.total)}</td>
+      <td class="score-cell">${r.total} pts</td>
       <td class="date-cell">${formatDate(r.last)}</td>
     </tr>`;
   }).join('');
@@ -1310,10 +1487,18 @@ function setupFilter() {
   sel.addEventListener('change', renderLeaderboard);
 }
 
-$('clear-all').addEventListener('click', () => {
+$('clear-all').addEventListener('click', async () => {
+  if (REMOTE) {
+    // The shared board is the source of truth and isn't wiped from a client.
+    // (To reset it, an admin runs `truncate public.scores;` in Supabase.)
+    await refreshAndRender();
+    toast('Leaderboard refreshed');
+    return;
+  }
   if (!loadScores().length) { toast('Nothing to clear'); return; }
   if (confirm('Clear ALL leaderboard scores? Game histories inside each game stay intact. This cannot be undone.')) {
-    saveScores([]);
+    saveLocalScores([]);
+    SCORES = [];
     renderLeaderboard();
     renderTotals();
     renderGames();
@@ -1345,10 +1530,32 @@ function formatDate(ts) {
    INIT
    ════════════════════════════════════════════════════════════════════ */
 
-renderGames();
 setupFilter();
+renderGames();        // immediate paint (SCORES is empty until first sync)
 renderLeaderboard();
 renderTotals();
+
+// First load of the shared board (or localStorage in local-only mode).
+refreshAndRender();
+
+// In remote mode, keep the open board fresh so the competition feels live.
+if (REMOTE) {
+  setInterval(() => {
+    if (overlay.classList.contains('open')) return; // don't fight the in-game watcher
+    const active = document.querySelector('.tab.active');
+    const panel = active ? active.dataset.panel : '';
+    if (panel === 'leaderboard' || panel === 'totals') refreshAndRender();
+  }, 20000);
+}
+
+// Relabel the destructive "Clear All" button — there's nothing to clear locally
+// when the board lives on the shared server.
+if (REMOTE) {
+  const clearBtn = $('clear-all');
+  clearBtn.textContent = '↻ Refresh';
+  clearBtn.style.borderColor = 'var(--border-hi)';
+  clearBtn.style.color = 'var(--muted)';
+}
 
 // Refresh the grid's "Your best" labels when the player name changes
 playerInput.addEventListener('change', renderGames);
