@@ -4,7 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**Arcadius Hub** — a collection of 10 standalone HTML mini-games built by the Analysts of Arcadius, glued together by [index.html](index.html) — an arcade-style connector that iframes each game and auto-captures their scores into a unified leaderboard. There is **no build system, no package.json, no tests, no framework** — every file is a self-contained HTML document with inline CSS/JS that runs by opening it in a browser.
+**Arcadius Hub** — a collection of 10 standalone HTML mini-games built by the Analysts of Arcadius, glued together by [index.html](index.html) — an arcade-style connector that iframes each game from the [games/](games/) folder and auto-captures their scores into a unified leaderboard. There is **no build system, no package.json, no tests, no framework** — every file is a self-contained HTML document with inline CSS/JS that runs by opening it in a browser.
+
+**Repository structure:**
+```
+├── index.html                    (main hub)
+├── games/                        (all 10 game files)
+│   ├── british-slang-quiz.html
+│   ├── bomb-defusal.html
+│   └── ... (8 more games)
+├── CLAUDE.md                     (this file)
+├── LEADERBOARD-SETUP.md          (Supabase setup guide)
+├── supabase-setup.sql            (database schema)
+└── delete-dual-ship-scores.sql   (cleanup script)
+```
 
 ## Running it
 

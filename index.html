@@ -873,7 +873,7 @@ const secs = ms => (ms / 1000).toFixed(ms < 10000 ? 2 : 1) + 's';
 
 const GAMES = [
   {
-    id: 'british', file: 'british-slang-quiz.html', name: 'British Slang Quiz',
+    id: 'british', file: 'games/british-slang-quiz.html', name: 'British Slang Quiz',
     art: SVG.britishSlang, bg: 'linear-gradient(135deg,#e040fb,#ff69b4)',
     desc: 'Decode Britain\'s slang — 10 rounds. Get them right, fastest time wins.',
     mode: 'session', scoring: 'time',
@@ -888,7 +888,7 @@ const GAMES = [
     }
   },
   {
-    id: 'code', file: 'cipher-codebreaker.html', name: 'Cipher Codebreaker',
+    id: 'code', file: 'games/cipher-codebreaker.html', name: 'Cipher Codebreaker',
     art: SVG.cipher, bg: 'linear-gradient(135deg,#00bcd4,#3f51b5)',
     desc: 'Mastermind-style deduction — crack the secret code for the biggest score.',
     mode: 'session', scoring: 'score',
@@ -902,7 +902,7 @@ const GAMES = [
     }
   },
   {
-    id: 'defuse', file: 'bomb-defusal.html', name: 'Bomb Defusal',
+    id: 'defuse', file: 'games/bomb-defusal.html', name: 'Bomb Defusal',
     art: SVG.bomb, bg: 'linear-gradient(135deg,#ff5252,#b71c1c)',
     desc: 'Snip the right wires under pressure — chain correct cuts for a combo multiplier.',
     mode: 'session', scoring: 'score',
@@ -916,7 +916,7 @@ const GAMES = [
     }
   },
   {
-    id: 'drift', file: 'dual-ship-pilot.html', name: 'Dual-Ship Pilot',
+    id: 'drift', file: 'games/dual-ship-pilot.html', name: 'Dual-Ship Pilot',
     art: SVG.dualShip, bg: 'linear-gradient(135deg,#5b8cff,#ff9966)',
     desc: 'Pilot two ships simultaneously on mirrored lanes — split-attention dodging.',
     mode: 'dom', scoring: 'score',
@@ -930,7 +930,7 @@ const GAMES = [
     }
   },
   {
-    id: 'reaction', file: 'f1-reaction-test.html', name: 'F1 Reaction Test',
+    id: 'reaction', file: 'games/f1-reaction-test.html', name: 'F1 Reaction Test',
     art: SVG.reaction, bg: 'linear-gradient(135deg,#ffd54f,#ff5722)',
     desc: 'F1 lights-out start — five lights, then GO. How few milliseconds can you hit?',
     mode: 'session', scoring: 'time',
@@ -943,7 +943,7 @@ const GAMES = [
     }
   },
   {
-    id: 'pattern', file: 'grid-pattern-memory.html', name: 'Grid Pattern Memory',
+    id: 'pattern', file: 'games/grid-pattern-memory.html', name: 'Grid Pattern Memory',
     art: SVG.gridPattern, bg: 'linear-gradient(135deg,#00e5ff,#a3ff57)',
     desc: 'Cells light up across a grid — memorise the pattern and tap them back.',
     mode: 'session', scoring: 'score',
@@ -956,7 +956,7 @@ const GAMES = [
     }
   },
   {
-    id: 'probability', file: 'probability-intuition.html', name: 'Probability Intuition',
+    id: 'probability', file: 'games/probability-intuition.html', name: 'Probability Intuition',
     art: SVG.probability, bg: 'linear-gradient(135deg,#ffb43c,#bd8526)',
     desc: 'Gut-check the odds — accuracy first, then your average answer speed.',
     mode: 'session', scoring: 'time',
@@ -971,7 +971,7 @@ const GAMES = [
     }
   },
   {
-    id: 'stroop', file: 'stroop-color-conflict.html', name: 'Stroop Color Conflict',
+    id: 'stroop', file: 'games/stroop-color-conflict.html', name: 'Stroop Color Conflict',
     art: SVG.stroop, bg: 'linear-gradient(135deg,#ab47bc,#7e57c2)',
     desc: 'Classic Stroop — pick the ink colour, ignore the word. Accuracy then speed.',
     mode: 'session', scoring: 'time',
@@ -986,7 +986,7 @@ const GAMES = [
     }
   },
   {
-    id: 'symbol', file: 'symbol-sequence-recall.html', name: 'Symbol Sequence Recall',
+    id: 'symbol', file: 'games/symbol-sequence-recall.html', name: 'Symbol Sequence Recall',
     art: SVG.symbolSeq, bg: 'linear-gradient(135deg,#c8f564,#7a9c3a)',
     desc: 'Watch the symbols flash in order, then reproduce the sequence from memory.',
     mode: 'session', scoring: 'score',
@@ -999,7 +999,7 @@ const GAMES = [
     }
   },
   {
-    id: 'wordspan', file: 'working-memory-span.html', name: 'Working Memory Span',
+    id: 'wordspan', file: 'games/working-memory-span.html', name: 'Working Memory Span',
     art: SVG.memorySpan, bg: 'linear-gradient(135deg,#7ee8a2,#5bc4f5)',
     desc: 'Hold the list in your head — how many words can you recall back in order?',
     mode: 'session', scoring: 'score',
