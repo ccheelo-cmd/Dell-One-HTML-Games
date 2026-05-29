@@ -749,6 +749,14 @@ function renderHistory(){
 // ── INIT ──
 renderHistory();
 document.getElementById('scale-bar').style.display='block';
+
+// Spacebar support for reaction trigger
+document.addEventListener('keydown', (e) => {
+  if(e.code === 'Space' || e.key === ' ') {
+    e.preventDefault();
+    handleBtn();
+  }
+});
 </script>
 </body>
 </html>
