@@ -198,6 +198,84 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
+  /* ── Casebook section (above the games grid) ── */
+  .casebook-section {
+    margin: 0 0 32px;
+    padding: 20px 22px 22px;
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(217,164,65,.08), transparent 55%),
+      linear-gradient(160deg, #221813, #14100c 80%);
+    border: 1px solid rgba(158,38,28,0.35);
+    border-radius: 14px;
+    box-shadow: 0 10px 40px -20px rgba(158,38,28,0.55);
+  }
+  .casebook-head {
+    display: flex; flex-direction: column; gap: 4px;
+    margin-bottom: 16px; padding-bottom: 14px;
+    border-bottom: 1px dashed rgba(217,164,65,0.25);
+  }
+  .casebook-title {
+    font-family: 'Oswald', 'Segoe UI', sans-serif;
+    font-weight: 700; letter-spacing: 4px; text-transform: uppercase;
+    font-size: 18px; color: #d9a441;
+  }
+  .casebook-sub {
+    font-size: 12px; color: var(--muted); letter-spacing: 0.4px;
+  }
+  .casebook-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+  .case-card {
+    background: linear-gradient(160deg, #2a1a14, #1a0f0a);
+    border: 1px solid rgba(217,164,65,0.30);
+    border-radius: 12px; padding: 18px 20px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .case-card:hover {
+    transform: translateY(-3px);
+    border-color: #d9a441;
+    box-shadow: 0 12px 32px rgba(158,38,28,0.30);
+  }
+  .case-stamp {
+    align-self: flex-start;
+    font-family: 'Oswald', 'Segoe UI', sans-serif;
+    font-weight: 700; letter-spacing: 3px; font-size: 10px;
+    text-transform: uppercase; color: #c0301f;
+    border: 2px solid #9e261c; padding: 3px 8px 4px;
+    border-radius: 3px; opacity: 0.85; transform: rotate(-1.5deg);
+  }
+  .case-name {
+    font-family: 'Oswald', 'Segoe UI', sans-serif;
+    font-weight: 700; font-size: 22px; line-height: 1.05;
+    letter-spacing: 0.5px; text-transform: uppercase; color: #ece1cb;
+  }
+  .case-by { font-size: 11px; color: rgba(236,225,203,0.55); letter-spacing: 0.4px; }
+  .case-desc { font-size: 13px; color: rgba(236,225,203,0.75); line-height: 1.5; flex: 1; }
+  .case-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
+  .cb-closed { color: #5fb37b; font-weight: 700; }
+  .cb-open   { color: #d9a441; font-weight: 700; }
+  .case-card .play-btn {
+    background: linear-gradient(135deg, #c0301f, #9e261c);
+    color: #f4ecd8;
+    margin-top: 4px;
+  }
+  .case-card .play-btn:hover { box-shadow: 0 0 18px rgba(192,48,31,0.45); }
+
+  .games-section-head {
+    font-family: 'Oswald', 'Segoe UI', sans-serif;
+    font-weight: 700; letter-spacing: 4px; text-transform: uppercase;
+    font-size: 18px; color: var(--neon-1);
+    margin: 0 0 16px;
+  }
+
+  /* Casebook leaderboard sub-tabs (red-tinted variant of .lb-tab) */
+  .cb-tab { --tab-color: #c0301f; }
+  .cb-table .score-cell .raw { display: none; } /* no league pts in casebook */
+
   /* ── Game grid ── */
   .game-grid {
     display: grid;
@@ -635,6 +713,7 @@
     <button class="tab active" data-panel="games">Games</button>
     <button class="tab" data-panel="leaderboard">Leaderboard</button>
     <button class="tab" data-panel="totals">Total Score</button>
+    <button class="tab" data-panel="casebook">Casebook</button>
   </div>
 
   <!-- Games panel -->
@@ -647,6 +726,16 @@
         automatically, so everyone competes on one board. Set your player name above first.
       </span>
     </div>
+
+    <div class="casebook-section">
+      <div class="casebook-head">
+        <div class="casebook-title">The Casebook</div>
+        <div class="casebook-sub">Long-form SQL investigations. One sitting, one solution — race the clock.</div>
+      </div>
+      <div class="casebook-grid" id="casebook-grid"></div>
+    </div>
+
+    <div class="games-section-head">The Games</div>
     <div class="game-grid" id="game-grid"></div>
   </div>
 
@@ -699,6 +788,39 @@
           </tr>
         </thead>
         <tbody id="totals-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Casebook leaderboard panel -->
+  <div class="panel" id="panel-casebook">
+    <div style="margin-bottom: 24px; padding: 16px; background: rgba(158,38,28,0.10); border: 1px solid rgba(158,38,28,0.35); border-radius: 8px;">
+      <div style="font-size: 13px; color: var(--muted); line-height: 1.6;">
+        <strong style="color: var(--text);">The Casebook</strong> is its own league.
+        Cases are bounded investigations with a single solution — they're <strong>not</strong> in the
+        Total Score table. Ranking here is by <strong>solve time</strong> (faster = better);
+        false trails are shown but don't affect rank. Scores are kept locally per browser.
+      </div>
+    </div>
+    <div class="cb-tabs" id="cb-tabs"></div>
+    <div class="lb-controls">
+      <div style="color:var(--muted);font-size:13px;letter-spacing:1px;">
+        Fastest solvers per case
+      </div>
+      <button class="clear-btn" id="clear-casebook">Clear Casebook Scores</button>
+    </div>
+    <div class="lb-table-wrap">
+      <table class="lb-table cb-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Solve Time</th>
+            <th>False Trails</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="cb-body"></tbody>
       </table>
     </div>
   </div>
@@ -1033,11 +1155,32 @@ const GAMES = [
 ];
 
 /* ════════════════════════════════════════════════════════════════════
+   CASEBOOK REGISTRY
+   Long-form investigations. Each casefile lives in its own HTML and
+   persists progress under `progressKey` keyed by case id. Ranking is by
+   solve time (ms, lower = better). Not part of GAMES, not part of
+   LEAGUE_PTS — the Casebook is its own league.
+   ════════════════════════════════════════════════════════════════════ */
+
+const CASEBOOK = [
+  {
+    id: 'ck-404',
+    file: 'Chinook/chinook-case-file.html',
+    name: 'Database Detective',
+    code: 'CK-404',
+    desc: 'A SQL murder mystery. Query the live Chinook database across ten leads to name the killer.',
+    creator: 'Emmanuel and Choolwe',
+    estMin: 30
+  }
+];
+
+/* ════════════════════════════════════════════════════════════════════
    STORAGE
    ════════════════════════════════════════════════════════════════════ */
 
 const LS_PLAYER = 'hub_player_name';
 const LS_SCORES = 'hub_scores_v1';
+const LS_CASEBOOK_SCORES = 'hub_casebook_scores_v1';
 
 const $ = id => document.getElementById(id);
 
@@ -1316,8 +1459,10 @@ function renderGames() {
 const overlay = $('overlay');
 const overlayIframe = $('overlay-iframe');
 const overlayTitle = $('overlay-title');
+const overlayWatch = $('overlay-watch');
 let currentGameSrc = '';
 let currentGameId = '';
+let currentTarget = null; // { kind: 'game' | 'case', id }
 
 function openGame(gameId) {
   const game = GAMES.find(g => g.id === gameId);
@@ -1331,7 +1476,9 @@ function openGame(gameId) {
 
   currentGameSrc = encodeURI(game.file);
   currentGameId = gameId;
+  currentTarget = { kind: 'game', id: gameId };
   overlayTitle.textContent = game.name;
+  if (overlayWatch) overlayWatch.textContent = 'Watching Score';
   overlayIframe.src = currentGameSrc;
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -1351,20 +1498,23 @@ function onIframeLoad() {
 
 function closeGame() {
   stopWatching();
+  stopWatchingCase();
   overlay.classList.remove('open');
   overlayIframe.src = 'about:blank';
   document.body.style.overflow = '';
   currentGameId = '';
   currentGameSrc = '';
+  currentTarget = null;
 }
 
 $('overlay-close').addEventListener('click', closeGame);
 $('overlay-reload').addEventListener('click', () => {
-  if (currentGameSrc) {
-    stopWatching();
-    overlayIframe.src = currentGameSrc;
-    overlayIframe.addEventListener('load', onIframeLoad, { once: true });
-  }
+  if (!currentGameSrc) return;
+  const loadHandler = (currentTarget && currentTarget.kind === 'case') ? onIframeLoadCase : onIframeLoad;
+  stopWatching();
+  stopWatchingCase();
+  overlayIframe.src = currentGameSrc;
+  overlayIframe.addEventListener('load', loadHandler, { once: true });
 });
 overlay.addEventListener('click', e => {
   if (e.target === overlay) closeGame();
@@ -1372,6 +1522,215 @@ overlay.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && overlay.classList.contains('open')) closeGame();
 });
+
+/* ════════════════════════════════════════════════════════════════════
+   CASEBOOK
+   ─────────────────────────────────────────────────────────────────────
+   Parallel system to the games watcher. Cases persist progress to their
+   own localStorage key. Ranking is by solve time (lower = better), with
+   one best row per (player, caseId) kept locally. Doesn't touch SCORES,
+   LEAGUE_PTS, or Total Score.
+   ════════════════════════════════════════════════════════════════════ */
+
+let CASEBOOK_SCORES = safeJson(localStorage.getItem(LS_CASEBOOK_SCORES), []);
+function saveCasebookScores() {
+  localStorage.setItem(LS_CASEBOOK_SCORES, JSON.stringify(CASEBOOK_SCORES));
+}
+
+function readCaseProgress(caseId) {
+  // The Chinook game writes to localStorage['chinook_casebook_v1'][caseId].
+  // Future casefiles use the same key structure (one shared progress map).
+  const all = safeJson(localStorage.getItem('chinook_casebook_v1'), {});
+  return all[caseId] || null;
+}
+
+function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return '—';
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (m === 0) return `${s}s`;
+  if (m < 60) return `${m}m ${String(s).padStart(2,'0')}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${String(m % 60).padStart(2,'0')}m`;
+}
+
+let activeCaseWatcher = null;
+
+function startWatchingCase(caseDef) {
+  stopWatchingCase();
+  const initial = readCaseProgress(caseDef.id);
+  const baselineSolvedAt = initial ? initial.solvedAt : null;
+  activeCaseWatcher = {
+    caseDef,
+    baselineSolvedAt,
+    lastPostedSolvedAt: baselineSolvedAt,
+    intervalId: setInterval(() => {
+      if (!overlay.classList.contains('open')) { stopWatchingCase(); return; }
+      tryCaptureCase();
+    }, POLL_INTERVAL_MS)
+  };
+}
+
+function tryCaptureCase() {
+  if (!activeCaseWatcher) return;
+  const rec = readCaseProgress(activeCaseWatcher.caseDef.id);
+  if (!rec || !rec.solvedAt) return;
+  if (rec.solvedAt === activeCaseWatcher.lastPostedSolvedAt) return;
+  if (rec.solvedAt === activeCaseWatcher.baselineSolvedAt) return;
+  autoPostCaseSolve(activeCaseWatcher.caseDef, rec);
+  activeCaseWatcher.lastPostedSolvedAt = rec.solvedAt;
+}
+
+function stopWatchingCase() {
+  if (!activeCaseWatcher) return;
+  // One final sweep before tearing down (catches a solve posted at close)
+  tryCaptureCase();
+  clearInterval(activeCaseWatcher.intervalId);
+  activeCaseWatcher = null;
+}
+
+function autoPostCaseSolve(caseDef, rec) {
+  const name = playerInput.value.trim();
+  if (!name) { toast('⚠ Set your player name to save scores', 'warn'); return; }
+
+  const solveTimeMs = (rec.startedAt && rec.solvedAt) ? (rec.solvedAt - rec.startedAt) : 0;
+  if (solveTimeMs <= 0) return;  // bad clock data — don't pollute the board
+
+  const entry = {
+    player: name,
+    caseId: caseDef.id,
+    caseName: caseDef.name,
+    leadsLogged: rec.leadsLogged || 0,
+    totalLeads: rec.totalLeads || 0,
+    falseTrails: rec.falseTrails || 0,
+    solveTimeMs,
+    solvedAt: rec.solvedAt,
+    ts: Date.now()
+  };
+
+  // Keep best (lowest solveTimeMs) per player per case — local only for now.
+  const key = name.toLowerCase();
+  const idx = CASEBOOK_SCORES.findIndex(s =>
+    s.caseId === entry.caseId && s.player.toLowerCase() === key);
+  if (idx === -1) CASEBOOK_SCORES.push(entry);
+  else if (entry.solveTimeMs > 0 && entry.solveTimeMs < CASEBOOK_SCORES[idx].solveTimeMs) {
+    CASEBOOK_SCORES[idx] = entry;
+  }
+  saveCasebookScores();
+
+  toast(`✓ ${caseDef.name}: case closed in ${formatDuration(entry.solveTimeMs)}`);
+  renderCasebook();
+  renderCasebookBoard();
+}
+
+function bestForCase(caseId) {
+  const name = playerInput.value.trim().toLowerCase();
+  if (!name) return null;
+  return CASEBOOK_SCORES.find(s =>
+    s.caseId === caseId && s.player.toLowerCase() === name) || null;
+}
+
+function renderCasebook() {
+  const grid = $('casebook-grid');
+  if (!grid) return;
+  grid.innerHTML = CASEBOOK.map(c => {
+    const best = bestForCase(c.id);
+    const status = best
+      ? `<span class="cb-closed">✓ Closed · ${formatDuration(best.solveTimeMs)} · ${best.falseTrails} false trail${best.falseTrails===1?'':'s'}</span>`
+      : `<span class="cb-open">Open</span>`;
+    return `
+      <div class="case-card" data-id="${c.id}">
+        <div class="case-stamp">CASE ${escapeHtml(c.code)}</div>
+        <div class="case-name">${escapeHtml(c.name)}</div>
+        <div class="case-by">by ${escapeHtml(c.creator)}</div>
+        <div class="case-desc">${escapeHtml(c.desc)}</div>
+        <div class="case-meta">⏱ ~${c.estMin} min · ${status}</div>
+        <button class="play-btn" data-open-case="${c.id}">▶ Open Case File</button>
+      </div>
+    `;
+  }).join('');
+  grid.querySelectorAll('[data-open-case]').forEach(btn => {
+    btn.addEventListener('click', () => openCase(btn.dataset.openCase));
+  });
+}
+
+function openCase(caseId) {
+  const c = CASEBOOK.find(x => x.id === caseId);
+  if (!c) return;
+  if (!playerInput.value.trim()) {
+    toast('⚠ Set your player name first', 'warn');
+    playerInput.focus();
+    return;
+  }
+  currentGameSrc = encodeURI(c.file);
+  currentGameId = '';
+  currentTarget = { kind: 'case', id: caseId };
+  overlayTitle.textContent = c.name;
+  if (overlayWatch) overlayWatch.textContent = 'Watching Case File';
+  overlayIframe.src = currentGameSrc;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  overlayIframe.addEventListener('load', onIframeLoadCase, { once: true });
+}
+
+function onIframeLoadCase() {
+  const c = CASEBOOK.find(x => x.id === (currentTarget && currentTarget.id));
+  if (!c) return;
+  setTimeout(() => {
+    if (overlay.classList.contains('open')) startWatchingCase(c);
+  }, 300);
+}
+
+/* ── Casebook leaderboard (its own panel, its own sub-tabs) ── */
+
+function setupCasebookTabs() {
+  const wrap = $('cb-tabs');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  CASEBOOK.forEach((c, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'lb-tab cb-tab' + (idx === 0 ? ' active' : '');
+    btn.dataset.case = c.id;
+    btn.textContent = c.name;
+    btn.addEventListener('click', () => {
+      wrap.querySelectorAll('.cb-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderCasebookBoard();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function renderCasebookBoard() {
+  const active = document.querySelector('.cb-tab.active');
+  const caseId = active ? active.dataset.case : (CASEBOOK[0] && CASEBOOK[0].id);
+  const tbody = $('cb-body');
+  if (!tbody) return;
+
+  const rows = CASEBOOK_SCORES
+    .filter(s => s.caseId === caseId && s.solveTimeMs > 0)
+    .slice()
+    .sort((a, b) => a.solveTimeMs - b.solveTimeMs)
+    .slice(0, 10);
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No solves yet — open the case file and crack it to land on this board.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const rank = i + 1;
+    const rankCls = rank <= 3 ? `rank-${rank}` : '';
+    return `<tr>
+      <td class="rank-cell ${rankCls}">${trophyFor(rank)}</td>
+      <td class="player-cell">${escapeHtml(r.player)}</td>
+      <td class="score-cell">${escapeHtml(formatDuration(r.solveTimeMs))}</td>
+      <td>${r.falseTrails}</td>
+      <td class="date-cell">${formatDate(r.solvedAt || r.ts)}</td>
+    </tr>`;
+  }).join('');
+}
 
 /* ════════════════════════════════════════════════════════════════════
    TABS
@@ -1383,7 +1742,9 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     $('panel-' + tab.dataset.panel).classList.add('active');
-    if (REMOTE) {
+    if (tab.dataset.panel === 'casebook') {
+      renderCasebookBoard();
+    } else if (REMOTE) {
       // Re-pull the shared board so you see teammates' latest scores.
       refreshAndRender();
     } else {
@@ -1444,7 +1805,7 @@ function leagueTable() {
 }
 
 function renderLeaderboard() {
-  const activeTab = document.querySelector('.lb-tab.active');
+  const activeTab = document.querySelector('#lb-tabs .lb-tab.active');
   const gameId = activeTab ? activeTab.dataset.game : (GAMES[0]?.id || null);
   const table = leagueTable();
   const tbody = $('lb-body');
@@ -1524,7 +1885,7 @@ function setupFilter() {
     const color = gameColors[g.id] || '#a259ff';
     btn.style.setProperty('--tab-color', color);
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+      tabsContainer.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
       renderLeaderboard();
     });
@@ -1576,12 +1937,26 @@ function formatDate(ts) {
    ════════════════════════════════════════════════════════════════════ */
 
 setupFilter();
+setupCasebookTabs();
 renderGames();        // immediate paint (SCORES is empty until first sync)
 renderLeaderboard();
 renderTotals();
+renderCasebook();
+renderCasebookBoard();
 
 // First load of the shared board (or localStorage in local-only mode).
 refreshAndRender();
+
+$('clear-casebook').addEventListener('click', () => {
+  if (!CASEBOOK_SCORES.length) { toast('Nothing to clear'); return; }
+  if (confirm('Clear ALL casebook scores? Progress inside each case stays intact. This cannot be undone.')) {
+    CASEBOOK_SCORES = [];
+    saveCasebookScores();
+    renderCasebookBoard();
+    renderCasebook();
+    toast('Casebook cleared');
+  }
+});
 
 // In remote mode, keep the open board fresh so the competition feels live.
 if (REMOTE) {
@@ -1603,8 +1978,8 @@ if (REMOTE) {
 }
 
 // Refresh the grid's "Your best" labels when the player name changes
-playerInput.addEventListener('change', renderGames);
-playerInput.addEventListener('blur',   renderGames);
+playerInput.addEventListener('change', () => { renderGames(); renderCasebook(); });
+playerInput.addEventListener('blur',   () => { renderGames(); renderCasebook(); });
 </script>
 
 </body>

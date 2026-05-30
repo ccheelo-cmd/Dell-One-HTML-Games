@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Chinook Case File — A SQL Murder Mystery</title>
+<title>Database Detective — A SQL Murder Mystery</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
@@ -70,8 +70,8 @@
 
   .answer-row{margin-top:24px;}
   .answer-label{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--type-soft);font-family:"Oswald",sans-serif;margin-bottom:6px;}
-  .typeline{display:flex;align-items:stretch;border-bottom:2px solid var(--type);}
-  .typeline input{flex:1;background:transparent;border:0;outline:0;font-family:"Special Elite",monospace;font-size:18px;color:var(--ink);padding:8px 4px;letter-spacing:.5px;caret-color:var(--red);}
+  .typeline{display:flex;align-items:stretch;border-bottom:2px solid var(--type);cursor:text;}
+  .typeline input{flex:1;background:transparent;border:0;outline:0;font-family:"Special Elite",monospace;font-size:18px;color:var(--ink);padding:8px 4px;letter-spacing:.5px;caret-color:#c0301f;}
   .typeline:focus-within{box-shadow:0 2px 0 0 var(--red);}
   .typeline input::placeholder{color:var(--type-soft);opacity:.6;}
   .submit-btn{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;
@@ -184,17 +184,20 @@
   .term-out .empty{color:#9a8c6c;font-style:italic;padding:6px 2px;}
   .term-out .err{color:#e07a6a;white-space:pre-wrap;font-size:12.5px;line-height:1.55;}
   .term-out .nullv{color:#7d6f55;font-style:italic;}
-  /* sandbox solver */
-  .solver{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 12px;}
-  .solver-lbl{font-size:11px;color:#9a8c6c;letter-spacing:.5px;margin-right:2px;}
-  .lead-chips{display:inline-flex;gap:5px;flex-wrap:wrap;}
-  .lead-chip{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:1px;font-size:11px;min-width:30px;
-    background:#2c2318;color:var(--amber);border:1px solid #3a2f20;padding:5px 9px;cursor:pointer;border-radius:2px;transition:.13s;}
-  .lead-chip:hover{background:var(--amber);color:#1b1510;border-color:var(--amber);}
-  .solve-all{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-size:11px;
-    background:transparent;color:#e7dcc4;border:1px solid var(--red);padding:6px 13px;cursor:pointer;border-radius:2px;transition:.13s;}
-  .solve-all:hover{background:var(--red);color:#f4ecd8;}
-  .solve-all:disabled,.lead-chip:disabled{opacity:.45;cursor:wait;}
+  /* SQL terminal — autocomplete popup */
+  .sqlbox-wrap{position:relative;}
+  .sql-ac{position:absolute;left:13px;top:100%;margin-top:4px;z-index:30;
+    background:#15100b;border:1px solid #3a2f20;border-radius:3px;
+    box-shadow:0 12px 28px -10px rgba(0,0,0,.55);
+    min-width:200px;max-width:340px;max-height:240px;overflow-y:auto;
+    font-family:"Courier Prime",monospace;font-size:13px;}
+  .sql-ac-row{display:flex;justify-content:space-between;align-items:baseline;
+    padding:6px 12px;cursor:pointer;color:#e8dcc0;border-bottom:1px dotted #241c12;}
+  .sql-ac-row:last-child{border-bottom:0;}
+  .sql-ac-row.sel,.sql-ac-row:hover{background:rgba(217,164,65,.18);color:#fff3d4;}
+  .sql-ac-text{letter-spacing:.3px;}
+  .sql-ac-type{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-left:14px;opacity:.85;}
+
   .solvechain{display:flex;flex-direction:column;gap:0;}
   .sc-row{display:flex;gap:12px;align-items:baseline;padding:8px 4px;border-bottom:1px dotted #3a2f20;font-size:13px;}
   .sc-row.busy{opacity:.5;}
@@ -212,7 +215,7 @@
     <span class="tab">Homicide</span>
     <div class="file-head">
       <div class="case-no">Case No. CK&#8209;404 · Chinook Digital Media Co.</div>
-      <div class="file-title">The Chinook<br>Case File</div>
+      <div class="file-title">Database<br>Detective</div>
       <div class="file-sub">A SQL Murder Mystery · Prague Field Office</div>
       <span class="corner-stamp">Confidential</span>
     </div>
@@ -244,13 +247,11 @@
   </div>
   <div class="terminal" id="terminal">
     <h3>SQL Terminal — Chinook Ledger <span class="term-conn" id="termConn">● connecting…</span></h3>
-    <div class="term-sub">Query the live case database. <b>Read-only</b> — SELECT statements only, one at a time. Identifiers are case-sensitive, so quote them: <code>SELECT "FirstName" FROM "Customer"</code>.</div>
-    <div class="solver">
-      <span class="solver-lbl">Sandbox · solve the case from live queries:</span>
-      <span class="lead-chips" id="leadChips"></span>
-      <button class="solve-all" id="solveAll">Solve Whole Case &#9656;</button>
+    <div class="term-sub">Query the live case database. <b>Read-only</b> — SELECT statements only, one at a time. Type freely — <code>SELECT firstname FROM customer</code> works.</div>
+    <div class="sqlbox-wrap">
+      <textarea id="sqlBox" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="SELECT FirstName, LastName, City FROM Customer LIMIT 5"></textarea>
+      <div class="sql-ac" id="sqlAc" hidden></div>
     </div>
-    <textarea id="sqlBox" spellcheck="false" placeholder='SELECT "FirstName","LastName","City" FROM "Customer" LIMIT 5'></textarea>
     <div class="term-bar">
       <button id="runBtn">Run Query &#9656;</button>
       <span class="term-hint">Ctrl+Enter to run · max 1000 rows</span>
@@ -263,7 +264,7 @@
 
 <script>
 /* ============================================================
-   THE CHINOOK CASE FILE — branching trails (Option A).
+   DATABASE DETECTIVE — branching trails (Option A).
    Correct answer advances the true spine. A wrong answer drops
    you onto a DIFFERENT false trail unique to that exhibit, which
    ends cold; you then resume from the exhibit where you strayed.
@@ -411,6 +412,19 @@ const SPINE=[
     body:`The summit is <em>Andrew Adams</em>, the General Manager — and the night of the murder he was three time zones away at a conference, in front of a hundred witnesses. The killer was not at the top of the ladder. They were exactly <em>one rung</em> above the rep who held the keys.` } }
 ];
 
+/* ---------------- progress persistence (read by hub) ---------------- */
+const CASE_ID = "ck-404";
+const LS_PROGRESS = "chinook_casebook_v1";
+function _loadAll(){ try{return JSON.parse(localStorage.getItem(LS_PROGRESS)||"{}");}catch(_){return {};} }
+function loadCaseRec(){ return _loadAll()[CASE_ID] || null; }
+function saveCaseRec(patch){
+  const all=_loadAll();
+  const cur=all[CASE_ID]||{leadsLogged:0,totalLeads:SPINE.length,falseTrails:0,startedAt:null,solvedAt:null};
+  all[CASE_ID]={...cur,...patch,totalLeads:SPINE.length};
+  localStorage.setItem(LS_PROGRESS,JSON.stringify(all));
+}
+function startNewAttempt(){ saveCaseRec({leadsLogged:0,falseTrails:0,startedAt:Date.now(),solvedAt:null}); }
+
 /* ---------------- state ---------------- */
 let S={mode:"intro", si:0, bi:0, origin:0};
 let answers=[];
@@ -451,7 +465,7 @@ function renderIntro(){
       <li>Each box must hold a finding to proceed. Step <em>Back</em> any time to revisit earlier leads. There is no path to the true culprit through a wrong answer.</li>
     </ul>
     <button class="begin-btn" id="go">Open the Investigation</button>`;
-  document.getElementById("go").onclick=()=>{S.mode="spine";S.si=0;render();};
+  document.getElementById("go").onclick=()=>{startNewAttempt();S.mode="spine";S.si=0;render();};
 }
 
 function renderSpine(){
@@ -480,7 +494,11 @@ function renderSpine(){
   const go=()=>{
     if(input.value.trim()===""){ val.className="validate show"; val.textContent="Log a finding before you move on — the trail won't advance on an empty hand."; input.focus(); return; }
     answers[i]=input.value.trim();
-    if(matchNode(answers[i], n)){ if(isLast){S.mode="win";} else {S.si=i+1;} render(); }
+    if(matchNode(answers[i], n)){
+      if(isLast){ saveCaseRec({leadsLogged:SPINE.length,solvedAt:Date.now()}); S.mode="win"; }
+      else { saveCaseRec({leadsLogged:i+1}); S.si=i+1; }
+      render();
+    }
     else { S.mode="branch"; S.origin=i; S.bi=0; render(); }
   };
   document.getElementById("sub").onclick=go;
@@ -515,7 +533,8 @@ function renderBranch(){
   const input=document.getElementById("ans"), val=document.getElementById("val");
   const go=()=>{
     if(input.value.trim()===""){ val.className="validate show"; val.textContent="Log something before you chase it — even a hunch needs a value."; input.focus(); return; }
-    if(last){ S.mode="dead"; render(); } else { S.bi=j+1; render(); }
+    if(last){ const r=loadCaseRec(); saveCaseRec({falseTrails:((r&&r.falseTrails)||0)+1}); S.mode="dead"; render(); }
+    else { S.bi=j+1; render(); }
   };
   document.getElementById("sub").onclick=go;
   input.addEventListener("keydown",e=>{if(e.key==="Enter")go();});
@@ -585,7 +604,7 @@ function renderIndex(){
   }).join("");
 }
 
-function restart(){ S={mode:"intro",si:0,bi:0,origin:0}; answers=[]; render(); }
+function restart(){ startNewAttempt(); S={mode:"intro",si:0,bi:0,origin:0}; answers=[]; render(); }
 render();
 
 /* ============================================================
@@ -630,8 +649,9 @@ function renderRows(rows){
 }
 
 async function runQuery(){
-  const q=(sqlBox.value||"").trim();
-  if(!q){ sqlBox.focus(); return; }
+  const raw=(sqlBox.value||"").trim();
+  if(!raw){ sqlBox.focus(); return; }
+  const q=rewriteSQL(raw);
   runBtn.disabled=true; sqlStatus.className="term-status"; sqlStatus.textContent="running…";
   const t0=performance.now();
   try{
@@ -647,78 +667,165 @@ async function runQuery(){
   }
 }
 runBtn.onclick=runQuery;
-sqlBox.addEventListener("keydown",e=>{ if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){ e.preventDefault(); runQuery(); } });
 
-/* ---- Sandbox solver: the 10 canonical queries that crack the case ----
-   Each builds the answer from a LIVE query, not a hard-coded value.
-   victim = the top lifetime spender; last_inv = that victim's final invoice. */
-const _VICTIM = `WITH victim AS (\n  SELECT i."CustomerId" AS cid\n  FROM "Invoice" i\n  GROUP BY i."CustomerId"\n  ORDER BY SUM(i."Total") DESC\n  LIMIT 1\n)`;
-const _LAST = _VICTIM + `,\nlast_inv AS (\n  SELECT i."InvoiceId" AS iid\n  FROM "Invoice" i JOIN victim v ON v.cid = i."CustomerId"\n  ORDER BY i."InvoiceDate" DESC\n  LIMIT 1\n)`;
+/* ============================================================
+   SCHEMA DICTIONARY · auto-quote bare identifiers
+   ────────────────────────────────────────────────────────────
+   The database keeps PascalCase + double-quoted identifiers
+   (e.g. "Customer", "FirstName"). To let players write natural
+   SQL — `SELECT firstname FROM customer` — we walk the query,
+   recognise bare identifiers that match this Chinook schema
+   (case-insensitively), and wrap them in their canonical
+   double-quoted form before sending. String literals, comments,
+   and already-quoted identifiers are left alone.
+   ============================================================ */
+const SCHEMA_TABLES = ["Album","Artist","Customer","Employee","Genre","Invoice","InvoiceLine","MediaType","Playlist","PlaylistTrack","Track"];
+const SCHEMA_COLUMNS = ["Address","AlbumId","ArtistId","BillingAddress","BillingCity","BillingCountry","BillingPostalCode","BillingState","BirthDate","Bytes","City","Company","Composer","Country","CustomerId","Email","EmployeeId","Fax","FirstName","GenreId","HireDate","InvoiceDate","InvoiceId","InvoiceLineId","LastName","MediaTypeId","Milliseconds","Name","Phone","PlaylistId","PostalCode","Quantity","ReportsTo","State","SupportRepId","Title","Total","TrackId","UnitPrice"];
+const SCHEMA_DICT = Object.create(null);
+[...SCHEMA_TABLES, ...SCHEMA_COLUMNS].forEach(n => { SCHEMA_DICT[n.toLowerCase()] = n; });
 
-const SOLUTIONS=[
- { roman:"I", name:"The Victim",
-   q:`SELECT c."FirstName", c."LastName", ROUND(SUM(i."Total"),2) AS lifetime_spend\nFROM "Customer" c\nJOIN "Invoice" i ON i."CustomerId" = c."CustomerId"\nGROUP BY c."CustomerId", c."FirstName", c."LastName"\nORDER BY lifetime_spend DESC\nLIMIT 1`,
-   answer:r=>`${r[0].FirstName} ${r[0].LastName}` },
- { roman:"II", name:"The Scene",
-   q:`${_VICTIM}\nSELECT c."City"\nFROM "Customer" c JOIN victim v ON v.cid = c."CustomerId"`,
-   answer:r=>r[0].City },
- { roman:"III", name:"The Night",
-   q:`${_VICTIM}\nSELECT MAX(i."InvoiceDate")::date AS last_invoice\nFROM "Invoice" i JOIN victim v ON v.cid = i."CustomerId"`,
-   answer:r=>r[0].last_invoice },
- { roman:"IV", name:"The Haul",
-   q:`${_LAST}\nSELECT COUNT(*) AS line_items\nFROM "InvoiceLine" il JOIN last_inv l ON l.iid = il."InvoiceId"`,
-   answer:r=>r[0].line_items },
- { roman:"V", name:"The Obsession",
-   q:`${_LAST}\nSELECT g."Name" AS genre, COUNT(*) AS plays\nFROM "InvoiceLine" il JOIN last_inv l ON l.iid = il."InvoiceId"\nJOIN "Track" t ON t."TrackId" = il."TrackId"\nJOIN "Genre" g ON g."GenreId" = t."GenreId"\nGROUP BY g."Name"\nORDER BY plays DESC`,
-   answer:r=>r[0].genre },
- { roman:"VI", name:"The Calling Card",
-   q:`${_LAST}\n-- the two-word taunt hides among these titles:\nSELECT t."Name" AS track_title\nFROM "InvoiceLine" il JOIN last_inv l ON l.iid = il."InvoiceId"\nJOIN "Track" t ON t."TrackId" = il."TrackId"`,
-   answer:r=>(r.find(x=>x.track_title==="So Cruel")?"So Cruel":"(scan the titles)") },
- { roman:"VII", name:"The Plant",
-   q:`SELECT COUNT(*) AS times_sold_storewide\nFROM "InvoiceLine" il\nJOIN "Track" t ON t."TrackId" = il."TrackId"\nWHERE t."Name" = 'So Cruel'`,
-   answer:r=>r[0].times_sold_storewide },
- { roman:"VIII", name:"The Prime Suspect",
-   q:`${_VICTIM}\nSELECT e."FirstName", e."LastName", e."Title"\nFROM "Customer" c JOIN victim v ON v.cid = c."CustomerId"\nJOIN "Employee" e ON e."EmployeeId" = c."SupportRepId"`,
-   answer:r=>`${r[0].FirstName} ${r[0].LastName}` },
- { roman:"IX", name:"The Reach",
-   q:`${_VICTIM}\nSELECT COUNT(*) AS customers_handled\nFROM "Customer"\nWHERE "SupportRepId" = (\n  SELECT c."SupportRepId" FROM "Customer" c JOIN victim v ON v.cid = c."CustomerId"\n)`,
-   answer:r=>r[0].customers_handled },
- { roman:"X", name:"The Culprit",
-   q:`${_VICTIM}\nSELECT m."FirstName", m."LastName", m."Title"\nFROM "Customer" c JOIN victim v ON v.cid = c."CustomerId"\nJOIN "Employee" rep ON rep."EmployeeId" = c."SupportRepId"\nJOIN "Employee" m   ON m."EmployeeId"   = rep."ReportsTo"`,
-   answer:r=>`${r[0].FirstName} ${r[0].LastName}` }
+function rewriteSQL(sql){
+  let out=""; let i=0; const n=sql.length;
+  while(i<n){
+    const c=sql[i];
+    // string literal '...'  (handles SQL '' escape)
+    if(c==="'"){
+      let j=i+1;
+      while(j<n){
+        if(sql[j]==="'" && sql[j+1]==="'"){ j+=2; continue; }
+        if(sql[j]==="'") break;
+        j++;
+      }
+      out+=sql.slice(i, Math.min(j+1,n)); i=Math.min(j+1,n); continue;
+    }
+    // already-quoted identifier "..."
+    if(c==='"'){
+      const j=sql.indexOf('"', i+1);
+      const end = j===-1 ? n : j+1;
+      out+=sql.slice(i,end); i=end; continue;
+    }
+    // line comment --
+    if(c==='-' && sql[i+1]==='-'){
+      const j=sql.indexOf('\n', i);
+      const end = j===-1 ? n : j;
+      out+=sql.slice(i,end); i=end; continue;
+    }
+    // block comment /* */
+    if(c==='/' && sql[i+1]==='*'){
+      const j=sql.indexOf('*/', i+2);
+      const end = j===-1 ? n : j+2;
+      out+=sql.slice(i,end); i=end; continue;
+    }
+    // identifier candidate
+    if(/[A-Za-z_]/.test(c)){
+      let j=i;
+      while(j<n && /[A-Za-z0-9_]/.test(sql[j])) j++;
+      const word=sql.slice(i,j);
+      const canonical = SCHEMA_DICT[word.toLowerCase()];
+      // don't quote if it's followed by '(' — that's a function call (e.g. count(*))
+      const nextChar = sql.slice(j).replace(/^\s+/,'')[0];
+      if(canonical && nextChar !== '('){
+        out += `"${canonical}"`;
+      } else {
+        out += word;
+      }
+      i=j; continue;
+    }
+    out+=c; i++;
+  }
+  return out;
+}
+
+/* ============================================================
+   AUTOCOMPLETE · keywords + tables + columns
+   ────────────────────────────────────────────────────────────
+   A minimal popup that appears below the textarea showing
+   prefix matches for the partial identifier under the caret.
+   ↑/↓ to navigate · Tab/Enter to insert · Esc dismisses.
+   ============================================================ */
+const SQL_KEYWORDS = ["SELECT","FROM","WHERE","JOIN","INNER","LEFT","RIGHT","OUTER","FULL","ON","GROUP BY","HAVING","ORDER BY","LIMIT","OFFSET","DESC","ASC","AS","AND","OR","NOT","NULL","IS","IN","LIKE","BETWEEN","DISTINCT","CASE","WHEN","THEN","ELSE","END","UNION","ALL","WITH","COUNT","SUM","AVG","MIN","MAX","ROUND","COALESCE"];
+const AC_TYPES = {
+  keyword: { label: 'kw',  color: '#9a8c6c' },
+  table:   { label: 'tbl', color: '#e07a6a' },
+  column:  { label: 'col', color: '#6fbf8e' }
+};
+const AC_ITEMS = [
+  ...SQL_KEYWORDS.map(t => ({ text:t, type:'keyword' })),
+  ...SCHEMA_TABLES.map(t => ({ text:t, type:'table' })),
+  ...SCHEMA_COLUMNS.map(t => ({ text:t, type:'column' }))
 ];
 
-const leadChips=document.getElementById("leadChips");
-leadChips.innerHTML=SOLUTIONS.map(s=>`<button class="lead-chip" data-r="${s.roman}" title="${esc(s.name)}">${s.roman}</button>`).join("");
-leadChips.querySelectorAll(".lead-chip").forEach(btn=>{
-  btn.onclick=()=>{ const s=SOLUTIONS.find(x=>x.roman===btn.dataset.r); sqlBox.value=s.q; sqlBox.scrollIntoView({behavior:"smooth",block:"nearest"}); runQuery(); };
-});
+const sqlAc = document.getElementById("sqlAc");
+let acState = { open:false, items:[], sel:0, wordStart:0, wordEnd:0 };
 
-const solveAllBtn=document.getElementById("solveAll");
-function setSolverDisabled(d){ solveAllBtn.disabled=d; runBtn.disabled=d; leadChips.querySelectorAll(".lead-chip").forEach(b=>b.disabled=d); }
-async function solveWholeCase(){
-  setSolverDisabled(true);
-  sqlStatus.className="term-status"; sqlStatus.textContent="solving…";
-  sqlOut.innerHTML='<div class="solvechain">'+SOLUTIONS.map(s=>
-    `<div class="sc-row busy" id="sc-${s.roman}"><span class="sc-rn">${s.roman}</span><span class="sc-name">${esc(s.name)}</span><span class="sc-ans">…</span></div>`).join("")+'</div>';
-  try{
-    for(const s of SOLUTIONS){
-      const row=document.getElementById("sc-"+s.roman);
-      const data=await callRunSql(s.q);
-      const ans=(Array.isArray(data)&&data.length)?s.answer(data):"(no rows)";
-      row.className="sc-row"; row.querySelector(".sc-ans").textContent=ans;
-    }
-    sqlOut.insertAdjacentHTML("beforeend",
-      '<div class="sc-final">Every lead held — the calling card was sold exactly once and planted by an insider with write access. The support rep held the keys, but only his manager could rewrite the file and bury the trail. The killer is <b>Nancy Edwards</b>.</div>');
-    sqlStatus.className="term-status"; sqlStatus.textContent="case solved";
-  }catch(err){
-    sqlOut.insertAdjacentHTML("beforeend",`<div class="err">✗ ${esc(err.message||String(err))}</div>`);
-    sqlStatus.className="term-status err"; sqlStatus.textContent="error";
-  }finally{
-    setSolverDisabled(false);
-  }
+function currentWord(){
+  const v = sqlBox.value; const pos = sqlBox.selectionStart;
+  let s = pos;
+  while(s > 0 && /[A-Za-z0-9_]/.test(v[s-1])) s--;
+  return { word: v.slice(s, pos), start: s, end: pos };
 }
-solveAllBtn.onclick=solveWholeCase;
+
+function showAutocomplete(){
+  const { word, start, end } = currentWord();
+  if(word.length < 1){ hideAutocomplete(); return; }
+  const lower = word.toLowerCase();
+  const matches = AC_ITEMS
+    .filter(it => it.text.toLowerCase().startsWith(lower) && it.text.toLowerCase() !== lower)
+    .slice(0, 8);
+  if(!matches.length){ hideAutocomplete(); return; }
+  acState = { open:true, items: matches, sel: 0, wordStart: start, wordEnd: end };
+  renderAutocomplete();
+  sqlAc.hidden = false;
+}
+
+function hideAutocomplete(){
+  acState.open = false;
+  sqlAc.hidden = true;
+}
+
+function renderAutocomplete(){
+  sqlAc.innerHTML = acState.items.map((it,i) => {
+    const t = AC_TYPES[it.type];
+    return `<div class="sql-ac-row${i===acState.sel?' sel':''}" data-i="${i}">
+      <span class="sql-ac-text">${esc(it.text)}</span>
+      <span class="sql-ac-type" style="color:${t.color}">${t.label}</span>
+    </div>`;
+  }).join("");
+  sqlAc.querySelectorAll('.sql-ac-row').forEach(r => {
+    r.addEventListener('mousedown', e => { e.preventDefault(); acceptAutocomplete(parseInt(r.dataset.i,10)); });
+  });
+}
+
+function acceptAutocomplete(idx){
+  const item = acState.items[idx !== undefined ? idx : acState.sel];
+  if(!item) return;
+  const v = sqlBox.value;
+  const before = v.slice(0, acState.wordStart);
+  const after  = v.slice(acState.wordEnd);
+  const insertion = item.text;
+  sqlBox.value = before + insertion + after;
+  const newPos = before.length + insertion.length;
+  sqlBox.setSelectionRange(newPos, newPos);
+  hideAutocomplete();
+  sqlBox.focus();
+}
+
+sqlBox.addEventListener("input", showAutocomplete);
+sqlBox.addEventListener("blur",  () => setTimeout(hideAutocomplete, 100));
+sqlBox.addEventListener("keydown", e => {
+  // Ctrl+Enter runs the query (preserved from before; takes priority over autocomplete)
+  if((e.ctrlKey||e.metaKey) && e.key === "Enter"){
+    e.preventDefault();
+    hideAutocomplete();
+    runQuery();
+    return;
+  }
+  if(!acState.open) return;
+  if(e.key === "ArrowDown"){ e.preventDefault(); acState.sel = (acState.sel + 1) % acState.items.length; renderAutocomplete(); }
+  else if(e.key === "ArrowUp"){ e.preventDefault(); acState.sel = (acState.sel - 1 + acState.items.length) % acState.items.length; renderAutocomplete(); }
+  else if(e.key === "Tab" || e.key === "Enter"){ e.preventDefault(); acceptAutocomplete(); }
+  else if(e.key === "Escape"){ e.preventDefault(); hideAutocomplete(); }
+});
 
 /* connection status pill */
 (async()=>{
