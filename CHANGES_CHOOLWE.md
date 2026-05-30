@@ -5,6 +5,7 @@ This document captures all changes made on the `choolwe` branch that need to be 
 ## Summary
 - Added creator credits to all 10 game cards on the hub
 - Added spacebar support to the F1 Reaction Test game
+- Merged `origin/Emmanuel`: Chinook SQL murder mystery wired to live Supabase
 
 ---
 
@@ -211,4 +212,46 @@ This allows players to:
 
 1. `53eb0b9` - Add creator credits to game cards on the hub
 2. `dcbf702` - Add spacebar support to F1 Reaction Test
+
+---
+
+## Change 3: Merge `origin/Emmanuel` — Chinook SQL Murder Mystery
+
+### What Changed
+Merged the `Emmanuel` branch into `main`. This brings in a new SQL-themed murder
+mystery game (`Chinook/chinook_case_file (1).html`) that queries a live Supabase
+Postgres database seeded with the Chinook sample dataset, plus the worklog/issues
+documentation for how that setup was done.
+
+### Files Added (from `origin/Emmanuel`)
+- `Chinook/chinook_case_file (1).html` — the playable murder-mystery game with an
+  in-page SQL terminal that submits queries to Supabase over PostgREST.
+- `Chinook/chinook_supabase.sql` — Postgres-ready seed (564 KB) generated from the
+  SQLite file: `drop` → `create table` (PK only) → batched multi-row `insert`s →
+  `alter table add constraint` FKs added last so insert order never trips a constraint.
+- `Chinook/Chinook_Sqlite.sqlite` — original SQLite source DB (~1 MB, 11 tables,
+  ~16,420 rows: Album, Artist, Customer, Employee, Genre, Invoice, InvoiceLine,
+  MediaType, Playlist, PlaylistTrack, Track).
+- `Chinook/CHINOOK-SUPABASE-WORKLOG.md` — full setup record: identifiers were kept
+  PascalCase + double-quoted (`"Customer"`, `"FirstName"`) to match the game's
+  schema card, so every query MUST quote identifiers (unquoted `FROM Customer`
+  fails — Postgres folds to lowercase). Also documents the Supabase project
+  (`loivcffoynagskjhgips`, `eu-central-1`, PG 17.6), the session-pooler connection
+  workaround (direct host is IPv6-only), and the remaining issues to fix.
+
+### Merge Detail
+- **Merge base:** `4d946cd` — branched off before any choolwe changes landed on main.
+- **No conflicts.** Emmanuel only added files under `Chinook/`; choolwe touched
+  `index.html`, `games/f1-reaction-test.html`, and `CHANGES_CHOOLWE.md`. Disjoint
+  trees → clean three-way merge.
+- **Note:** Chinook is **not** registered in the hub's `GAMES` array in
+  [index.html](index.html), so it does not appear as a card on the Arcadius hub and
+  is not part of the leaderboard. It is played by opening the HTML file directly.
+  Adding it to the hub would require choosing a `scoring` mode and writing an
+  `extract()` (see step 2 of "Adding a new game" in [CLAUDE.md](CLAUDE.md)).
+
+### Commits Brought In
+1. `fbe4750` - Add Chinook SQL murder mystery wired to live Supabase
+2. `8b99610` - Add Chinook/Supabase work log and issues doc
+3. `e33bc41` - Merge commit on `main`
 
