@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Database Detective: Case II — The Signature</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1b1714; --desk-1:#14110f; --desk-2:#241d18;
+    --paper:#e7dcc4; --paper-edge:#cdbf9f; --paper-line:#bcae8c;
+    --type:#33291f; --type-soft:#5a4c3a;
+    --red:#9e261c; --red-bright:#c0301f; --amber:#d9a441;
+    --stamp-green:#2e6b4f; --shadow:rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Special Elite","Courier Prime",monospace;color:var(--type);
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(217,164,65,.16), transparent 55%),
+      radial-gradient(80% 60% at 50% 40%, rgba(217,164,65,.05), transparent 60%),
+      linear-gradient(160deg, var(--desk-2), var(--desk-1) 70%);
+    min-height:100vh;display:flex;justify-content:center;padding:36px 18px 70px;position:relative;overflow-x:hidden;
+  }
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .case-wrap{width:100%;max-width:1100px;display:grid;grid-template-columns:1fr 300px;gap:26px;position:relative;z-index:2;}
+  @media(max-width:880px){.case-wrap{grid-template-columns:1fr;}}
+
+  .folder{background:
+      repeating-linear-gradient(transparent,transparent 30px, rgba(120,100,70,.10) 31px, transparent 32px),
+      linear-gradient(180deg,#ece1cb,var(--paper));
+    border:1px solid var(--paper-edge);border-radius:3px;
+    box-shadow:0 26px 60px -18px var(--shadow), 0 2px 0 rgba(255,255,255,.25) inset;
+    padding:0 0 36px;position:relative;transform:rotate(-.25deg);min-height:600px;}
+  .folder::before{content:"";position:absolute;top:14px;left:0;right:0;height:10px;
+    background:radial-gradient(circle 5px at 18% 50%, rgba(0,0,0,.30) 60%, transparent 62%),
+              radial-gradient(circle 5px at 82% 50%, rgba(0,0,0,.30) 60%, transparent 62%);}
+  .tab{position:absolute;top:-20px;left:34px;background:#c9b78f;color:#3a2f20;
+    font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;font-size:12px;
+    padding:6px 18px 8px;border-radius:5px 5px 0 0;box-shadow:0 -3px 8px -3px var(--shadow);text-transform:uppercase;}
+  .file-head{padding:34px 38px 18px;border-bottom:2px solid var(--type);margin:0 26px;position:relative;}
+  .case-no{font-family:"Oswald",sans-serif;letter-spacing:3px;font-size:11px;color:var(--type-soft);text-transform:uppercase;}
+  .file-title{font-family:"Oswald",sans-serif;font-weight:700;text-transform:uppercase;
+    font-size:clamp(26px,4.4vw,42px);line-height:.95;letter-spacing:1px;color:var(--ink);margin-top:4px;}
+  .file-sub{font-size:13px;color:var(--type-soft);margin-top:10px;letter-spacing:1px;}
+  .corner-stamp{position:absolute;top:18px;right:24px;border:3px double var(--red);color:var(--red);
+    font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:3px;font-size:13px;
+    padding:5px 12px;transform:rotate(8deg);opacity:.78;text-transform:uppercase;border-radius:3px;}
+  .file-body{padding:26px 40px 0;}
+
+  .ex-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;}
+  .exhibit-tag{display:inline-block;background:var(--type);color:var(--paper);
+    font-family:"Oswald",sans-serif;letter-spacing:3px;font-size:11px;font-weight:600;
+    padding:5px 12px;text-transform:uppercase;margin-bottom:14px;}
+  .exhibit-tag.lead{background:var(--red);}
+  .diff{display:flex;align-items:center;gap:6px;font-family:"Oswald",sans-serif;font-size:10px;letter-spacing:2px;color:var(--type-soft);text-transform:uppercase;}
+  .pip{width:9px;height:9px;border:1.5px solid var(--red);border-radius:50%;display:inline-block;}
+  .pip.on{background:var(--red);}
+  .exhibit-title{font-family:"Oswald",sans-serif;font-weight:700;font-size:23px;letter-spacing:1px;color:var(--ink);text-transform:uppercase;margin-bottom:14px;}
+  .narrative{font-size:15.5px;line-height:1.85;color:var(--type);max-width:62ch;}
+  .narrative em{color:var(--red);font-style:normal;border-bottom:1px dashed rgba(158,38,28,.5);}
+  .task{margin:22px 0 4px;padding:14px 16px;border-left:4px solid var(--amber);background:rgba(217,164,65,.13);font-size:13.5px;line-height:1.6;}
+  .task.lead{border-left-color:var(--red);background:rgba(158,38,28,.08);}
+  .task b{font-family:"Oswald",sans-serif;letter-spacing:1px;text-transform:uppercase;font-size:12px;color:#8a6a1f;display:block;margin-bottom:4px;}
+  .task.lead b{color:var(--red);}
+
+  .answer-row{margin-top:24px;}
+  .answer-label{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--type-soft);font-family:"Oswald",sans-serif;margin-bottom:6px;}
+  .typeline{display:flex;align-items:stretch;border-bottom:2px solid var(--type);cursor:text;}
+  .typeline input{flex:1;background:transparent;border:0;outline:0;font-family:"Special Elite",monospace;font-size:18px;color:var(--ink);padding:8px 4px;letter-spacing:.5px;caret-color:#c0301f;}
+  .typeline:focus-within{box-shadow:0 2px 0 0 var(--red);}
+  .typeline input::placeholder{color:var(--type-soft);opacity:.6;}
+  .submit-btn{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+    background:var(--type);color:var(--paper);border:0;padding:0 20px;cursor:pointer;font-size:13px;transition:background .15s,transform .05s;}
+  .submit-btn:hover{background:var(--red);}.submit-btn:active{transform:translateY(1px);}
+  .validate{color:var(--red);font-size:13px;min-height:18px;margin-top:10px;}
+  .validate.show::before{content:"✗ ";font-weight:700;}
+  .navrow{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;flex-wrap:wrap;}
+  .btn-back{font-family:"Oswald",sans-serif;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;font-size:12px;
+    background:transparent;color:var(--type-soft);border:1.5px solid var(--paper-line);padding:8px 16px;cursor:pointer;transition:.15s;border-radius:2px;}
+  .btn-back:hover{color:var(--ink);border-color:var(--type);}
+  .carried{background:rgba(158,38,28,.10);border-bottom:1px solid var(--red);padding:1px 5px;color:var(--ink);font-style:normal;border-radius:2px;white-space:nowrap;}
+  .silent-note{font-size:12px;color:var(--type-soft);font-style:italic;}
+  .silent-note::before{content:"⟁ ";color:var(--amber);font-style:normal;}
+
+  .begin-btn{margin-top:24px;font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+    background:var(--red);color:#f4ecd8;border:0;padding:15px 34px;cursor:pointer;font-size:15px;border-radius:2px;
+    box-shadow:0 8px 20px -8px rgba(158,38,28,.8);transition:transform .08s, background .15s;}
+  .begin-btn:hover{background:var(--red-bright);}.begin-btn:active{transform:translateY(2px);}
+  .rules{margin-top:18px;font-size:13.5px;line-height:1.8;color:var(--type);max-width:62ch;}
+  .rules li{margin-left:18px;margin-bottom:4px;}
+
+  .verdict{padding:26px 40px 0;text-align:center;}
+  .stamp{display:inline-block;font-family:"Oswald",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:6px;border:6px double currentColor;padding:14px 30px;border-radius:6px;
+    font-size:clamp(28px,6.5vw,54px);line-height:1;animation:slam .45s cubic-bezier(.2,1.4,.4,1) both;}
+  .stamp.dead{color:var(--red);}.stamp.closed{color:var(--stamp-green);}
+  @keyframes slam{0%{transform:scale(2.6) rotate(-22deg);opacity:0;}60%{opacity:1;}100%{transform:scale(1) rotate(var(--rot,-8deg));}}
+  .verdict-title{font-family:"Oswald",sans-serif;font-weight:700;font-size:23px;letter-spacing:1px;margin:24px 0 12px;color:var(--ink);text-transform:uppercase;}
+  .verdict-body{font-size:15px;line-height:1.85;max-width:60ch;margin:0 auto;color:var(--type);text-align:left;}
+  .verdict-body em{color:var(--red);font-style:normal;font-weight:bold;}
+  .broke{margin:22px auto 0;max-width:520px;text-align:left;border:2px solid var(--red);background:rgba(158,38,28,.08);padding:16px 18px;}
+  .broke .lab{font-family:"Oswald",sans-serif;letter-spacing:2px;font-size:11px;text-transform:uppercase;color:var(--red);}
+  .broke .rehint{font-size:13.5px;line-height:1.6;color:var(--type);margin-top:8px;}
+
+  .culprit-card{margin:24px auto 0;max-width:440px;border:2px solid var(--type);background:rgba(46,107,79,.10);padding:18px 22px;text-align:left;}
+  .culprit-card .k{font-family:"Oswald",sans-serif;letter-spacing:2px;font-size:11px;text-transform:uppercase;color:var(--type-soft);}
+  .culprit-card .v{font-family:"Oswald",sans-serif;font-weight:700;font-size:30px;color:var(--ink);letter-spacing:1px;}
+  .culprit-card .t{font-size:13px;color:var(--type-soft);margin-top:2px;}
+  .board{margin:22px auto 0;max-width:540px;text-align:left;}
+  .board .row{display:flex;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dotted var(--paper-line);}
+  .board .row .rn{font-family:"Oswald",sans-serif;font-weight:700;color:var(--type-soft);min-width:34px;}
+  .board .row .rl{color:var(--type-soft);min-width:140px;}
+  .board .row .rv{color:var(--stamp-green);font-weight:bold;}
+  .solution-sql{margin:22px auto 0;max-width:560px;text-align:left;background:#201a14;color:#d8c8a3;
+    font-family:"Courier Prime",monospace;font-size:12.5px;line-height:1.6;padding:16px 18px;border-radius:4px;border:1px solid #3a2f20;overflow-x:auto;white-space:pre;}
+  .solution-sql .kw{color:var(--amber);}.solution-sql .cmt{color:#7d6f55;}
+
+  .btnrow{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:26px;}
+  .replay-btn{font-family:"Oswald",sans-serif;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+    background:transparent;color:var(--type);border:2px solid var(--type);padding:11px 24px;cursor:pointer;font-size:13px;transition:background .15s,color .15s;}
+  .replay-btn:hover{background:var(--type);color:var(--paper);}
+  .replay-btn.primary{background:var(--red);color:#f4ecd8;border-color:var(--red);}
+  .replay-btn.primary:hover{background:var(--red-bright);}
+
+  .rail{display:flex;flex-direction:column;gap:18px;}
+  .pad{background:linear-gradient(180deg,#efe6d2,#e3d7be);border:1px solid var(--paper-edge);
+    box-shadow:0 16px 40px -20px var(--shadow);padding:18px 18px 20px;border-radius:3px;transform:rotate(.4deg);}
+  .pad h3{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:13px;color:var(--ink);
+    border-bottom:2px solid var(--type);padding-bottom:8px;margin-bottom:6px;}
+  .pad .sub{font-size:10.5px;color:var(--type-soft);font-style:italic;margin-bottom:8px;}
+  .idx{list-style:none;display:flex;flex-direction:column;}
+  .idx li{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.35;padding:6px 4px;border-bottom:1px dotted var(--paper-line);}
+  .idx .mk{font-family:"Oswald",sans-serif;font-weight:700;font-size:11px;min-width:30px;color:var(--type-soft);letter-spacing:1px;padding-top:1px;}
+  .idx .body .lbl{font-family:"Oswald",sans-serif;letter-spacing:1px;text-transform:uppercase;font-size:10.5px;color:var(--type-soft);}
+  .idx .body .val{display:block;margin-top:1px;color:var(--ink);word-break:break-word;}
+  .idx li.locked .val{letter-spacing:2px;color:#9a8c6c;}
+  .idx li.current{background:rgba(217,164,65,.18);}.idx li.current .mk{color:var(--red);}
+  .idx li.current .val{color:var(--red);font-style:italic;}
+  .idx li.astray{background:rgba(158,38,28,.12);}
+  .idx li.astray .mk{color:var(--red);}.idx li.astray .val{color:var(--red);font-style:italic;}
+  .idx li.solved .val{color:var(--stamp-green);}
+  .idx li.solved .mk::after{content:" ✓";color:var(--stamp-green);}
+
+  .toolbox details summary{cursor:pointer;font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:1px;font-size:12px;text-transform:uppercase;list-style:none;}
+  .toolbox details summary::-webkit-details-marker{display:none;}
+  .toolbox details summary::before{content:"▸ ";color:var(--red);}
+  .toolbox details[open] summary::before{content:"▾ ";}
+  .schema{font-family:"Courier Prime",monospace;font-size:11px;line-height:1.55;color:var(--type);margin-top:10px;}
+  .schema b{color:var(--red);}
+  .howto{font-size:11.5px;line-height:1.6;color:var(--type-soft);margin-top:6px;}
+  .credit{grid-column:1/-1;text-align:center;color:rgba(231,220,196,.4);font-size:11px;letter-spacing:1px;margin-top:6px;}
+
+  /* ── Live SQL terminal (Supabase-backed Chinook ledger) ── */
+  .terminal{grid-column:1/-1;background:linear-gradient(180deg,#241d16,#1b1510);border:1px solid #3a2f20;border-radius:4px;
+    box-shadow:0 18px 44px -20px var(--shadow);padding:18px 20px 20px;color:#d8c8a3;font-family:"Courier Prime",monospace;margin-top:6px;}
+  .terminal h3{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:14px;color:#e7dcc4;
+    border-bottom:1px solid #3a2f20;padding-bottom:10px;margin-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .term-conn{font-family:"Courier Prime",monospace;font-size:11px;letter-spacing:0;text-transform:none;color:var(--amber);font-weight:400;}
+  .term-conn.ok{color:#6fbf8e;}.term-conn.err{color:var(--red-bright);}
+  .term-sub{font-size:11.5px;color:#9a8c6c;margin:9px 0 12px;line-height:1.55;}
+  .term-sub code{color:var(--amber);}
+  #sqlBox{width:100%;min-height:92px;resize:vertical;background:#15100b;color:#e8dcc0;border:1px solid #3a2f20;border-radius:3px;
+    font-family:"Courier Prime",monospace;font-size:13.5px;line-height:1.5;padding:11px 13px;outline:none;caret-color:var(--amber);}
+  #sqlBox:focus{border-color:var(--amber);box-shadow:0 0 0 1px rgba(217,164,65,.4);}
+  .term-bar{display:flex;align-items:center;gap:14px;margin-top:11px;flex-wrap:wrap;}
+  #runBtn{font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:var(--red);color:#f4ecd8;
+    border:0;padding:10px 22px;cursor:pointer;font-size:13px;border-radius:2px;transition:background .15s,transform .05s;}
+  #runBtn:hover{background:var(--red-bright);}#runBtn:active{transform:translateY(1px);}
+  #runBtn:disabled{opacity:.5;cursor:wait;}
+  .term-hint{font-size:11px;color:#7d6f55;}
+  .term-status{font-size:12px;margin-left:auto;color:#9a8c6c;}
+  .term-status.err{color:var(--red-bright);}
+  .term-out{margin-top:14px;max-height:360px;overflow:auto;border-radius:3px;}
+  .term-out table{border-collapse:collapse;width:100%;font-size:12.5px;}
+  .term-out th{position:sticky;top:0;background:#2c2318;color:var(--amber);text-align:left;font-family:"Oswald",sans-serif;
+    letter-spacing:1px;text-transform:uppercase;font-size:11px;padding:7px 11px;border-bottom:1px solid #3a2f20;white-space:nowrap;}
+  .term-out td{padding:6px 11px;border-bottom:1px solid #2a2218;color:#dcceb0;white-space:nowrap;}
+  .term-out tr:hover td{background:rgba(217,164,65,.06);}
+  .term-out .empty{color:#9a8c6c;font-style:italic;padding:6px 2px;}
+  .term-out .err{color:#e07a6a;white-space:pre-wrap;font-size:12.5px;line-height:1.55;}
+  .term-out .nullv{color:#7d6f55;font-style:italic;}
+  /* SQL terminal — autocomplete popup */
+  .sqlbox-wrap{position:relative;}
+  .sql-ac{position:absolute;left:13px;top:100%;margin-top:4px;z-index:30;
+    background:#15100b;border:1px solid #3a2f20;border-radius:3px;
+    box-shadow:0 12px 28px -10px rgba(0,0,0,.55);
+    min-width:200px;max-width:340px;max-height:240px;overflow-y:auto;
+    font-family:"Courier Prime",monospace;font-size:13px;}
+  .sql-ac-row{display:flex;justify-content:space-between;align-items:baseline;
+    padding:6px 12px;cursor:pointer;color:#e8dcc0;border-bottom:1px dotted #241c12;}
+  .sql-ac-row:last-child{border-bottom:0;}
+  .sql-ac-row.sel,.sql-ac-row:hover{background:rgba(217,164,65,.18);color:#fff3d4;}
+  .sql-ac-text{letter-spacing:.3px;}
+  .sql-ac-type{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-left:14px;opacity:.85;}
+
+  .solvechain{display:flex;flex-direction:column;gap:0;}
+  .sc-row{display:flex;gap:12px;align-items:baseline;padding:8px 4px;border-bottom:1px dotted #3a2f20;font-size:13px;}
+  .sc-row.busy{opacity:.5;}
+  .sc-rn{font-family:"Oswald",sans-serif;font-weight:700;color:var(--amber);min-width:34px;}
+  .sc-name{color:#9a8c6c;min-width:150px;}
+  .sc-ans{color:#7ec99a;font-weight:700;}
+  .sc-final{margin-top:14px;padding:12px 14px;border:1px solid var(--red);background:rgba(158,38,28,.12);
+    color:#e7dcc4;font-size:13.5px;border-radius:3px;}
+  .sc-final b{color:#e07a6a;}
+</style>
+</head>
+<body>
+<div class="case-wrap">
+  <div class="folder" id="folder">
+    <span class="tab">Homicide</span>
+    <div class="file-head">
+      <div class="case-no">Case No. CK&#8209;405 · Chinook Digital Media Co. · File II</div>
+      <div class="file-title">Database<br>Detective <span style="font-size:.45em;letter-spacing:5px;opacity:.7;display:inline-block;vertical-align:middle;border:1.5px solid var(--type);padding:2px 10px;margin-left:14px;">CASE II</span></div>
+      <div class="file-sub">A SQL Murder Mystery · Fort Worth Field Office · Sequel to CK&#8209;404</div>
+      <span class="corner-stamp">Confidential</span>
+    </div>
+    <div class="file-body" id="screen"></div>
+  </div>
+
+  <div class="rail">
+    <div class="pad toolbox">
+      <h3>Evidence Trail</h3>
+      <div class="sub">Confirmed leads lock in. A wrong turn drags you onto a false trail.</div>
+      <ul class="idx" id="idx"></ul>
+    </div>
+    <div class="pad toolbox">
+      <details>
+        <summary>Detective's Toolkit</summary>
+        <p class="howto">Answer each lead by querying the <b>Chinook</b> database in the <b>SQL Terminal</b> below, then log what you find. Basic SQL only — SELECT, WHERE, JOIN, GROUP BY, HAVING, ORDER BY, LIMIT.</p>
+        <div class="schema">
+<b>Customer</b>(CustomerId, FirstName, LastName, City, Country, SupportRepId)
+<b>Invoice</b>(InvoiceId, CustomerId, InvoiceDate, BillingCity, Total)
+<b>InvoiceLine</b>(InvoiceLineId, InvoiceId, TrackId, UnitPrice, Quantity)
+<b>Track</b>(TrackId, Name, AlbumId, GenreId, Composer, Milliseconds, UnitPrice)
+<b>Album</b>(AlbumId, Title, ArtistId)
+<b>Artist</b>(ArtistId, Name)
+<b>Genre</b>(GenreId, Name)
+<b>Employee</b>(EmployeeId, FirstName, LastName, Title, ReportsTo)
+        </div>
+      </details>
+    </div>
+  </div>
+  <div class="terminal" id="terminal">
+    <h3>SQL Terminal — Chinook Ledger <span class="term-conn" id="termConn">● connecting…</span></h3>
+    <div class="term-sub">Query the live case database. <b>Read-only</b> — SELECT statements only, one at a time. Type freely — <code>SELECT firstname FROM customer</code> works.</div>
+    <div class="sqlbox-wrap">
+      <textarea id="sqlBox" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="SELECT FirstName, LastName, City FROM Customer LIMIT 5"></textarea>
+      <div class="sql-ac" id="sqlAc" hidden></div>
+    </div>
+    <div class="term-bar">
+      <button id="runBtn">Run Query &#9656;</button>
+      <span class="term-hint">Ctrl+Enter to run · max 1000 rows</span>
+      <span class="term-status" id="sqlStatus"></span>
+    </div>
+    <div class="term-out" id="sqlOut"></div>
+  </div>
+  <div class="credit">Built on the open-source Chinook sample database · follow the data, detective.</div>
+</div>
+
+<script>
+/* ============================================================
+   DATABASE DETECTIVE — branching trails (Option A).
+   Correct answer advances the true spine. A wrong answer drops
+   you onto a DIFFERENT false trail unique to that exhibit, which
+   ends cold; you then resume from the exhibit where you strayed.
+   All values verified against the Chinook database.
+   ============================================================ */
+
+function norm(s){return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");}
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function matchNode(raw,node){
+  if(node.numeric){const d=(raw||"").replace(/[^0-9]/g,"");return d!=="" && d===node.accept[0];}
+  const n=norm(raw);if(!n) return false;
+  return node.accept.some(t=> n===t || (t.length>=8&&n.startsWith(t)) || (n.length>=8&&t.startsWith(n)));
+}
+
+/* the true spine (10), each with a unique false-trail branch + dead end */
+const SPINE=[
+{ roman:"I", name:"The Second Body", diff:2, deps:[],
+  title:"The Second Body",
+  body:`Edwards is in a cell. The Prague file is closed. So why is there a fresh body on your desk? Fort Worth PD pulled a customer out of a hotel room with the Chinook ledger open on his laptop — and the same fingerprint as Case CK&#8209;404: a <em>single</em> invoice obscenely larger than anything else that customer ever spent. Pull the books. Excluding Helena Holý — case <em>closed</em> — find the customer attached to the largest single invoice in the entire ledger. Name your second victim.`,
+  task:`Across every invoice in the ledger (excluding Helena Holý, CustomerId 6), find the row with the greatest Total. Log the customer's name.`,
+  placeholder:"Victim's name…", accept:["cunningham","richardcunningham"], reveal:"Richard Cunningham",
+  hint2:`Join Invoice to Customer on CustomerId, filter out CustomerId = 6, ORDER BY Invoice.Total descending, take the top.`,
+  branch:[{ tag:"The Pauper's Theory",
+    body:`A killer with a grudge against the firm would strike the cheapest customer of all — someone the company barely noticed, easy to make vanish. Reach for the smallest single invoice anyone ever paid Chinook.`,
+    task:`Find the SMALLEST single invoice in the ledger. Log the buying customer's name.`,
+    placeholder:"A name…" }],
+  dead:{ title:"A Trail of Pennies",
+    body:`The cheapest receipt in the whole house, <em>0.99</em>, was paid by <em>Fynn Zimmermann</em> of Frankfurt — alive, unbothered, and home with his cat. Small spenders do not bring the killer to Fort Worth. The pattern that matters is the <em>same</em> one that named Helena Holý: a swollen, lonely outlier on an otherwise quiet account.` } },
+
+{ roman:"II", name:"The Scene", diff:2, deps:[0],
+  title:"The Scene",
+  body:`You have your second victim: [[0]]. The hotel ledger is silent on where he was struck; the billing line of his fatal invoice is not. Pull the BillingCity that sits on his swollen receipt — the city the killer used to address the kill.`,
+  task:`Find the BillingCity on the victim's largest-Total invoice. Log the city.`,
+  placeholder:"City…", accept:["fortworth"], reveal:"Fort Worth",
+  hint2:`Join Invoice → Customer, filter to the victim, ORDER BY Total DESC, read BillingCity from the top row.`,
+  branch:[{ tag:"The Wider Net",
+    body:`A single BillingCity feels narrow. Maybe the killer hunts in the company's loudest market and just happened to find [[0]] there. Pull the country that holds the greatest number of Chinook customers — that's where the killing class lives.`,
+    task:`Find the country with the most rows in Customer. Log the country.`,
+    placeholder:"A country…" }],
+  dead:{ title:"Lost on the Map",
+    body:`The biggest customer base is the <em>USA</em>, thirteen accounts deep — a forest, not a clue. A crowded country only tells you where buyers are, not where bodies fall. The scene was written into the receipt itself, and you walked past it.` } },
+
+{ roman:"III", name:"The Night", diff:3, deps:[0],
+  title:"The Night It Happened",
+  body:`The hotel maid says [[0]] was alive at breakfast and cold by dusk. The kill landed on a single day, and the killer signed it in the ledger. Pull the InvoiceDate stamped on [[0]]'s outlier invoice — the largest one on his account. That date is the night it happened.`,
+  task:`Find the InvoiceDate of the victim's largest-Total invoice. Log the date.`,
+  placeholder:"YYYY-MM-DD…", accept:["20120805"], reveal:"2012-08-05",
+  hint2:`From Invoice joined to Customer, filter to the victim, ORDER BY Total DESC, take the InvoiceDate of the top row — or MAX(Total) plus the date.`,
+  branch:[{ tag:"Birth of the Account",
+    body:`You decide every ending begins with a beginning. Reach for the <em>first</em> invoice [[0]] ever paid Chinook — the moment the firm first had his name.`,
+    task:`Find the date of the victim's earliest invoice. Log the date.`,
+    placeholder:"YYYY-MM-DD…" }],
+  dead:{ title:"A Cold, Old Trail",
+    body:`The earliest receipt — a tidy 1.98 on 7 November 2009 — predates the killing by nearly three years. Whatever was set in motion that morning, it was not yet murder. The night that mattered was the one with the swollen receipt, not the one when the file was opened.` } },
+
+{ roman:"IV", name:"The Bloat", diff:3, deps:[0,2],
+  title:"The Bloat",
+  body:`The night of [[2]] was no four-track impulse buy. The invoice is fat — the killer used the bulk to hide something inside the order. Measure the bloat: how many separate <em>track line items</em> were billed on that one receipt?`,
+  task:`COUNT the InvoiceLine rows on the victim's invoice dated as in Exhibit III. Log the number.`,
+  placeholder:"A number…", accept:["14"], numeric:true, reveal:"14",
+  hint2:`Find the InvoiceId for the victim on that date, then COUNT(*) from InvoiceLine where InvoiceId equals it.`,
+  branch:[{ tag:"Follow the Money",
+    body:`Lines feel petty when there is a dollar figure right there. On [[0]]'s receipt dated [[2]], what was the total dollar amount the firm billed him?`,
+    task:`Find the Total of the victim's outlier invoice. Log the amount.`,
+    placeholder:"An amount…" }],
+  dead:{ title:"A Receipt Names No One",
+    body:`The total comes to <em>23.86</em> — exactly two dollars shy of Helena Holý's. A pair of numbers, side by side, accuse no one. The <em>bloat</em>, not the price, was the thread: fourteen lines is room enough to hide a calling card, and you stepped past it.` } },
+
+{ roman:"V", name:"The Signature", diff:4, deps:[0,2],
+  title:"The Signature",
+  body:`Fourteen lines, scattered across a record collection. Now lift the names of the <em>artists</em> behind those tracks. Helena Holý's fatal invoice was a chord of four performers — the killer's signature. Does [[0]]'s receipt of [[2]] play the <em>same</em> chord? Count the distinct artists represented on that invoice's tracks.`,
+  task:`Join InvoiceLine → Track → Album → Artist for the victim's outlier invoice. COUNT the DISTINCT artists. Log the number.`,
+  placeholder:"A number…", accept:["4"], numeric:true, reveal:"4",
+  hint2:`Three joins past InvoiceLine: Track on TrackId, Album on AlbumId, Artist on ArtistId. Then COUNT(DISTINCT Artist.ArtistId) for that one InvoiceId.`,
+  branch:[{ tag:"The Genre Map",
+    body:`Artists feel slow — you would rather sort by <em>genre</em>. On [[0]]'s receipt dated [[2]], find the single genre that appears the most often across its tracks.`,
+    task:`Group the invoice's tracks by genre and take the most frequent one. Log the genre.`,
+    placeholder:"Genre…" }],
+  dead:{ title:"A Crowd of Categories",
+    body:`The loudest genre is <em>Drama</em>, six lines deep — a label so broad it covers half the catalogue. Genres are how a store organises, not how a killer signs. The signature was the <em>specific four performers</em> behind the lines, not the bin they were filed under.` } },
+
+{ roman:"VI", name:"The Same Chord", diff:5, deps:[0,2,4],
+  title:"The Same Chord",
+  body:`Four artists on [[0]]'s receipt, four on Helena Holý's — and the same four names: <em>Lost</em>, <em>U2</em>, <em>Heroes</em>, <em>Battlestar Galactica</em>. Two reps, two cities, two bodies, identical chord. Prove it is no accident. Search the <em>entire ledger</em>: how many invoices in the whole database contain at least one track from <em>all four</em> of those artists at once? A signature that fits only two receipts is no coincidence.`,
+  task:`Across every invoice, count those that include a track from each of the four artists (Lost, U2, Heroes, Battlestar Galactica). Log the number.`,
+  placeholder:"A number…", accept:["2"], numeric:true, reveal:"2 (only Helena & Cunningham)",
+  hint2:`Join Invoice → InvoiceLine → Track → Album → Artist. Filter Artist.Name IN those four. GROUP BY InvoiceId HAVING COUNT(DISTINCT Artist.ArtistId) = 4. COUNT the result.`,
+  branch:[{ tag:"The Longest Cut",
+    body:`Instead of chasing the chord across the whole house, you fixate on [[0]]'s receipt alone — surely the longest track on it carries the message. Find the track on his invoice of [[2]] with the greatest length in milliseconds.`,
+    task:`On the victim's outlier invoice, find the LONGEST track by Milliseconds. Log its title.`,
+    placeholder:"Track title…" }],
+  dead:{ title:"A Long Way to Nowhere",
+    body:`The longest cut is a forty-six-minute Lost episode titled simply <em>"?"</em> — punctuation as a name and a perfect description of where you have ended up. Length carries no fingerprints. The pattern that mattered was the <em>chord</em>: four specific artists pressed onto two specific receipts, by the same hand.` } },
+
+{ roman:"VII", name:"The New Rep", diff:3, deps:[0],
+  title:"The Rep Who Held the File",
+  body:`Two victims, one signature — but <em>different</em> support reps. Helena's account was Steve Johnson's; [[0]]'s was somebody else's. Pull that name. Every customer is shadowed by one assigned support representative with full write access to the file. Whose hand held [[0]]'s account?`,
+  task:`Join the victim's row in Customer to Employee on SupportRepId. Log the support rep's name.`,
+  placeholder:"Employee name…", accept:["margaretpark","park"], reveal:"Margaret Park",
+  hint2:`Customer.SupportRepId = Employee.EmployeeId, filtered to the victim. Read the employee's name.`,
+  branch:[{ tag:"The Busiest Hands",
+    body:`You reason the killer is the rep with the heaviest desk — too many accounts, too little oversight. Among the floor, find the support rep who handles the most customers of all.`,
+    task:`Find the support rep with the largest customer book. Log their name.`,
+    placeholder:"Employee name…" }],
+  dead:{ title:"The Wrong Hands",
+    body:`The biggest desk belongs to <em>Jane Peacock</em>, twenty-one accounts strong — and not <em>this</em> account. A full workload is not a confession, and Peacock never touched the Fort Worth file. The hand on the victim's account is the only one with motive on this body.` } },
+
+{ roman:"VIII", name:"The Familiar Manager", diff:4, deps:[6],
+  title:"The Manager She Reports To",
+  body:`[[6]] is a competent rep on a clean tour — but reps don't reach across desks to plant evidence on another rep's customer. That kind of move requires <em>her boss</em>: the manager who signs both their timesheets and could lean on Steve Johnson's account from above. Climb one rung: the employee that [[6]] reports to. The name will already feel familiar.`,
+  task:`Self-join Employee on ReportsTo, starting from the rep in Exhibit VII, and pull the manager. Log that name.`,
+  placeholder:"Manager…", accept:["nancyedwards","edwards"], reveal:"Nancy Edwards (in custody — alibi: prison)",
+  hint2:`Employee e JOIN Employee m ON m.EmployeeId = e.ReportsTo, where e is the rep from Exhibit VII. Read m's name.`,
+  branch:[{ tag:"Skip the Ladder",
+    body:`You skip the rung and aim straight for the summit. Whoever sits at the very top of Chinook gave the orders that killed two customers — find the one employee who answers to no one.`,
+    task:`Find the employee whose ReportsTo is NULL. Log their name.`,
+    placeholder:"Name…" }],
+  dead:{ title:"Too Far Up the Ladder",
+    body:`The summit is <em>Andrew Adams</em>, the General Manager — alibied on both nights, ledger-clean, and frankly bored of being suspected. The killer is not at the top. And the manager directly above the new rep is already locked up for Case CK&#8209;404, which only deepens the puzzle: who else has the reach to plant a chord on two reps' accounts?` } },
+
+{ roman:"IX", name:"The Quiet Access", diff:5, deps:[0,2,6],
+  title:"A Hand Outside the Sales Floor",
+  body:`Edwards is in a cell, locked up since the day Case CK&#8209;404 closed. She did not write a row on the night of [[2]] and could not have signed [[0]]'s receipt. Someone else carries her reach. Pull every employee on the Chinook payroll, and find the one whose HireDate <em>exactly matches</em> Steve Johnson's — the rep Edwards manipulated in the first case. Two hires on a single day are rarely strangers; they often arrive as a pair. Name [[6]]'s opposite number from outside the sales department.`,
+  task:`Find the employee (other than Steve Johnson) whose HireDate equals Steve Johnson's. Log their name.`,
+  placeholder:"Employee name…", accept:["michaelmitchell","mitchell"], reveal:"Michael Mitchell, IT Manager",
+  hint2:`Self-join Employee or use a subquery: WHERE HireDate = (SELECT HireDate FROM Employee WHERE FirstName='Steve' AND LastName='Johnson') AND EmployeeId <> 5.`,
+  branch:[{ tag:"By Years of Service",
+    body:`You reason the killer is the employee with the deepest tenure — the one who has watched the books the longest. Find the single employee with the earliest HireDate of any on the payroll.`,
+    task:`Find the employee with the smallest (earliest) HireDate. Log their name.`,
+    placeholder:"Name…" }],
+  dead:{ title:"Tenure Is Not Guilt",
+    body:`The earliest hire is <em>Jane Peacock</em>, on the payroll since April 2002 — already cleared in Exhibit VII. Longevity is paperwork, not motive. The thread that mattered was a <em>shared</em> hire date with the rep Edwards used: two newcomers walking in the same door on the same morning.` } },
+
+{ roman:"X", name:"The Culprit", diff:5, deps:[8],
+  title:"The Unmasking",
+  body:`[[8]] joined Chinook on the same day as Steve Johnson — and unlike a sales agent, an IT Manager holds keys to <em>every</em> account, every rep's customer file, every receipt the firm has ever issued. He is the only person at the firm with the reach to plant the same four-artist chord on two different reps' books while Edwards sat in custody. Confirm his standing: count the employees that report directly to [[8]]. A small, quiet team — exactly the kind a man uses when he runs an operation off the books. Log the count and name the killer.`,
+  task:`COUNT the rows in Employee where ReportsTo equals the suspect from Exhibit IX. Log that number — and his name is the killer.`,
+  placeholder:"Number of IT staff under him…", accept:["2"], numeric:true, reveal:"2 (Robert King & Laura Callahan) — Michael Mitchell",
+  hint2:`SELECT COUNT(*) FROM Employee WHERE ReportsTo = (SELECT EmployeeId FROM Employee WHERE FirstName='Michael' AND LastName='Mitchell').`,
+  branch:[{ tag:"The Total Payroll",
+    body:`Counting one man's team feels narrow — you would rather size the whole company. How many employees does Chinook keep on its payroll all-told?`,
+    task:`COUNT every row in Employee. Log the number.`,
+    placeholder:"A number…" }],
+  dead:{ title:"A Headcount Names No One",
+    body:`The payroll is exactly <em>eight</em> souls — a tidy roster that names no killer and clears no suspect. Summing the whole department is the kind of busywork that hides the man you are chasing inside a column. You needed the reach of his <em>own team</em>: two IT staff in Lethbridge, answering only to him, with root access to every account.` } }
+];
+
+/* ---------------- progress persistence (read by hub) ---------------- */
+const CASE_ID = "ck-405";
+const LS_PROGRESS = "chinook_casebook_v1";
+function _loadAll(){ try{return JSON.parse(localStorage.getItem(LS_PROGRESS)||"{}");}catch(_){return {};} }
+function loadCaseRec(){ return _loadAll()[CASE_ID] || null; }
+function saveCaseRec(patch){
+  const all=_loadAll();
+  const cur=all[CASE_ID]||{leadsLogged:0,totalLeads:SPINE.length,falseTrails:0,startedAt:null,solvedAt:null};
+  all[CASE_ID]={...cur,...patch,totalLeads:SPINE.length};
+  localStorage.setItem(LS_PROGRESS,JSON.stringify(all));
+}
+function startNewAttempt(){ saveCaseRec({leadsLogged:0,falseTrails:0,startedAt:Date.now(),solvedAt:null}); }
+
+/* ---------------- state ---------------- */
+let S={mode:"intro", si:0, bi:0, origin:0};
+let answers=[];
+
+const screen=document.getElementById("screen");
+const idxEl=document.getElementById("idx");
+
+function pips(d){let h="";for(let i=0;i<5;i++)h+=`<span class="pip ${i<d?'on':''}"></span>`;return h;}
+function injectDeps(node, src){
+  let html=node.body;
+  (node.deps||[]).forEach(idx=>{ html=html.split("[["+idx+"]]").join(`<span class="carried">${esc(src(idx))}</span>`); });
+  return html;
+}
+function injectBranch(bnode, depsFrom){
+  let html=bnode.body;
+  // branch bodies reference confirmed spine reveals by the same [[idx]] tokens used on that exhibit
+  (depsFrom||[]).forEach(idx=>{ html=html.split("[["+idx+"]]").join(`<span class="carried">${esc(SPINE[idx].reveal)}</span>`); });
+  return html;
+}
+
+function render(){
+  if(S.mode==="intro") renderIntro();
+  else if(S.mode==="spine") renderSpine();
+  else if(S.mode==="branch") renderBranch();
+  else if(S.mode==="dead") renderDead();
+  else if(S.mode==="win") renderWin();
+  renderIndex();
+}
+
+function renderIntro(){
+  screen.innerHTML=`
+    <div class="exhibit-tag">Briefing — File II</div>
+    <div class="exhibit-title">You Closed One Case. Open The Next.</div>
+    <p class="narrative">Edwards is in custody. Case CK&#8209;404 went to verdict. You thought the file was done. Then a Fort Worth coroner called: <em>same signature, second body</em>. Edwards has been behind bars since the night of the kill, so she didn't sign this one. Someone else has her reach.</p>
+    <p class="narrative" style="margin-top:14px;">Ten new leads stand between you and the second killer of <em>Chinook Digital Media Co.</em> Each is a question answered only by querying the same <em>Chinook</em> database — but this case is heavier on the joins, and the trail leaves the sales floor altogether. They form one chain — <em>every lead is built from the answer you logged before it</em>.</p>
+    <ul class="rules narrative">
+      <li>Log a correct finding and the trail advances to the next exhibit.</li>
+      <li>Log the wrong one and you slip onto a <em>false trail</em> — a different lead entirely — that runs cold. You then resume from the exhibit where you strayed, your confirmed work intact.</li>
+      <li>Each box must hold a finding to proceed. Step <em>Back</em> any time to revisit earlier leads. There is no path to the true culprit through a wrong answer.</li>
+    </ul>
+    <button class="begin-btn" id="go">Reopen the Investigation</button>`;
+  document.getElementById("go").onclick=()=>{startNewAttempt();S.mode="spine";S.si=0;render();};
+}
+
+function renderSpine(){
+  const i=S.si, n=SPINE[i], isLast=i===SPINE.length-1;
+  screen.innerHTML=`
+    <div class="ex-top">
+      <div class="exhibit-tag">Exhibit ${n.roman} — Lead ${i+1} of ${SPINE.length}</div>
+      <div class="diff">Difficulty ${pips(n.diff)}</div>
+    </div>
+    <div class="exhibit-title">${n.title}</div>
+    <p class="narrative">${injectDeps(n, idx=>answers[idx])}</p>
+    <div class="task"><b>Your query</b>${n.task}</div>
+    <div class="answer-row">
+      <div class="answer-label">Log your finding</div>
+      <div class="typeline">
+        <input id="ans" type="text" autocomplete="off" spellcheck="false" placeholder="${n.placeholder}" value="${esc(answers[i]||'')}">
+        <button class="submit-btn" id="sub">${isLast?"Close&nbsp;Case":"Log&nbsp;&amp;&nbsp;Continue"}</button>
+      </div>
+      <div class="validate" id="val"></div>
+      <div class="navrow">
+        ${i>0?`<button class="btn-back" id="back">&larr; Back to Exhibit ${SPINE[i-1].roman}</button>`:`<span></span>`}
+        <div class="silent-note">A right answer advances; a wrong one opens a false trail.</div>
+      </div>
+    </div>`;
+  const input=document.getElementById("ans"), val=document.getElementById("val");
+  const go=()=>{
+    if(input.value.trim()===""){ val.className="validate show"; val.textContent="Log a finding before you move on — the trail won't advance on an empty hand."; input.focus(); return; }
+    answers[i]=input.value.trim();
+    if(matchNode(answers[i], n)){
+      if(isLast){ saveCaseRec({leadsLogged:SPINE.length,solvedAt:Date.now()}); S.mode="win"; }
+      else { saveCaseRec({leadsLogged:i+1}); S.si=i+1; }
+      render();
+    }
+    else { S.mode="branch"; S.origin=i; S.bi=0; render(); }
+  };
+  document.getElementById("sub").onclick=go;
+  input.addEventListener("keydown",e=>{if(e.key==="Enter")go();});
+  input.addEventListener("input",()=>{ if(val.className.indexOf("show")>=0){val.className="validate";val.textContent="";} });
+  const b=document.getElementById("back");
+  if(b) b.onclick=()=>{ answers[i]=input.value.trim(); S.si=i-1; render(); };
+  input.focus();
+}
+
+function renderBranch(){
+  const k=S.origin, j=S.bi, n=SPINE[k], bnode=n.branch[j], last=j===n.branch.length-1;
+  screen.innerHTML=`
+    <div class="ex-top">
+      <div class="exhibit-tag lead">False Trail — off Exhibit ${n.roman}</div>
+    </div>
+    <div class="exhibit-title">${bnode.tag}</div>
+    <p class="narrative">${injectBranch(bnode, n.deps)}</p>
+    <div class="task lead"><b>This lead's query</b>${bnode.task}</div>
+    <div class="answer-row">
+      <div class="answer-label">Log your finding</div>
+      <div class="typeline">
+        <input id="ans" type="text" autocomplete="off" spellcheck="false" placeholder="${bnode.placeholder}">
+        <button class="submit-btn" id="sub">${last?"Chase&nbsp;It&nbsp;Down":"Follow&nbsp;the&nbsp;Lead"}</button>
+      </div>
+      <div class="validate" id="val"></div>
+      <div class="navrow">
+        <button class="btn-back" id="back">&larr; Reconsider Exhibit ${n.roman}</button>
+        <div class="silent-note">You're chasing a hunch that broke from the main trail.</div>
+      </div>
+    </div>`;
+  const input=document.getElementById("ans"), val=document.getElementById("val");
+  const go=()=>{
+    if(input.value.trim()===""){ val.className="validate show"; val.textContent="Log something before you chase it — even a hunch needs a value."; input.focus(); return; }
+    if(last){ const r=loadCaseRec(); saveCaseRec({falseTrails:((r&&r.falseTrails)||0)+1}); S.mode="dead"; render(); }
+    else { S.bi=j+1; render(); }
+  };
+  document.getElementById("sub").onclick=go;
+  input.addEventListener("keydown",e=>{if(e.key==="Enter")go();});
+  input.addEventListener("input",()=>{ if(val.className.indexOf("show")>=0){val.className="validate";val.textContent="";} });
+  document.getElementById("back").onclick=()=>{
+    if(j>0){ S.bi=j-1; } else { S.mode="spine"; S.si=k; }
+    render();
+  };
+  input.focus();
+}
+
+function renderDead(){
+  const k=S.origin, n=SPINE[k];
+  screen.innerHTML=`
+    <div class="verdict">
+      <span class="stamp dead" style="--rot:-9deg">Dead End</span>
+      <div class="verdict-title">${n.dead.title}</div>
+      <p class="verdict-body">${n.dead.body}</p>
+      <div class="broke">
+        <div class="lab">Your trail broke at Exhibit ${n.roman}: ${n.name}</div>
+        <div class="rehint">Pick the thread back up there:<br>${n.hint2}</div>
+      </div>
+      <div class="btnrow">
+        <button class="replay-btn primary" id="resume">Resume From Exhibit ${n.roman}</button>
+        <button class="replay-btn" id="again">Start The Case Over</button>
+      </div>
+    </div>`;
+  document.getElementById("resume").onclick=()=>{ answers=answers.slice(0,k); S.mode="spine"; S.si=k; S.bi=0; render(); };
+  document.getElementById("again").onclick=restart;
+}
+
+function renderWin(){
+  const board=SPINE.map(n=>`<div class="row"><span class="rn">${n.roman}</span><span class="rl">${n.name}</span><span class="rv">${n.reveal}</span></div>`).join("");
+  screen.innerHTML=`
+    <div class="verdict">
+      <span class="stamp closed" style="--rot:-4deg">Case Closed</span>
+      <div class="verdict-title">Edwards Had A Partner. You Named Him.</div>
+      <div class="culprit-card">
+        <div class="k">The Culprit</div>
+        <div class="v">Michael Mitchell</div>
+        <div class="t">IT Manager · Chinook Digital Media Co.</div>
+      </div>
+      <p class="verdict-body" style="margin-top:22px;">From a second bloated invoice in Fort Worth to a four-artist chord struck only twice in the entire ledger, the killer kept signing his work. Edwards held the sales floor; her partner held the database. Hired together, working together, killing together — when she went down for Helena Holý, he closed the books and signed Richard Cunningham himself to break the pattern. He broke nothing. Every link in your chain held.</p>
+      <div class="board">${board}</div>
+      <div class="solution-sql"><span class="cmt">-- The four-artist signature that pinned both kills to one hand:</span>
+<span class="kw">SELECT</span> i.InvoiceId, c.FirstName || ' ' || c.LastName <span class="kw">AS</span> customer
+<span class="kw">FROM</span> Invoice i
+<span class="kw">JOIN</span> Customer c    <span class="kw">ON</span> c.CustomerId = i.CustomerId
+<span class="kw">JOIN</span> InvoiceLine il <span class="kw">ON</span> il.InvoiceId = i.InvoiceId
+<span class="kw">JOIN</span> Track t        <span class="kw">ON</span> t.TrackId    = il.TrackId
+<span class="kw">JOIN</span> Album al       <span class="kw">ON</span> al.AlbumId   = t.AlbumId
+<span class="kw">JOIN</span> Artist ar      <span class="kw">ON</span> ar.ArtistId  = al.ArtistId
+<span class="kw">WHERE</span> ar.Name <span class="kw">IN</span> ('Lost','U2','Heroes','Battlestar Galactica')
+<span class="kw">GROUP BY</span> i.InvoiceId, c.FirstName, c.LastName
+<span class="kw">HAVING</span> <span class="kw">COUNT</span>(<span class="kw">DISTINCT</span> ar.ArtistId) = 4;
+<span class="cmt">-- Exactly two rows: Helena Holý (Case CK-404) and Richard Cunningham (Case CK-405).</span>
+<span class="cmt">-- One signature. Two reps. Same firm. Same partner with root access — Michael Mitchell.</span></div>
+      <div class="btnrow"><button class="replay-btn primary" id="again">Open A New Case</button></div>
+    </div>`;
+  document.getElementById("again").onclick=restart;
+}
+
+function renderIndex(){
+  const focus = (S.mode==="spine") ? S.si : ((S.mode==="branch"||S.mode==="dead") ? S.origin : (S.mode==="win"?SPINE.length:-1));
+  idxEl.innerHTML=SPINE.map((n,i)=>{
+    let cls, val;
+    if(S.mode==="intro"){ cls="locked"; val="&#9619;&#9619;&#9619;&#9619;"; }
+    else if(i<focus){ cls="solved"; val=n.reveal; }
+    else if(i===focus){
+      if(S.mode==="spine"){ cls="current"; val="…investigating"; }
+      else { cls="astray"; val="…false trail"; }
+    } else { cls="locked"; val="&#9619;&#9619;&#9619;&#9619;"; }
+    return `<li class="${cls}"><span class="mk">${n.roman}</span><span class="body"><span class="lbl">${n.name}</span><span class="val">${val}</span></span></li>`;
+  }).join("");
+}
+
+function restart(){ startNewAttempt(); S={mode:"intro",si:0,bi:0,origin:0}; answers=[]; render(); }
+render();
+
+/* ============================================================
+   LIVE SQL TERMINAL — queries the Chinook database on Supabase
+   via the read-only run_sql() RPC. The anon key below is a public
+   client key (safe to embed): the database is read-only for it and
+   run_sql() rejects anything that isn't a single SELECT.
+   ============================================================ */
+const SB_URL  = "https://loivcffoynagskjhgips.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvaXZjZmZveW5hZ3NramhnaXBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNjAxMTksImV4cCI6MjA5NTYzNjExOX0.QH6YesfhLkLlrEd913aYT2W_EeRh2GmBlKri3kd0mYs";   /* public anon/publishable key — safe to embed (read-only) */
+
+const sqlBox   = document.getElementById("sqlBox");
+const sqlOut   = document.getElementById("sqlOut");
+const sqlStatus= document.getElementById("sqlStatus");
+const runBtn   = document.getElementById("runBtn");
+const termConn = document.getElementById("termConn");
+
+async function callRunSql(query){
+  const res = await fetch(`${SB_URL}/rest/v1/rpc/run_sql`, {
+    method:"POST",
+    headers:{ "apikey":SB_ANON, "Authorization":"Bearer "+SB_ANON, "Content-Type":"application/json" },
+    body: JSON.stringify({ query })
+  });
+  let data=null; try{ data=await res.json(); }catch(_){}
+  if(!res.ok){
+    const msg = (data&&(data.message||data.hint||data.error_description)) || ("HTTP "+res.status);
+    throw new Error(msg);
+  }
+  return data; // array of row objects
+}
+
+function renderRows(rows){
+  if(!Array.isArray(rows) || rows.length===0){ sqlOut.innerHTML='<div class="empty">Query ran — 0 rows returned.</div>'; return; }
+  const cols=Object.keys(rows[0]);
+  const head="<tr>"+cols.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
+  const body=rows.map(r=>"<tr>"+cols.map(c=>{
+    const v=r[c];
+    if(v===null||v===undefined) return '<td><span class="nullv">NULL</span></td>';
+    return `<td>${esc(typeof v==="object"?JSON.stringify(v):String(v))}</td>`;
+  }).join("")+"</tr>").join("");
+  sqlOut.innerHTML=`<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+async function runQuery(){
+  const raw=(sqlBox.value||"").trim();
+  if(!raw){ sqlBox.focus(); return; }
+  const q=rewriteSQL(raw);
+  runBtn.disabled=true; sqlStatus.className="term-status"; sqlStatus.textContent="running…";
+  const t0=performance.now();
+  try{
+    const data=await callRunSql(q);
+    renderRows(data);
+    const ms=Math.round(performance.now()-t0);
+    sqlStatus.textContent=`${Array.isArray(data)?data.length:0} row(s) · ${ms}ms`;
+  }catch(err){
+    sqlOut.innerHTML=`<div class="err">✗ ${esc(err.message||String(err))}</div>`;
+    sqlStatus.className="term-status err"; sqlStatus.textContent="error";
+  }finally{
+    runBtn.disabled=false;
+  }
+}
+runBtn.onclick=runQuery;
+
+/* ============================================================
+   SCHEMA DICTIONARY · auto-quote bare identifiers
+   ────────────────────────────────────────────────────────────
+   The database keeps PascalCase + double-quoted identifiers
+   (e.g. "Customer", "FirstName"). To let players write natural
+   SQL — `SELECT firstname FROM customer` — we walk the query,
+   recognise bare identifiers that match this Chinook schema
+   (case-insensitively), and wrap them in their canonical
+   double-quoted form before sending. String literals, comments,
+   and already-quoted identifiers are left alone.
+   ============================================================ */
+const SCHEMA_TABLES = ["Album","Artist","Customer","Employee","Genre","Invoice","InvoiceLine","MediaType","Playlist","PlaylistTrack","Track"];
+const SCHEMA_COLUMNS = ["Address","AlbumId","ArtistId","BillingAddress","BillingCity","BillingCountry","BillingPostalCode","BillingState","BirthDate","Bytes","City","Company","Composer","Country","CustomerId","Email","EmployeeId","Fax","FirstName","GenreId","HireDate","InvoiceDate","InvoiceId","InvoiceLineId","LastName","MediaTypeId","Milliseconds","Name","Phone","PlaylistId","PostalCode","Quantity","ReportsTo","State","SupportRepId","Title","Total","TrackId","UnitPrice"];
+const SCHEMA_DICT = Object.create(null);
+[...SCHEMA_TABLES, ...SCHEMA_COLUMNS].forEach(n => { SCHEMA_DICT[n.toLowerCase()] = n; });
+
+function rewriteSQL(sql){
+  let out=""; let i=0; const n=sql.length;
+  while(i<n){
+    const c=sql[i];
+    // string literal '...'  (handles SQL '' escape)
+    if(c==="'"){
+      let j=i+1;
+      while(j<n){
+        if(sql[j]==="'" && sql[j+1]==="'"){ j+=2; continue; }
+        if(sql[j]==="'") break;
+        j++;
+      }
+      out+=sql.slice(i, Math.min(j+1,n)); i=Math.min(j+1,n); continue;
+    }
+    // already-quoted identifier "..."
+    if(c==='"'){
+      const j=sql.indexOf('"', i+1);
+      const end = j===-1 ? n : j+1;
+      out+=sql.slice(i,end); i=end; continue;
+    }
+    // line comment --
+    if(c==='-' && sql[i+1]==='-'){
+      const j=sql.indexOf('\n', i);
+      const end = j===-1 ? n : j;
+      out+=sql.slice(i,end); i=end; continue;
+    }
+    // block comment /* */
+    if(c==='/' && sql[i+1]==='*'){
+      const j=sql.indexOf('*/', i+2);
+      const end = j===-1 ? n : j+2;
+      out+=sql.slice(i,end); i=end; continue;
+    }
+    // identifier candidate
+    if(/[A-Za-z_]/.test(c)){
+      let j=i;
+      while(j<n && /[A-Za-z0-9_]/.test(sql[j])) j++;
+      const word=sql.slice(i,j);
+      const canonical = SCHEMA_DICT[word.toLowerCase()];
+      // don't quote if it's followed by '(' — that's a function call (e.g. count(*))
+      const nextChar = sql.slice(j).replace(/^\s+/,'')[0];
+      if(canonical && nextChar !== '('){
+        out += `"${canonical}"`;
+      } else {
+        out += word;
+      }
+      i=j; continue;
+    }
+    out+=c; i++;
+  }
+  return out;
+}
+
+/* ============================================================
+   AUTOCOMPLETE · keywords + tables + columns
+   ────────────────────────────────────────────────────────────
+   A minimal popup that appears below the textarea showing
+   prefix matches for the partial identifier under the caret.
+   ↑/↓ to navigate · Tab/Enter to insert · Esc dismisses.
+   ============================================================ */
+const SQL_KEYWORDS = ["SELECT","FROM","WHERE","JOIN","INNER","LEFT","RIGHT","OUTER","FULL","ON","GROUP BY","HAVING","ORDER BY","LIMIT","OFFSET","DESC","ASC","AS","AND","OR","NOT","NULL","IS","IN","LIKE","BETWEEN","DISTINCT","CASE","WHEN","THEN","ELSE","END","UNION","ALL","WITH","COUNT","SUM","AVG","MIN","MAX","ROUND","COALESCE"];
+const AC_TYPES = {
+  keyword: { label: 'kw',  color: '#9a8c6c' },
+  table:   { label: 'tbl', color: '#e07a6a' },
+  column:  { label: 'col', color: '#6fbf8e' }
+};
+const AC_ITEMS = [
+  ...SQL_KEYWORDS.map(t => ({ text:t, type:'keyword' })),
+  ...SCHEMA_TABLES.map(t => ({ text:t, type:'table' })),
+  ...SCHEMA_COLUMNS.map(t => ({ text:t, type:'column' }))
+];
+
+const sqlAc = document.getElementById("sqlAc");
+let acState = { open:false, items:[], sel:0, wordStart:0, wordEnd:0 };
+
+function currentWord(){
+  const v = sqlBox.value; const pos = sqlBox.selectionStart;
+  let s = pos;
+  while(s > 0 && /[A-Za-z0-9_]/.test(v[s-1])) s--;
+  return { word: v.slice(s, pos), start: s, end: pos };
+}
+
+function showAutocomplete(){
+  const { word, start, end } = currentWord();
+  if(word.length < 1){ hideAutocomplete(); return; }
+  const lower = word.toLowerCase();
+  const matches = AC_ITEMS
+    .filter(it => it.text.toLowerCase().startsWith(lower) && it.text.toLowerCase() !== lower)
+    .slice(0, 8);
+  if(!matches.length){ hideAutocomplete(); return; }
+  acState = { open:true, items: matches, sel: 0, wordStart: start, wordEnd: end };
+  renderAutocomplete();
+  sqlAc.hidden = false;
+}
+
+function hideAutocomplete(){
+  acState.open = false;
+  sqlAc.hidden = true;
+}
+
+function renderAutocomplete(){
+  sqlAc.innerHTML = acState.items.map((it,i) => {
+    const t = AC_TYPES[it.type];
+    return `<div class="sql-ac-row${i===acState.sel?' sel':''}" data-i="${i}">
+      <span class="sql-ac-text">${esc(it.text)}</span>
+      <span class="sql-ac-type" style="color:${t.color}">${t.label}</span>
+    </div>`;
+  }).join("");
+  sqlAc.querySelectorAll('.sql-ac-row').forEach(r => {
+    r.addEventListener('mousedown', e => { e.preventDefault(); acceptAutocomplete(parseInt(r.dataset.i,10)); });
+  });
+}
+
+function acceptAutocomplete(idx){
+  const item = acState.items[idx !== undefined ? idx : acState.sel];
+  if(!item) return;
+  const v = sqlBox.value;
+  const before = v.slice(0, acState.wordStart);
+  const after  = v.slice(acState.wordEnd);
+  const insertion = item.text;
+  sqlBox.value = before + insertion + after;
+  const newPos = before.length + insertion.length;
+  sqlBox.setSelectionRange(newPos, newPos);
+  hideAutocomplete();
+  sqlBox.focus();
+}
+
+sqlBox.addEventListener("input", showAutocomplete);
+sqlBox.addEventListener("blur",  () => setTimeout(hideAutocomplete, 100));
+sqlBox.addEventListener("keydown", e => {
+  // Ctrl+Enter runs the query (preserved from before; takes priority over autocomplete)
+  if((e.ctrlKey||e.metaKey) && e.key === "Enter"){
+    e.preventDefault();
+    hideAutocomplete();
+    runQuery();
+    return;
+  }
+  if(!acState.open) return;
+  if(e.key === "ArrowDown"){ e.preventDefault(); acState.sel = (acState.sel + 1) % acState.items.length; renderAutocomplete(); }
+  else if(e.key === "ArrowUp"){ e.preventDefault(); acState.sel = (acState.sel - 1 + acState.items.length) % acState.items.length; renderAutocomplete(); }
+  else if(e.key === "Tab" || e.key === "Enter"){ e.preventDefault(); acceptAutocomplete(); }
+  else if(e.key === "Escape"){ e.preventDefault(); hideAutocomplete(); }
+});
+
+/* connection status pill */
+(async()=>{
+  try{
+    await callRunSql("select 1 as ok");
+    termConn.className="term-conn ok"; termConn.textContent="● connected";
+  }catch(e){
+    termConn.className="term-conn err";
+    termConn.textContent = SB_ANON.indexOf("__")===0 ? "● set anon key" : "● "+(e.message||"offline");
+  }
+})();
+</script>
+</body>
+</html>

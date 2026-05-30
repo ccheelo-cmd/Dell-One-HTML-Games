@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cell Chase — Reflex Grid</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #070b12;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    color: #eaf2ff;
+  }
+  #app {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start;
+    padding: max(12px, env(safe-area-inset-top)) 12px 16px;
+  }
+  /* subtle background glow */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(circle at 50% 32%, rgba(0,200,255,0.08), transparent 60%);
+  }
+
+  /* ---- Top bar ---- */
+  #topbar {
+    width: 100%; max-width: 560px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px;
+    flex-wrap: nowrap;
+  }
+  .stat { text-align: center; }
+  .stat .label {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: #6c8099;
+  }
+  .stat .val {
+    font-size: 26px; font-weight: 800; line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+  #scoreVal { color: #4be3ff; text-shadow: 0 0 14px rgba(75,227,255,0.5); }
+
+  /* F1-style lights */
+  #lives { display: flex; gap: 8px; align-items: center; }
+  .life {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #2a1216;
+    border: 2px solid #5a1d24;
+    box-shadow: inset 0 0 4px rgba(0,0,0,0.6);
+    transition: all 0.25s;
+  }
+  .life.on {
+    background: #ff2233;
+    border-color: #ff6b76;
+    box-shadow: 0 0 12px rgba(255,40,60,0.85), inset 0 0 6px rgba(255,180,180,0.6);
+  }
+
+  /* ---- Grid ---- */
+  #board {
+    position: relative;
+    width: min(92vw, 70vh, 540px);
+    height: min(92vw, 70vh, 540px);
+    display: grid;
+    gap: 10px;
+  }
+  #board.shake { animation: shake 0.32s; }
+  @keyframes shake {
+    0%,100% { transform: translate(0,0); }
+    15% { transform: translate(-9px, 4px); }
+    30% { transform: translate(8px, -6px); }
+    45% { transform: translate(-7px, 5px); }
+    60% { transform: translate(6px, -4px); }
+    75% { transform: translate(-4px, 3px); }
+  }
+
+  .cell {
+    position: relative;
+    border-radius: 12px;
+    background: #0e1622;
+    border: 1px solid #1c2a3a;
+    cursor: pointer;
+    overflow: hidden;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .cell.lit {
+    background: radial-gradient(circle at 50% 45%, #6ff0ff, #00a6e6 70%);
+    border-color: #aef6ff;
+    box-shadow: 0 0 22px rgba(40,200,255,0.75), 0 0 50px rgba(40,200,255,0.35);
+    animation: pulse 0.9s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); box-shadow: 0 0 22px rgba(40,200,255,0.7), 0 0 50px rgba(40,200,255,0.3); }
+    50% { transform: scale(0.945); box-shadow: 0 0 30px rgba(60,220,255,0.95), 0 0 70px rgba(40,200,255,0.5); }
+  }
+  .cell.missed {
+    background: radial-gradient(circle at 50% 45%, #ff7a86, #d11020 70%) !important;
+    border-color: #ff9aa4 !important;
+    box-shadow: 0 0 26px rgba(255,40,60,0.85) !important;
+    animation: none !important;
+  }
+  .cell.flash {
+    background: #16344a;
+    border-color: #3a6f96;
+  }
+  /* progress ring */
+  .ring { position: absolute; inset: 0; pointer-events: none; }
+  .ring svg { width: 100%; height: 100%; display: block; }
+  .ring circle {
+    fill: none; stroke-width: 4;
+    stroke: rgba(255,255,255,0.9);
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.7));
+  }
+
+  /* floating score popups */
+  .pop {
+    position: absolute; pointer-events: none; z-index: 30;
+    font-weight: 800; font-size: 22px;
+    color: #4be3ff; text-shadow: 0 0 10px rgba(0,0,0,0.7);
+    transform: translate(-50%, -50%);
+    animation: floatUp 0.85s ease-out forwards;
+  }
+  .pop.quick { color: #ffd23f; }
+  .pop.bonus { color: #ff8be3; }
+  .pop.miss { color: #ff4d5e; }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    20% { opacity: 1; transform: translate(-50%, -70%) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
+  }
+
+  /* streak text */
+  #streak {
+    height: 26px; margin-top: 14px;
+    font-size: 16px; font-weight: 700; color: #ff9b3f;
+    letter-spacing: 1px; opacity: 0;
+    transition: opacity 0.2s;
+    text-shadow: 0 0 12px rgba(255,140,40,0.5);
+  }
+  #streak.on { opacity: 1; }
+
+  /* ---- Overlays (start / end) ---- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 24px;
+    background: rgba(5,9,16,0.92);
+    backdrop-filter: blur(4px);
+  }
+  .overlay.hidden { display: none; }
+  .title {
+    font-size: clamp(34px, 9vw, 60px); font-weight: 900;
+    letter-spacing: 2px; line-height: 1;
+    background: linear-gradient(90deg, #4be3ff, #8a5bff);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .tagline { font-size: 15px; color: #9fb3c8; margin-bottom: 30px; max-width: 320px; line-height: 1.5; }
+  .btn {
+    font-family: inherit;
+    font-size: 20px; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #051018;
+    background: linear-gradient(180deg, #6ff0ff, #00b4e6);
+    border: none; border-radius: 14px;
+    padding: 16px 44px; cursor: pointer;
+    box-shadow: 0 0 30px rgba(40,200,255,0.5);
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: scale(0.95); }
+
+  #finalScore { font-size: 64px; font-weight: 900; color: #4be3ff; text-shadow: 0 0 24px rgba(75,227,255,0.5); line-height: 1; }
+  #endStats { font-size: 16px; color: #9fb3c8; margin: 10px 0 4px; }
+  #rank {
+    font-size: clamp(28px, 7vw, 40px); font-weight: 900;
+    margin: 14px 0 30px; letter-spacing: 1px;
+  }
+  .rank-god   { color: #ffd23f; text-shadow: 0 0 22px rgba(255,210,63,0.6); }
+  .rank-sharp { color: #4be3ff; text-shadow: 0 0 22px rgba(75,227,255,0.5); }
+  .rank-ok    { color: #8affc1; }
+  .rank-slow  { color: #ff7a86; }
+  .smalllabel { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #6c8099; }
+
+  /* mute toggle */
+  #muteBtn {
+    position: fixed; z-index: 60;
+    top: max(10px, env(safe-area-inset-top)); right: 12px;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; line-height: 1;
+    background: rgba(14,22,34,0.85);
+    border: 1px solid #1c2a3a; border-radius: 10px;
+    color: #eaf2ff; cursor: pointer;
+    transition: transform 0.1s, border-color 0.15s;
+  }
+  #muteBtn:active { transform: scale(0.9); }
+  #muteBtn.muted { color: #6c8099; border-color: #5a1d24; }
+</style>
+</head>
+<body>
+<button id="muteBtn" title="Mute / unmute" aria-label="Mute">🔊</button>
+
+<div id="app">
+  <div id="topbar">
+    <div class="stat"><div class="label">Score</div><div class="val" id="scoreVal">0</div></div>
+    <div class="stat"><div class="label">Round</div><div class="val" id="roundVal">1</div></div>
+    <div class="stat">
+      <div class="label">Lives</div>
+      <div id="lives">
+        <div class="life on"></div><div class="life on"></div><div class="life on"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="board"></div>
+  <div id="streak"></div>
+</div>
+
+<!-- Start screen -->
+<div class="overlay" id="startScreen">
+  <div class="title">CELL CHASE</div>
+  <div class="tagline">Tap the glowing cell before it escapes!<br>It gets faster. Miss 3 and you're out.</div>
+  <button class="btn" id="startBtn">Start</button>
+</div>
+
+<!-- End screen -->
+<div class="overlay hidden" id="endScreen">
+  <div class="smalllabel">Final Score</div>
+  <div id="finalScore">0</div>
+  <div id="endStats">Highest round reached: 1</div>
+  <div id="rank">Slow hands</div>
+  <button class="btn" id="restartBtn">Play Again</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var board     = document.getElementById("board");
+  var scoreVal  = document.getElementById("scoreVal");
+  var roundVal  = document.getElementById("roundVal");
+  var lives      = document.querySelectorAll("#lives .life");
+  var streakEl  = document.getElementById("streak");
+  var startScreen = document.getElementById("startScreen");
+  var endScreen   = document.getElementById("endScreen");
+
+  var RING_R = 46;            // radius for the progress ring (viewBox 0..100)
+  var RING_C = 2 * Math.PI * RING_R;
+
+  var state = null;
+
+  /* ------------------------------------------------------------------ *
+   * Audio engine — everything synthesized with the Web Audio API.
+   * Background beat (kick/snare/hat/bass/arp) speeds up with the rounds,
+   * plus reactive one-shot SFX. No external files, no dependencies.
+   * ------------------------------------------------------------------ */
+  var Sound = (function () {
+    var ctx = null, master = null, musicGain = null;
+    var muted = false;
+    var running = false, schedTimer = null, nextNote = 0, step16 = 0, bpm = 108;
+    var noiseBuf = null;
+
+    function init() {
+      if (ctx) return;
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = muted ? 0.0001 : 0.9;
+      master.connect(ctx.destination);
+      musicGain = ctx.createGain();
+      musicGain.gain.value = 0.0001;
+      musicGain.connect(master);
+    }
+    function resume() { if (ctx && ctx.state === "suspended") ctx.resume(); }
+
+    function getNoise() {
+      if (noiseBuf) return noiseBuf;
+      var len = ctx.sampleRate * 0.5;
+      noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      return noiseBuf;
+    }
+
+    // Simple oscillator "blip" with a fast attack and exponential decay.
+    function blip(freq, t, dur, type, gainVal, target) {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(gainVal, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(target || master);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+
+    function noiseBurst(t, dur, gainVal, freq, type, target) {
+      var s = ctx.createBufferSource(); s.buffer = getNoise();
+      var f = ctx.createBiquadFilter();
+      f.type = type || "bandpass";
+      f.frequency.value = freq || 1500;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(gainVal, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(g); g.connect(target || master);
+      s.start(t); s.stop(t + dur + 0.02);
+    }
+
+    /* ---- drum voices (routed through musicGain) ---- */
+    function kick(t) {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.setValueAtTime(155, t);
+      o.frequency.exponentialRampToValueAtTime(48, t + 0.12);
+      g.gain.setValueAtTime(0.9, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.connect(g); g.connect(musicGain);
+      o.start(t); o.stop(t + 0.2);
+    }
+    function snare(t) {
+      noiseBurst(t, 0.18, 0.5, 1800, "bandpass", musicGain);
+      blip(220, t, 0.08, "triangle", 0.25, musicGain);
+    }
+    function hat(t) { noiseBurst(t, 0.035, 0.18, 9000, "highpass", musicGain); }
+
+    function bass(semi, t) {
+      var f = 55 * Math.pow(2, semi / 12);
+      var o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+      o.type = "sawtooth"; o.frequency.setValueAtTime(f, t);
+      lp.type = "lowpass"; lp.frequency.value = 600;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.4, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      o.connect(lp); lp.connect(g); g.connect(musicGain);
+      o.start(t); o.stop(t + 0.24);
+    }
+
+    // A-minor-pentatonic flavoured 16-step loop.
+    var ARP  = [12, 19, 15, 22, 12, 19, 15, 24, 17, 24, 19, 15, 12, 15, 19, 22];
+    var BASS = { 0: 0, 6: 0, 8: 5, 14: 3 };
+    function stepDur() { return 60 / bpm / 4; }
+
+    function playBar(s, t) {
+      if (s % 4 === 0) kick(t);
+      if (s === 4 || s === 12) snare(t);
+      if (s % 2 === 1) hat(t);
+      if (BASS.hasOwnProperty(s)) bass(BASS[s], t);
+      // light, sparkly arpeggio
+      blip(220 * Math.pow(2, ARP[s] / 12), t, 0.14, "triangle", 0.06, musicGain);
+    }
+
+    function scheduler() {
+      if (!running || !ctx) return;
+      while (nextNote < ctx.currentTime + 0.12) {
+        playBar(step16, nextNote);
+        nextNote += stepDur();
+        step16 = (step16 + 1) % 16;
+      }
+    }
+
+    function startMusic() {
+      init(); resume();
+      if (!ctx || running) return;
+      running = true;
+      musicGain.gain.cancelScheduledValues(ctx.currentTime);
+      musicGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      musicGain.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 1.0);
+      nextNote = ctx.currentTime + 0.08;
+      step16 = 0;
+      schedTimer = setInterval(scheduler, 25);
+    }
+    function stopMusic() {
+      running = false;
+      if (schedTimer) { clearInterval(schedTimer); schedTimer = null; }
+      if (ctx) {
+        musicGain.gain.cancelScheduledValues(ctx.currentTime);
+        musicGain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.15);
+      }
+    }
+
+    // Tempo climbs with the round → "maximum chaos".
+    function setIntensity(round) { bpm = Math.min(152, 104 + round * 3); }
+
+    /* ---- one-shot SFX ---- */
+    var PENTA = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22, 24, 27, 29, 31];
+    function hit(streak, quick) {
+      resume(); if (!ctx) return;
+      var t = ctx.currentTime + 0.005;
+      var i = Math.min((streak || 1) - 1, PENTA.length - 1);
+      var f = 523.25 * Math.pow(2, PENTA[i] / 12);
+      blip(f, t, 0.13, quick ? "square" : "triangle", 0.32, master);
+      blip(f * 2, t + 0.004, 0.11, "sine", 0.16, master);
+      if (quick) blip(f * 3, t + 0.02, 0.13, "sine", 0.12, master);
+    }
+    function streakBonus() {
+      resume(); if (!ctx) return;
+      var t = ctx.currentTime;
+      [0, 4, 7, 12].forEach(function (semi, k) {
+        blip(784 * Math.pow(2, semi / 12), t + k * 0.05, 0.16, "sine", 0.18, master);
+      });
+    }
+    function miss() {
+      resume(); if (!ctx) return;
+      var t = ctx.currentTime;
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(320, t);
+      o.frequency.exponentialRampToValueAtTime(60, t + 0.35);
+      g.gain.setValueAtTime(0.35, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 0.42);
+      noiseBurst(t, 0.2, 0.2, 800, "lowpass", master);
+    }
+    function gameover() {
+      resume(); if (!ctx) return;
+      var t = ctx.currentTime;
+      [0, -2, -4, -7].forEach(function (semi, k) {
+        blip(440 * Math.pow(2, semi / 12), t + k * 0.13, 0.5, "sawtooth", 0.22, master);
+      });
+    }
+    function startCue() {
+      resume(); if (!ctx) return;
+      var t = ctx.currentTime;
+      [0, 5, 7, 12].forEach(function (semi, k) {
+        blip(330 * Math.pow(2, semi / 12), t + k * 0.07, 0.25, "square", 0.2, master);
+      });
+    }
+
+    function toggleMute() {
+      muted = !muted;
+      if (ctx) master.gain.setTargetAtTime(muted ? 0.0001 : 0.9, ctx.currentTime, 0.05);
+      return muted;
+    }
+    function isMuted() { return muted; }
+
+    return {
+      init: init, startMusic: startMusic, stopMusic: stopMusic,
+      setIntensity: setIntensity, hit: hit, streakBonus: streakBonus,
+      miss: miss, gameover: gameover, startCue: startCue,
+      toggleMute: toggleMute, isMuted: isMuted
+    };
+  })();
+
+  // Speed/grid progression by round.
+  function configFor(round) {
+    if (round <= 3)  return { grid: 3, window: 1800 };
+    if (round <= 6)  return { grid: 4, window: 1400 };
+    if (round <= 10) return { grid: 4, window: 1000 };
+    if (round <= 15) return { grid: 5, window: 700  };
+    return { grid: 5, window: 500 };
+  }
+
+  function buildGrid(size) {
+    board.innerHTML = "";
+    board.style.gridTemplateColumns = "repeat(" + size + ", 1fr)";
+    board.style.gridTemplateRows    = "repeat(" + size + ", 1fr)";
+    var total = size * size;
+    var cells = [];
+    for (var i = 0; i < total; i++) {
+      var c = document.createElement("div");
+      c.className = "cell";
+      c.dataset.index = i;
+      c.addEventListener("pointerdown", onCellTap);
+      board.appendChild(c);
+      cells.push(c);
+    }
+    return cells;
+  }
+
+  // Flash all cells briefly so the player notices the grid changed.
+  function flashGrid() {
+    state.cells.forEach(function (c) {
+      c.classList.add("flash");
+    });
+    setTimeout(function () {
+      state.cells.forEach(function (c) { c.classList.remove("flash"); });
+    }, 260);
+  }
+
+  function startGame() {
+    startScreen.classList.add("hidden");
+    endScreen.classList.add("hidden");
+
+    Sound.startMusic();
+    Sound.startCue();
+
+    state = {
+      score: 0,
+      round: 0,          // incremented to 1 on first lightNext
+      lives: 3,
+      streak: 0,
+      gridSize: 0,
+      cells: [],
+      litIndex: -1,
+      litCell: null,
+      windowMs: 0,
+      litAt: 0,
+      timer: null,
+      raf: null,
+      ring: null,
+      ringCircle: null,
+      over: false
+    };
+
+    updateScore();
+    updateLives();
+    setStreakText();
+
+    var cfg = configFor(1);
+    state.gridSize = cfg.grid;
+    state.cells = buildGrid(cfg.grid);
+
+    lightNext();
+  }
+
+  function lightNext() {
+    if (state.over) return;
+
+    state.round++;
+    roundVal.textContent = state.round;
+
+    var cfg = configFor(state.round);
+    Sound.setIntensity(state.round);
+
+    // Rebuild grid if size changed, then flash to signal the change.
+    if (cfg.grid !== state.gridSize) {
+      state.gridSize = cfg.grid;
+      state.cells = buildGrid(cfg.grid);
+      flashGrid();
+    }
+
+    state.windowMs = cfg.window;
+
+    // Pick a new random cell (avoid repeating the same index when possible).
+    var n = state.cells.length;
+    var idx = Math.floor(Math.random() * n);
+    if (n > 1 && idx === state.litIndex) {
+      idx = (idx + 1 + Math.floor(Math.random() * (n - 1))) % n;
+    }
+    state.litIndex = idx;
+    var cell = state.cells[idx];
+    state.litCell = cell;
+    cell.classList.add("lit");
+
+    // Add a draining progress ring.
+    addRing(cell);
+
+    state.litAt = performance.now();
+    startRing();
+
+    clearTimeout(state.timer);
+    state.timer = setTimeout(onMiss, state.windowMs);
+  }
+
+  function addRing(cell) {
+    var wrap = document.createElement("div");
+    wrap.className = "ring";
+    wrap.innerHTML =
+      '<svg viewBox="0 0 100 100">' +
+      '<circle cx="50" cy="50" r="' + RING_R + '" ' +
+      'transform="rotate(-90 50 50)" ' +
+      'stroke-dasharray="' + RING_C + '" stroke-dashoffset="0"></circle>' +
+      '</svg>';
+    cell.appendChild(wrap);
+    state.ring = wrap;
+    state.ringCircle = wrap.querySelector("circle");
+  }
+
+  function startRing() {
+    cancelAnimationFrame(state.raf);
+    var tick = function (now) {
+      if (state.over || !state.ringCircle) return;
+      var elapsed = now - state.litAt;
+      var frac = Math.min(1, elapsed / state.windowMs);
+      state.ringCircle.setAttribute("stroke-dashoffset", (RING_C * frac).toFixed(1));
+      // Shift ring toward red as time runs out.
+      if (frac > 0.66) state.ringCircle.style.stroke = "#ff5566";
+      else if (frac > 0.4) state.ringCircle.style.stroke = "#ffd23f";
+      if (frac < 1) state.raf = requestAnimationFrame(tick);
+    };
+    state.raf = requestAnimationFrame(tick);
+  }
+
+  function clearLit() {
+    cancelAnimationFrame(state.raf);
+    if (state.litCell) {
+      state.litCell.classList.remove("lit", "missed");
+      if (state.ring && state.ring.parentNode) {
+        state.ring.parentNode.removeChild(state.ring);
+      }
+    }
+    state.ring = null;
+    state.ringCircle = null;
+  }
+
+  function onCellTap(e) {
+    if (!state || state.over) return;
+    var idx = parseInt(this.dataset.index, 10);
+    if (idx !== state.litIndex) return;   // tapping a dark cell does nothing
+
+    // Hit!
+    clearTimeout(state.timer);
+    var elapsed = performance.now() - state.litAt;
+    var quick = elapsed <= state.windowMs * 0.30;
+
+    var base = 10 * state.round;
+    var gained = base;
+    var popClass = "";
+    var popText = "+" + gained;
+
+    if (quick) {
+      gained = Math.round(base * 1.5);
+      popText = "+" + gained + " Quick!";
+      popClass = "quick";
+    }
+
+    state.streak++;
+    var streakBonus = state.streak >= 5;
+    if (streakBonus) {
+      gained += 50;
+      popText += " 🔥+50";
+      if (!quick) popClass = "bonus";
+    }
+
+    state.score += gained;
+    updateScore();
+    setStreakText();
+
+    Sound.hit(state.streak, quick);
+    if (streakBonus) Sound.streakBonus();
+
+    spawnPop(e, popText, popClass);
+
+    clearLit();
+    // brief gap then next round
+    setTimeout(lightNext, 130);
+  }
+
+  function onMiss() {
+    if (!state || state.over) return;
+
+    state.lives--;
+    state.streak = 0;
+    setStreakText();
+    updateLives();
+
+    // Flash the missed cell red before it jumps away.
+    cancelAnimationFrame(state.raf);
+    if (state.litCell) {
+      state.litCell.classList.remove("lit");
+      state.litCell.classList.add("missed");
+    }
+    if (state.ringCircle) state.ringCircle.style.opacity = "0";
+
+    shake();
+    Sound.miss();
+    spawnPopAtCell(state.litCell, "Miss", "miss");
+
+    if (state.lives <= 0) {
+      // Freeze grid, then end.
+      state.over = true;
+      setTimeout(endGame, 650);
+      return;
+    }
+
+    setTimeout(function () {
+      clearLit();
+      lightNext();
+    }, 480);
+  }
+
+  function shake() {
+    board.classList.remove("shake");
+    // force reflow to restart animation
+    void board.offsetWidth;
+    board.classList.add("shake");
+  }
+
+  function spawnPop(e, text, cls) {
+    var rect = board.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var y = e.clientY - rect.top;
+    placePop(x, y, text, cls);
+  }
+
+  function spawnPopAtCell(cell, text, cls) {
+    if (!cell) return;
+    var rect = board.getBoundingClientRect();
+    var cr = cell.getBoundingClientRect();
+    var x = cr.left - rect.left + cr.width / 2;
+    var y = cr.top - rect.top + cr.height / 2;
+    placePop(x, y, text, cls);
+  }
+
+  function placePop(x, y, text, cls) {
+    var p = document.createElement("div");
+    p.className = "pop" + (cls ? " " + cls : "");
+    p.textContent = text;
+    p.style.left = x + "px";
+    p.style.top = y + "px";
+    board.appendChild(p);
+    setTimeout(function () {
+      if (p.parentNode) p.parentNode.removeChild(p);
+    }, 900);
+  }
+
+  function updateScore() { scoreVal.textContent = state.score; }
+
+  function updateLives() {
+    for (var i = 0; i < lives.length; i++) {
+      if (i < state.lives) lives[i].classList.add("on");
+      else lives[i].classList.remove("on");
+    }
+  }
+
+  function setStreakText() {
+    if (state.streak >= 5) {
+      streakEl.textContent = "🔥 " + state.streak + " streak";
+      streakEl.classList.add("on");
+    } else if (state.streak >= 2) {
+      streakEl.textContent = state.streak + " in a row";
+      streakEl.classList.add("on");
+    } else {
+      streakEl.classList.remove("on");
+    }
+  }
+
+  function rankFor(round) {
+    if (round >= 15) return { text: "Reflex God", cls: "rank-god" };
+    if (round >= 10) return { text: "Sharp", cls: "rank-sharp" };
+    if (round >= 6)  return { text: "Getting there", cls: "rank-ok" };
+    return { text: "Slow hands", cls: "rank-slow" };
+  }
+
+  function endGame() {
+    clearTimeout(state.timer);
+    cancelAnimationFrame(state.raf);
+
+    Sound.stopMusic();
+    Sound.gameover();
+
+    document.getElementById("finalScore").textContent = state.score;
+    document.getElementById("endStats").textContent =
+      "Highest round reached: " + state.round;
+
+    var r = rankFor(state.round);
+    var rankEl = document.getElementById("rank");
+    rankEl.textContent = r.text;
+    rankEl.className = r.cls;
+
+    try {
+      var k = 'cell_chase_v1';
+      var h = JSON.parse(localStorage.getItem(k) || '[]');
+      if (!Array.isArray(h)) h = [];
+      h.unshift({ score: state.score, round: state.round, date: Date.now() });
+      if (h.length > 20) h.length = 20;
+      localStorage.setItem(k, JSON.stringify(h));
+    } catch (_) {}
+
+    endScreen.classList.remove("hidden");
+  }
+
+  document.getElementById("startBtn").addEventListener("click", startGame);
+  document.getElementById("restartBtn").addEventListener("click", startGame);
+
+  var muteBtn = document.getElementById("muteBtn");
+  muteBtn.addEventListener("click", function () {
+    Sound.init();
+    var m = Sound.toggleMute();
+    muteBtn.textContent = m ? "🔇" : "🔊";
+    muteBtn.classList.toggle("muted", m);
+  });
+})();
+</script>
+</body>
+</html>

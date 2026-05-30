@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NEURON — IQ Challenge</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#06060e;--surface:#0d0d1a;--card:#12121f;--border:#1e1e35;
+  --text:#eeeef8;--text2:#8888aa;--text3:#444466;
+  --purple:#7c5cfc;--purple2:#a78bfa;--cyan:#00d4ff;--green:#00ff9d;
+  --red:#ff4466;--orange:#ff8c42;--yellow:#ffd166;
+  --serif:'Space Grotesk',sans-serif;--mono:'Space Mono',monospace;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--serif);overflow-x:hidden;}
+body{display:flex;flex-direction:column;align-items:center;}
+
+/* ── PARTICLES CANVAS ── */
+#bg-canvas{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;}
+
+/* ── SCREENS ── */
+.screen{display:none;flex-direction:column;align-items:center;width:100%;max-width:700px;padding:0 20px;position:relative;z-index:1;}
+.screen.active{display:flex;}
+
+/* ══════════════════════════════
+   INTRO SCREEN
+══════════════════════════════ */
+#intro-screen{min-height:100vh;justify-content:center;padding:40px 20px;}
+.intro-logo{font-family:var(--mono);font-size:.75rem;letter-spacing:.3em;color:var(--purple2);margin-bottom:48px;text-align:center;
+  animation:fadeDown .6s ease both;}
+.intro-hero{text-align:center;margin-bottom:40px;animation:fadeDown .6s .1s ease both;}
+.intro-hero h1{font-size:clamp(3rem,10vw,5.5rem);font-weight:700;line-height:.95;letter-spacing:-.03em;margin-bottom:16px;
+  background:linear-gradient(135deg,#fff 0%,var(--purple2) 50%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.intro-hero p{font-size:1rem;color:var(--text2);max-width:420px;margin:0 auto;line-height:1.7;}
+.brain-svg{width:120px;height:120px;margin:0 auto 28px;display:block;
+  animation:brainpulse 3s ease infinite;}
+@keyframes brainpulse{0%,100%{filter:drop-shadow(0 0 8px rgba(124,92,252,.4))}50%{filter:drop-shadow(0 0 24px rgba(124,92,252,.9));}}
+
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:36px;animation:fadeUp .6s .2s ease both;}
+.stat-pill{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 12px;text-align:center;}
+.stat-pill .sn{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--purple2);}
+.stat-pill .sl{font-size:.72rem;color:var(--text2);margin-top:3px;letter-spacing:.05em;}
+
+.modules-list{width:100%;margin-bottom:36px;animation:fadeUp .6s .3s ease both;}
+.mod-item{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:10px;margin-bottom:6px;background:var(--card);border:1px solid var(--border);transition:border-color .2s;}
+.mod-item:hover{border-color:var(--purple);}
+.mod-icon{font-size:1.4rem;width:36px;text-align:center;flex-shrink:0;}
+.mod-info{flex:1;}
+.mod-info b{font-size:.9rem;display:block;margin-bottom:2px;}
+.mod-info span{font-size:.75rem;color:var(--text2);}
+.mod-badge{font-family:var(--mono);font-size:.65rem;color:var(--text3);background:var(--border);padding:3px 8px;border-radius:20px;}
+
+.btn-start{
+  width:100%;padding:18px;border-radius:12px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--purple),var(--cyan));
+  color:#fff;font-family:var(--serif);font-size:1rem;font-weight:700;letter-spacing:.05em;
+  position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;
+  animation:fadeUp .6s .4s ease both;
+}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,92,252,.5);}
+.btn-start::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);opacity:0;transition:opacity .2s;}
+.btn-start:hover::before{opacity:1;}
+.intro-note{font-size:.72rem;color:var(--text3);text-align:center;margin-top:14px;letter-spacing:.04em;animation:fadeUp .6s .5s ease both;}
+
+/* ══════════════════════════════
+   GAME HEADER / HUD
+══════════════════════════════ */
+.game-hud{
+  position:sticky;top:0;z-index:100;width:100%;background:rgba(6,6,14,.92);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
+  padding:12px 20px;display:flex;align-items:center;gap:12px;
+  max-width:100%;
+}
+.hud-mod{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;color:var(--purple2);text-transform:uppercase;flex-shrink:0;}
+.hud-spacer{flex:1;}
+.hud-score{font-family:var(--mono);font-size:.85rem;color:var(--yellow);font-weight:700;flex-shrink:0;}
+.hud-q{font-family:var(--mono);font-size:.7rem;color:var(--text2);flex-shrink:0;}
+
+/* XP Bar */
+.xp-bar{width:100%;height:3px;background:var(--border);position:relative;}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--cyan));transition:width .4s cubic-bezier(.4,0,.2,1);}
+
+/* ══════════════════════════════
+   QUESTION WRAPPER
+══════════════════════════════ */
+#game-screen{padding-top:0;}
+.q-wrapper{width:100%;padding:28px 20px 120px;max-width:700px;}
+
+/* Module intro banner */
+.module-banner{
+  text-align:center;padding:48px 20px;
+  animation:scaleIn .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes scaleIn{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.mb-icon{font-size:4rem;margin-bottom:16px;display:block;}
+.mb-num{font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;color:var(--purple2);margin-bottom:8px;}
+.mb-title{font-size:2.2rem;font-weight:700;margin-bottom:10px;}
+.mb-desc{font-size:.9rem;color:var(--text2);max-width:360px;margin:0 auto 28px;line-height:1.6;}
+.btn-module-go{padding:14px 40px;border-radius:10px;border:none;cursor:pointer;background:var(--purple);color:#fff;font-family:var(--serif);font-size:.92rem;font-weight:600;transition:all .15s;}
+.btn-module-go:hover{background:var(--purple2);transform:translateY(-1px);}
+
+/* Question card */
+.q-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:28px 24px;margin-bottom:16px;
+  animation:slideIn .35s cubic-bezier(.34,1.2,.64,1) both;
+}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.q-type-badge{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;color:var(--text3);background:var(--border);padding:4px 10px;border-radius:20px;}
+.q-diff{display:flex;gap:3px;}
+.q-diff span{width:6px;height:6px;border-radius:50%;background:var(--border);}
+.q-diff span.on{background:var(--purple2);}
+
+/* Timer arc */
+.timer-wrap{display:flex;justify-content:center;margin-bottom:20px;position:relative;}
+.timer-svg{transform:rotate(-90deg);}
+.timer-track{fill:none;stroke:var(--border);stroke-width:4;}
+.timer-arc{fill:none;stroke:var(--cyan);stroke-width:4;stroke-linecap:round;stroke-dasharray:188.5;stroke-dashoffset:0;transition:stroke-dashoffset .1s linear,stroke .5s;}
+.timer-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--mono);font-size:1.1rem;font-weight:700;}
+.timer-pts{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:.6rem;color:var(--text3);}
+
+.q-stem{font-size:1.25rem;font-weight:600;line-height:1.5;margin-bottom:8px;}
+.q-instr{font-size:.8rem;color:var(--text2);line-height:1.6;margin-bottom:24px;}
+
+/* Visual displays */
+.seq-display{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:20px;}
+.seq-cell{width:56px;height:56px;border:1px solid var(--border);border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.seq-cell svg{width:38px;height:38px;}
+.seq-cell.is-q{background:rgba(124,92,252,.1);border-color:var(--purple);font-family:var(--mono);font-size:1rem;color:var(--purple2);}
+.seq-arrow{color:var(--text3);font-size:.9rem;flex-shrink:0;}
+.seq-num{font-family:var(--mono);font-size:1.6rem;font-weight:700;}
+.seq-num.is-q{color:var(--purple2);background:rgba(124,92,252,.1);border:1px solid var(--purple);padding:4px 14px;border-radius:6px;}
+
+.matrix-display{display:grid;grid-template-columns:repeat(3,72px);gap:6px;margin-bottom:20px;}
+.mat-cell{width:72px;height:72px;border:1px solid var(--border);border-radius:8px;background:var(--surface);display:flex;align-items:center;justify-content:center;}
+.mat-cell svg{width:52px;height:52px;}
+.mat-cell.is-q{background:rgba(124,92,252,.1);border-color:var(--purple);font-family:var(--mono);font-size:1.1rem;color:var(--purple2);}
+
+.analogy-display{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:20px;}
+.an-word{font-size:1.3rem;font-weight:600;}
+.an-rel{font-family:var(--mono);font-size:.7rem;color:var(--text3);}
+.an-blank{font-family:var(--mono);font-size:.88rem;color:var(--purple2);background:rgba(124,92,252,.1);border:1px solid var(--purple);padding:7px 16px;border-radius:6px;}
+
+.spatial-display{display:flex;flex-direction:column;gap:6px;margin-bottom:20px;}
+.sp-label{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;}
+.sp-fig{width:90px;height:90px;border:1px solid var(--border);border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;}
+.sp-fig svg{width:68px;height:68px;}
+
+/* Memory */
+.mem-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:20px;text-align:center;}
+.mem-label{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;color:var(--text3);margin-bottom:16px;text-transform:uppercase;}
+.mem-items-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.mem-chip{min-width:58px;height:58px;border:2px solid var(--border);border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--text);transition:all .3s;}
+.mem-chip.hide{opacity:0;transform:scale(.8);}
+.mem-countdown{font-family:var(--mono);font-size:2rem;font-weight:700;color:var(--purple2);}
+.recall-area{display:none;}
+.recall-area p{font-size:.8rem;color:var(--text2);margin-bottom:10px;}
+.recall-input{width:100%;background:var(--surface);border:2px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:1.2rem;padding:14px 18px;outline:none;transition:border-color .15s;text-align:center;letter-spacing:.1em;}
+.recall-input:focus{border-color:var(--purple);}
+
+/* Options */
+.opts{display:grid;gap:8px;}
+.opts.g2{grid-template-columns:1fr 1fr;}
+.opts.g4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.opt{
+  background:var(--surface);border:2px solid var(--border);border-radius:10px;
+  padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;
+  font-family:var(--serif);font-size:.9rem;color:var(--text);
+  transition:all .15s;text-align:left;position:relative;overflow:hidden;
+}
+.opt::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(124,92,252,.15),transparent);opacity:0;transition:opacity .15s;}
+.opt:hover:not(.locked)::before{opacity:1;}
+.opt:hover:not(.locked){border-color:var(--purple);transform:translateY(-1px);}
+.opt.selected{border-color:var(--purple2);background:rgba(124,92,252,.12);}
+.opt.correct{border-color:var(--green);background:rgba(0,255,157,.08);animation:correctPop .4s cubic-bezier(.34,1.56,.64,1);}
+.opt.wrong{border-color:var(--red);background:rgba(255,68,102,.08);animation:wrongShake .4s ease;}
+.opt.reveal{border-color:var(--green);background:rgba(0,255,157,.06);}
+.opt.locked{cursor:default;}
+@keyframes correctPop{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes wrongShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.opt-key{font-family:var(--mono);font-size:.66rem;color:var(--text3);width:18px;flex-shrink:0;}
+.opt-fig{width:48px;height:48px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.opt-fig svg{width:40px;height:40px;}
+.opt-check{margin-left:auto;font-size:1rem;opacity:0;transition:opacity .2s;}
+.opt.correct .opt-check,.opt.wrong .opt-check,.opt.reveal .opt-check{opacity:1;}
+
+/* Feedback */
+.q-feedback{
+  border-radius:12px;padding:16px 18px;margin-top:12px;
+  animation:fadeUp .3s ease both;
+}
+.q-feedback.ok{background:rgba(0,255,157,.07);border:1px solid rgba(0,255,157,.25);}
+.q-feedback.bad{background:rgba(255,68,102,.07);border:1px solid rgba(255,68,102,.25);}
+.fb-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.fb-icon{font-size:1.2rem;}
+.fb-title{font-size:.88rem;font-weight:600;}
+.fb-exp{font-size:.8rem;color:var(--text2);line-height:1.6;}
+.pts-pop{font-family:var(--mono);font-size:.8rem;margin-left:auto;flex-shrink:0;}
+.pts-pop.ok{color:var(--green);}
+.pts-pop.bad{color:var(--red);}
+
+/* Bottom nav */
+.q-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:rgba(6,6,14,.95);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);padding:14px 20px;
+  display:flex;justify-content:center;gap:10px;
+}
+.q-nav .inner{width:100%;max-width:700px;display:flex;gap:10px;}
+.btn-skip-q{flex:0 0 auto;padding:12px 20px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--serif);font-size:.84rem;cursor:pointer;transition:all .15s;}
+.btn-skip-q:hover{border-color:var(--text2);color:var(--text);}
+.btn-next-q{flex:1;padding:13px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--purple),var(--cyan));color:#fff;font-family:var(--serif);font-size:.92rem;font-weight:600;transition:all .15s;position:relative;overflow:hidden;}
+.btn-next-q:disabled{opacity:.3;cursor:default;transform:none!important;}
+.btn-next-q:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(124,92,252,.4);}
+
+/* ══════════════════════════════
+   SCORE POPUPS
+══════════════════════════════ */
+.score-popup{
+  position:fixed;pointer-events:none;z-index:500;
+  font-family:var(--mono);font-size:1.1rem;font-weight:700;
+  animation:popFly 1.2s ease forwards;
+}
+@keyframes popFly{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-80px) scale(.7)}}
+
+/* ══════════════════════════════
+   RESULTS SCREEN
+══════════════════════════════ */
+#results-screen{padding:0 20px 80px;min-height:100vh;}
+.results-hero{
+  width:100%;text-align:center;padding:56px 0 40px;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,92,252,.12),transparent);
+  border-bottom:1px solid var(--border);margin-bottom:36px;
+}
+.res-eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.2em;color:var(--purple2);margin-bottom:12px;}
+.res-iq{
+  font-size:clamp(4rem,15vw,7rem);font-weight:700;line-height:1;letter-spacing:-.04em;
+  background:linear-gradient(135deg,#fff,var(--purple2),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:8px;
+}
+.res-band{font-size:1.5rem;font-weight:600;margin-bottom:10px;}
+.res-pct{font-family:var(--mono);font-size:.72rem;color:var(--text2);margin-bottom:14px;}
+.res-desc{font-size:.88rem;color:var(--text2);line-height:1.75;max-width:460px;margin:0 auto;}
+
+/* IQ gauge */
+.iq-gauge{width:300px;margin:28px auto 0;}
+.gauge-svg{overflow:visible;}
+.gauge-track{fill:none;stroke:var(--border);stroke-width:8;stroke-linecap:round;}
+.gauge-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1) .5s,stroke 1s .5s;}
+.gauge-needle{transition:transform 1.5s cubic-bezier(.4,0,.2,1) .5s;}
+
+/* Module breakdown */
+.section-title{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;color:var(--text3);text-transform:uppercase;margin-bottom:16px;}
+.breakdown{margin-bottom:36px;}
+.bd-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.bd-icon{font-size:1.1rem;width:28px;text-align:center;flex-shrink:0;}
+.bd-name{font-size:.84rem;font-weight:500;width:155px;flex-shrink:0;}
+.bd-bar-bg{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.bd-bar-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1);}
+.bd-score{font-family:var(--mono);font-size:.72rem;color:var(--text2);width:40px;text-align:right;flex-shrink:0;}
+.bd-grade{font-family:var(--mono);font-size:.68rem;padding:2px 8px;border-radius:20px;flex-shrink:0;font-weight:700;}
+
+/* Review accordion */
+.review{margin-bottom:36px;}
+.rv-item{border:1px solid var(--border);border-radius:10px;margin-bottom:6px;overflow:hidden;}
+.rv-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;transition:background .15s;}
+.rv-header:hover{background:var(--card);}
+.rv-num{font-family:var(--mono);font-size:.66rem;color:var(--text3);width:22px;flex-shrink:0;}
+.rv-mod{font-size:.72rem;color:var(--text2);flex-shrink:0;width:80px;}
+.rv-q{font-size:.84rem;flex:1;}
+.rv-badge{font-family:var(--mono);font-size:.64rem;padding:3px 9px;border-radius:20px;flex-shrink:0;font-weight:700;}
+.rv-badge.ok{background:rgba(0,255,157,.12);color:var(--green);}
+.rv-badge.bad{background:rgba(255,68,102,.12);color:var(--red);}
+.rv-badge.skip{background:var(--border);color:var(--text3);}
+.rv-expand{font-size:.7rem;color:var(--text3);flex-shrink:0;transition:transform .2s;}
+.rv-item.open .rv-expand{transform:rotate(180deg);}
+.rv-body{display:none;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg);}
+.rv-body.show{display:block;}
+.rv-exp{font-size:.8rem;color:var(--text2);line-height:1.65;}
+
+/* History */
+.hist{margin-bottom:36px;}
+.hist-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.hist-iq{font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--purple2);width:48px;flex-shrink:0;}
+.hist-band{font-size:.8rem;flex:1;}
+.hist-date{font-family:var(--mono);font-size:.68rem;color:var(--text3);}
+.hist-empty{font-size:.82rem;color:var(--text3);padding:12px 0;}
+
+.res-btns{display:flex;gap:10px;}
+.btn-retake{flex:1;padding:15px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--purple),var(--cyan));color:#fff;font-family:var(--serif);font-size:.92rem;font-weight:600;transition:all .15s;}
+.btn-retake:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(124,92,252,.4);}
+.btn-back-res{padding:15px 22px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--text2);font-family:var(--serif);font-size:.88rem;cursor:pointer;transition:all .15s;}
+.btn-back-res:hover{border-color:var(--text2);color:var(--text);}
+
+/* Animations */
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes confetti{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(120vh) rotate(720deg);opacity:0}}
+
+/* Responsive */
+@media(max-width:500px){
+  .opts.g4{grid-template-columns:1fr 1fr;}
+  .matrix-display{grid-template-columns:repeat(3,60px);}
+  .mat-cell{width:60px;height:60px;}
+  .mat-cell svg{width:44px;height:44px;}
+}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+
+<!-- ══ INTRO ══ -->
+<div id="intro-screen" class="screen active">
+  <svg class="brain-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="60" cy="60" r="55" fill="rgba(124,92,252,.08)" stroke="rgba(124,92,252,.3)" stroke-width="1.5"/>
+    <path d="M40 55 Q35 42 45 38 Q52 35 55 42 Q58 30 68 32 Q76 34 74 44 Q82 40 84 50 Q86 60 78 62 Q82 70 76 75 Q70 80 64 74 Q60 82 52 80 Q44 78 46 68 Q38 68 36 60 Q34 52 40 55Z" fill="rgba(124,92,252,.25)" stroke="var(--purple2)" stroke-width="1.5" stroke-linejoin="round"/>
+    <circle cx="55" cy="52" r="3" fill="var(--cyan)" opacity=".8"/>
+    <circle cx="67" cy="48" r="2.5" fill="var(--purple2)" opacity=".8"/>
+    <circle cx="72" cy="60" r="2" fill="var(--green)" opacity=".8"/>
+    <circle cx="62" cy="65" r="2.5" fill="var(--yellow)" opacity=".8"/>
+    <circle cx="50" cy="64" r="2" fill="var(--orange)" opacity=".8"/>
+    <line x1="55" y1="52" x2="67" y2="48" stroke="rgba(124,92,252,.4)" stroke-width="1"/>
+    <line x1="67" y1="48" x2="72" y2="60" stroke="rgba(0,212,255,.4)" stroke-width="1"/>
+    <line x1="72" y1="60" x2="62" y2="65" stroke="rgba(0,255,157,.4)" stroke-width="1"/>
+    <line x1="62" y1="65" x2="50" y2="64" stroke="rgba(255,209,102,.4)" stroke-width="1"/>
+    <line x1="50" y1="64" x2="55" y2="52" stroke="rgba(255,140,66,.4)" stroke-width="1"/>
+  </svg>
+  <div class="intro-logo">NEURON · COGNITIVE CHALLENGE</div>
+  <div class="intro-hero">
+    <h1>How Sharp<br>Is Your Mind?</h1>
+    <p>25 questions across 5 cognitive domains. Timed rounds. Score points. Discover your IQ profile.</p>
+  </div>
+  <div class="stats-row">
+    <div class="stat-pill"><div class="sn">25</div><div class="sl">Questions</div></div>
+    <div class="stat-pill"><div class="sn">5</div><div class="sl">Modules</div></div>
+    <div class="stat-pill"><div class="sn">~15</div><div class="sl">Minutes</div></div>
+  </div>
+  <div class="modules-list">
+    <div class="mod-item"><span class="mod-icon">🔷</span><div class="mod-info"><b>Pattern Recognition</b><span>Visual sequences and matrices</span></div><span class="mod-badge">5 Q</span></div>
+    <div class="mod-item"><span class="mod-icon">💬</span><div class="mod-info"><b>Verbal Reasoning</b><span>Analogies and word logic</span></div><span class="mod-badge">5 Q</span></div>
+    <div class="mod-item"><span class="mod-icon">🔄</span><div class="mod-info"><b>Spatial Reasoning</b><span>Rotation and reflection</span></div><span class="mod-badge">5 Q</span></div>
+    <div class="mod-item"><span class="mod-icon">🔢</span><div class="mod-info"><b>Numerical Logic</b><span>Sequences and number patterns</span></div><span class="mod-badge">5 Q</span></div>
+    <div class="mod-item"><span class="mod-icon">🧠</span><div class="mod-info"><b>Working Memory</b><span>Memorise and recall sequences</span></div><span class="mod-badge">5 Q</span></div>
+  </div>
+  <button class="btn-start" id="btn-start">Start the Challenge →</button>
+  <p class="intro-note">For entertainment purposes · Not a clinical diagnostic tool</p>
+</div>
+
+<!-- ══ GAME ══ -->
+<div id="game-screen" class="screen">
+  <div class="game-hud" id="game-hud">
+    <span class="hud-mod" id="hud-mod">Pattern Recognition</span>
+    <span class="hud-spacer"></span>
+    <span class="hud-score" id="hud-score">0 pts</span>
+    <span class="hud-q" id="hud-q">1/25</span>
+  </div>
+  <div class="xp-bar"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+  <div class="q-wrapper" id="q-wrapper"></div>
+  <div class="q-nav">
+    <div class="inner">
+      <button class="btn-skip-q" id="btn-skip">Skip</button>
+      <button class="btn-next-q" id="btn-next" disabled>Next Question →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RESULTS ══ -->
+<div id="results-screen" class="screen">
+  <div class="results-hero">
+    <div class="res-eyebrow">Assessment Complete</div>
+    <div class="res-iq" id="res-iq">—</div>
+    <div class="res-band" id="res-band">—</div>
+    <div class="res-pct" id="res-pct">—</div>
+    <p class="res-desc" id="res-desc">—</p>
+    <div class="iq-gauge">
+      <svg class="gauge-svg" viewBox="0 0 200 120" width="300" height="180">
+        <path class="gauge-track" d="M20 110 A80 80 0 0 1 180 110" />
+        <path class="gauge-fill" id="gauge-fill" d="M20 110 A80 80 0 0 1 180 110" stroke-dasharray="251.3" stroke-dashoffset="251.3"/>
+        <text x="100" y="75" text-anchor="middle" font-family="Space Mono" font-size="10" fill="#444466">60</text>
+        <text x="20" y="118" text-anchor="middle" font-family="Space Mono" font-size="9" fill="#444466">70</text>
+        <text x="180" y="118" text-anchor="middle" font-family="Space Mono" font-size="9" fill="#444466">145</text>
+        <text x="100" y="118" text-anchor="middle" font-family="Space Mono" font-size="9" fill="#444466">100</text>
+      </svg>
+    </div>
+  </div>
+  <div style="width:100%;">
+    <div class="section-title" style="margin-bottom:16px;">Module Breakdown</div>
+    <div class="breakdown" id="breakdown"></div>
+    <div class="section-title" style="margin-bottom:16px;">Question Review</div>
+    <div class="review" id="review"></div>
+    <div class="section-title" style="margin-bottom:16px;">History</div>
+    <div class="hist" id="hist"></div>
+    <div class="res-btns">
+      <button class="btn-retake" id="btn-retake">Play Again</button>
+      <button class="btn-back-res" id="btn-back-res">← Home</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// BACKGROUND PARTICLE SYSTEM
+// ══════════════════════════════════════════════════════════════
+(function(){
+  var c=document.getElementById('bg-canvas');
+  var ctx=c.getContext('2d');
+  var nodes=[];
+  function resize(){c.width=window.innerWidth;c.height=window.innerHeight;}
+  resize();window.addEventListener('resize',resize);
+  for(var i=0;i<60;i++){
+    nodes.push({x:Math.random()*c.width,y:Math.random()*c.height,
+      vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,
+      r:Math.random()*2+1,
+      col:['rgba(124,92,252,','rgba(0,212,255,','rgba(0,255,157,'][Math.floor(Math.random()*3)]});
+  }
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    // connections
+    for(var i=0;i<nodes.length;i++){
+      for(var j=i+1;j<nodes.length;j++){
+        var dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y;
+        var dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<120){
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x,nodes[i].y);
+          ctx.lineTo(nodes[j].x,nodes[j].y);
+          ctx.strokeStyle='rgba(124,92,252,'+(0.12*(1-dist/120))+')';
+          ctx.lineWidth=.5;ctx.stroke();
+        }
+      }
+    }
+    // nodes
+    nodes.forEach(function(n){
+      ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fillStyle=n.col+'.6)';ctx.fill();
+      n.x+=n.vx;n.y+=n.vy;
+      if(n.x<0||n.x>c.width)n.vx*=-1;
+      if(n.y<0||n.y>c.height)n.vy*=-1;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ══════════════════════════════════════════════════════════════
+// SHAPE HELPERS
+// ══════════════════════════════════════════════════════════════
+function svg(content){return '<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">'+content+'</svg>';}
+var S={
+  circle:function(c,r){c=c||'#eeeef8';r=r||22;return svg('<circle cx="30" cy="30" r="'+r+'" fill="'+c+'"/>');},
+  square:function(c,s){c=c||'#eeeef8';s=s||38;var o=(60-s)/2;return svg('<rect x="'+o+'" y="'+o+'" width="'+s+'" height="'+s+'" fill="'+c+'"/>');},
+  tri:function(c){c=c||'#eeeef8';return svg('<polygon points="30,6 56,54 4,54" fill="'+c+'"/>');},
+  diamond:function(c){c=c||'#eeeef8';return svg('<polygon points="30,4 56,30 30,56 4,30" fill="'+c+'"/>');},
+  hex:function(c){c=c||'#eeeef8';return svg('<polygon points="30,3 54,16 54,44 30,57 6,44 6,16" fill="'+c+'"/>');},
+  ring:function(c,r){c=c||'#eeeef8';r=r||22;return svg('<circle cx="30" cy="30" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="5"/>');},
+  sqring:function(c,s){c=c||'#eeeef8';s=s||38;var o=(60-s)/2;return svg('<rect x="'+o+'" y="'+o+'" width="'+s+'" height="'+s+'" fill="none" stroke="'+c+'" stroke-width="5"/>');},
+  triout:function(c){c=c||'#eeeef8';return svg('<polygon points="30,6 56,54 4,54" fill="none" stroke="'+c+'" stroke-width="5" stroke-linejoin="round"/>');},
+  cross:function(c){c=c||'#eeeef8';return svg('<rect x="24" y="6" width="12" height="48" fill="'+c+'"/><rect x="6" y="24" width="48" height="12" fill="'+c+'"/>');},
+  star:function(c){c=c||'#eeeef8';return svg('<polygon points="30,4 36,22 55,22 40,33 46,52 30,41 14,52 20,33 5,22 24,22" fill="'+c+'"/>');},
+};
+
+// ══════════════════════════════════════════════════════════════
+// QUESTION BANK
+// ══════════════════════════════════════════════════════════════
+var QS=[
+  // MODULE I — Pattern Recognition
+  {mod:'Pattern Recognition',icon:'🔷',w:1,
+   stem:'Which shape completes the sequence?',
+   instr:'Identify the repeating pattern.',
+   type:'seq',
+   seq:[S.circle(),S.square(),S.tri(),S.circle(),S.square(),'?'],
+   opts:[S.tri(),S.circle(),S.diamond(),S.square()],
+   answer:0,time:20,
+   expl:'The sequence cycles: circle → square → triangle. Position 6 = triangle.'},
+
+  {mod:'Pattern Recognition',icon:'🔷',w:1,
+   stem:'Select the missing cell in the matrix.',
+   instr:'Each row and column contains three different shapes.',
+   type:'matrix',
+   cells:[S.circle('#eeeef8'),S.square('#eeeef8'),S.tri('#eeeef8'),
+          S.circle('#7c5cfc'),S.square('#7c5cfc'),'?',
+          S.circle('#00d4ff'),S.square('#00d4ff'),S.tri('#00d4ff')],
+   opts:[S.tri('#7c5cfc'),S.tri('#eeeef8'),S.diamond('#7c5cfc'),S.circle('#7c5cfc')],
+   answer:0,time:25,
+   expl:'Row 2 has circle and square in purple. Missing shape = purple triangle.'},
+
+  {mod:'Pattern Recognition',icon:'🔷',w:2,
+   stem:'The shapes transform following a rule. What comes next?',
+   instr:'Each solid shape is followed by its outline.',
+   type:'seq',
+   seq:[S.circle(),S.ring(),S.square(),S.sqring(),'?'],
+   opts:[S.tri(),S.triout(),S.diamond(),S.hex()],
+   answer:1,time:22,
+   expl:'Pattern: filled shape → outline shape. After filled circle (ring), filled square (sqring), the next should be a filled triangle — but we already have filled. The next in the alternation after sqring is a NEW outline. Here: triout (triangle outline) follows.'},
+
+  {mod:'Pattern Recognition',icon:'🔷',w:2,
+   stem:'Which completes the size matrix?',
+   instr:'Sizes decrease top → bottom. Shapes stay consistent per column.',
+   type:'matrix',
+   cells:[S.circle('#eeeef8',24),S.square('#eeeef8',42),S.tri('#eeeef8'),
+          S.circle('#eeeef8',16),S.square('#eeeef8',28),'?',
+          S.circle('#eeeef8',8),S.square('#eeeef8',16),S.tri('#eeeef8')],
+   opts:[S.tri('#eeeef8'),S.diamond('#eeeef8'),S.circle('#eeeef8',10),S.star('#eeeef8')],
+   answer:0,time:25,
+   expl:'Column 3 is all triangles. Row 2 is medium sizes. The missing cell is a medium triangle.'},
+
+  {mod:'Pattern Recognition',icon:'🔷',w:3,
+   stem:'What is the missing shape in the grid?',
+   instr:'Each row contains each colour exactly once. Each column contains each shape exactly once.',
+   type:'matrix',
+   cells:[S.circle('#7c5cfc'),S.square('#00d4ff'),S.tri('#00ff9d'),
+          S.square('#00ff9d'),S.tri('#7c5cfc'),'?',
+          S.tri('#00d4ff'),S.circle('#00ff9d'),S.square('#7c5cfc')],
+   opts:[S.circle('#00d4ff'),S.circle('#7c5cfc'),S.diamond('#00d4ff'),S.ring('#00d4ff')],
+   answer:0,time:30,
+   expl:'Row 2 needs a circle (shapes: square ✓, triangle ✓, circle ?). Column 3 needs cyan (#00d4ff) — green and purple are taken. Answer: cyan circle.'},
+
+  // MODULE II — Verbal Reasoning
+  {mod:'Verbal Reasoning',icon:'💬',w:1,
+   stem:'Hot is to Cold as Day is to ___',
+   instr:'Choose the word that best completes the analogy.',
+   type:'analogy',pair:['Hot','Cold','Day','?'],
+   opts:['Night','Noon','Sun','Bright'],
+   answer:0,time:18,
+   expl:'Hot and Cold are antonyms. The antonym of Day is Night.'},
+
+  {mod:'Verbal Reasoning',icon:'💬',w:1,
+   stem:'Pen is to Writer as Scalpel is to ___',
+   instr:'The relationship is: tool → the person who uses it.',
+   type:'analogy',pair:['Pen','Writer','Scalpel','?'],
+   opts:['Hospital','Surgeon','Patient','Nurse'],
+   answer:1,time:18,
+   expl:'A pen is the primary tool of a writer. A scalpel is the primary tool of a surgeon.'},
+
+  {mod:'Verbal Reasoning',icon:'💬',w:2,
+   stem:'Fish is to School as Wolf is to ___',
+   instr:'This analogy is about collective nouns for animals.',
+   type:'analogy',pair:['Fish','School','Wolf','?'],
+   opts:['Pack','Herd','Flock','Pride'],
+   answer:0,time:20,
+   expl:'A group of fish = school. A group of wolves = pack. (Herd=cattle, Flock=birds, Pride=lions)'},
+
+  {mod:'Verbal Reasoning',icon:'💬',w:2,
+   stem:'Which word does NOT belong?',
+   instr:'Three words share a category. One does not.',
+   type:'odd',
+   words:['Crimson','Scarlet','Cobalt','Vermillion'],
+   opts:['Crimson','Scarlet','Cobalt','Vermillion'],
+   answer:2,time:20,
+   expl:'Crimson, Scarlet, and Vermillion are all shades of red. Cobalt is blue — the odd one out.'},
+
+  {mod:'Verbal Reasoning',icon:'💬',w:3,
+   stem:'Cartography is to Maps as Numismatics is to ___',
+   instr:'Both are fields of academic study.',
+   type:'analogy',pair:['Cartography','Maps','Numismatics','?'],
+   opts:['Numbers','Coins','Languages','Stars'],
+   answer:1,time:22,
+   expl:'Cartography = the study of maps. Numismatics = the study and collection of coins and currency.'},
+
+  // MODULE III — Spatial Reasoning
+  {mod:'Spatial Reasoning',icon:'🔄',w:1,
+   stem:'Which is the correct mirror image (left-right flip)?',
+   instr:'Select the horizontal reflection of the original.',
+   type:'spatial',
+   orig:svg('<polygon points="10,50 10,10 50,30" fill="#eeeef8"/>'),
+   opts:[svg('<polygon points="50,50 50,10 10,30" fill="#eeeef8"/>'),
+         svg('<polygon points="10,10 50,10 30,50" fill="#eeeef8"/>'),
+         svg('<polygon points="10,50 50,50 30,10" fill="#eeeef8"/>'),
+         svg('<polygon points="10,50 10,10 50,30" fill="#7c5cfc"/>')],
+   answer:0,time:20,
+   expl:'Horizontal mirror flips left↔right. The triangle pointing right becomes one pointing left.'},
+
+  {mod:'Spatial Reasoning',icon:'🔄',w:1,
+   stem:'Which shows the shape rotated 90° clockwise?',
+   instr:'Mentally rotate the entire figure 90° to the right.',
+   type:'spatial',
+   orig:svg('<rect x="10" y="22" width="40" height="16" fill="#eeeef8"/><circle cx="30" cy="22" r="8" fill="#7c5cfc"/>'),
+   opts:[svg('<rect x="22" y="10" width="16" height="40" fill="#eeeef8"/><circle cx="38" cy="30" r="8" fill="#7c5cfc"/>'),
+         svg('<rect x="10" y="22" width="40" height="16" fill="#eeeef8"/><circle cx="30" cy="38" r="8" fill="#7c5cfc"/>'),
+         svg('<rect x="22" y="10" width="16" height="40" fill="#eeeef8"/><circle cx="22" cy="30" r="8" fill="#7c5cfc"/>'),
+         svg('<rect x="10" y="22" width="40" height="16" fill="#eeeef8"/><circle cx="30" cy="22" r="8" fill="#00d4ff"/>')],
+   answer:0,time:22,
+   expl:'90° clockwise: horizontal bar → vertical, purple circle (top of bar) → right side of bar.'},
+
+  {mod:'Spatial Reasoning',icon:'🔄',w:2,
+   stem:'Which shows the shape flipped vertically (top-bottom)?',
+   instr:'A vertical flip mirrors the shape top-to-bottom.',
+   type:'spatial',
+   orig:svg('<polygon points="10,12 50,12 50,38 30,50 10,38" fill="#eeeef8"/>'),
+   opts:[svg('<polygon points="10,48 50,48 50,22 30,10 10,22" fill="#eeeef8"/>'),
+         svg('<polygon points="10,12 50,12 50,38 30,50 10,38" fill="#eeeef8" transform="scale(-1,1) translate(-60,0)"/>'),
+         svg('<polygon points="10,12 30,22 50,12 50,50 10,50" fill="#eeeef8"/>'),
+         svg('<polygon points="10,22 30,10 50,22 50,48 10,48" fill="#eeeef8"/>')],
+   answer:0,time:25,
+   expl:'Vertical flip: the flat top edge becomes the bottom, and the pointed bottom moves to the top.'},
+
+  {mod:'Spatial Reasoning',icon:'🔄',w:2,
+   stem:'After a 180° rotation, which option results?',
+   instr:'180° = flip both horizontally and vertically.',
+   type:'spatial',
+   orig:svg('<polygon points="30,8 52,28 44,52 16,52 8,28" fill="#eeeef8"/><circle cx="30" cy="24" r="6" fill="#7c5cfc"/>'),
+   opts:[svg('<polygon points="30,52 8,32 16,8 44,8 52,32" fill="#eeeef8"/><circle cx="30" cy="36" r="6" fill="#7c5cfc"/>'),
+         svg('<polygon points="30,8 52,28 44,52 16,52 8,28" fill="#eeeef8"/><circle cx="44" cy="28" r="6" fill="#7c5cfc"/>'),
+         svg('<polygon points="30,8 52,28 44,52 16,52 8,28" fill="#7c5cfc"/><circle cx="30" cy="24" r="6" fill="#eeeef8"/>'),
+         svg('<polygon points="30,52 8,32 16,8 44,8 52,32" fill="#eeeef8"/><circle cx="30" cy="24" r="6" fill="#7c5cfc"/>')],
+   answer:0,time:28,
+   expl:'180° rotation: the shape flips completely. Pentagon inverts, purple dot (top) moves to the bottom.'},
+
+  {mod:'Spatial Reasoning',icon:'🔄',w:3,
+   stem:'Which cube can be made from this unfolded net?',
+   instr:'Mentally fold all faces inward.',
+   type:'spatial',
+   orig:svg('<rect x="4" y="22" width="16" height="16" fill="#7c5cfc"/><rect x="20" y="22" width="16" height="16" fill="#00d4ff"/><rect x="36" y="22" width="16" height="16" fill="#ff4466"/><rect x="52" y="22" width="16" height="16" fill="#00ff9d"/><rect x="20" y="6" width="16" height="16" fill="#ffd166"/><rect x="20" y="38" width="16" height="16" fill="#444466"/>'),
+   opts:[svg('<rect x="5" y="5" width="50" height="50" fill="rgba(124,92,252,.15)" stroke="rgba(124,92,252,.5)" stroke-width="1.5"/><polygon points="5,5 55,5 55,55" fill="rgba(0,212,255,.25)"/><polygon points="5,5 5,55 55,55" fill="rgba(255,68,102,.25)"/><text x="30" y="34" text-anchor="middle" font-size="16" fill="#00ff9d">✓</text>'),
+        svg('<rect x="5" y="5" width="50" height="50" fill="rgba(255,68,102,.15)" stroke="rgba(255,68,102,.5)" stroke-width="1.5"/><polygon points="5,5 55,5 55,55" fill="rgba(124,92,252,.25)"/><polygon points="5,5 5,55 55,55" fill="rgba(255,209,102,.25)"/><text x="30" y="34" text-anchor="middle" font-size="16" fill="#ff4466">✗</text>'),
+        svg('<rect x="5" y="5" width="50" height="50" fill="rgba(0,255,157,.15)" stroke="rgba(0,255,157,.5)" stroke-width="1.5"/><polygon points="5,5 55,5 55,55" fill="rgba(68,68,102,.4)"/><polygon points="5,5 5,55 55,55" fill="rgba(0,212,255,.25)"/><text x="30" y="34" text-anchor="middle" font-size="16" fill="#ff4466">✗</text>'),
+        svg('<rect x="5" y="5" width="50" height="50" fill="rgba(255,209,102,.15)" stroke="rgba(255,209,102,.5)" stroke-width="1.5"/><polygon points="5,5 55,5 55,55" fill="rgba(0,255,157,.25)"/><polygon points="5,5 5,55 55,55" fill="rgba(124,92,252,.25)"/><text x="30" y="34" text-anchor="middle" font-size="16" fill="#ff4466">✗</text>')],
+   answer:0,time:35,
+   expl:'The net shows: purple, cyan, red, green faces in a row with yellow on top and grey on bottom. Only option A shows correct adjacent face relationships.'},
+
+  // MODULE IV — Numerical Logic
+  {mod:'Numerical Logic',icon:'🔢',w:1,
+   stem:'What is the next number?',
+   instr:'Find the rule and continue the series.',
+   type:'numseq',seq:[2,4,6,8,'?'],
+   opts:['10','9','12','11'],
+   answer:0,time:15,
+   expl:'+2 each step. After 8 comes 10.'},
+
+  {mod:'Numerical Logic',icon:'🔢',w:1,
+   stem:'What number completes the series?',
+   instr:'These are perfect squares.',
+   type:'numseq',seq:[1,4,9,16,'?'],
+   opts:['25','20','24','36'],
+   answer:0,time:18,
+   expl:'1²=1, 2²=4, 3²=9, 4²=16, 5²=25.'},
+
+  {mod:'Numerical Logic',icon:'🔢',w:2,
+   stem:'Find the missing number.',
+   instr:'Each term is multiplied by the same value.',
+   type:'numseq',seq:[3,6,12,24,'?'],
+   opts:['48','36','42','30'],
+   answer:0,time:18,
+   expl:'Each number doubles: ×2 each step. 24×2=48.'},
+
+  {mod:'Numerical Logic',icon:'🔢',w:2,
+   stem:'What number comes next?',
+   instr:'This is a well-known mathematical series.',
+   type:'numseq',seq:[2,3,5,8,13,'?'],
+   opts:['21','18','20','17'],
+   answer:0,time:20,
+   expl:'Fibonacci: each number = sum of previous two. 8+13=21.'},
+
+  {mod:'Numerical Logic',icon:'🔢',w:3,
+   stem:'Identify the missing value.',
+   instr:'Look carefully — the pattern is more complex.',
+   type:'numseq',seq:[1,1,2,6,24,'?'],
+   opts:['120','48','60','96'],
+   answer:0,time:25,
+   expl:'Factorials: 0!=1, 1!=1, 2!=2, 3!=6, 4!=24, 5!=120.'},
+
+  // MODULE V — Working Memory
+  {mod:'Working Memory',icon:'🧠',w:1,
+   stem:'Memorise the sequence, then recall it.',
+   instr:'You have 4 seconds. Type the numbers in order.',
+   type:'memory',items:[7,3,9],memSecs:4},
+
+  {mod:'Working Memory',icon:'🧠',w:1,
+   stem:'Remember these words in exact order.',
+   instr:'You have 5 seconds. Type them back separated by spaces.',
+   type:'memory',items:['APPLE','RIVER','CLOUD'],memSecs:5},
+
+  {mod:'Working Memory',icon:'🧠',w:2,
+   stem:'Memorise this 4-number sequence.',
+   instr:'5 seconds. Exact order required.',
+   type:'memory',items:[4,8,2,6],memSecs:5},
+
+  {mod:'Working Memory',icon:'🧠',w:2,
+   stem:'Remember these symbols in order.',
+   instr:'5 seconds. Type exactly as shown.',
+   type:'memory',items:['◆','○','▲','□'],memSecs:5},
+
+  {mod:'Working Memory',icon:'🧠',w:3,
+   stem:'Memorise this 5-item sequence.',
+   instr:'6 seconds. Every item and position must match.',
+   type:'memory',items:[3,7,1,9,4],memSecs:6},
+];
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+var ST={qi:0,score:0,answers:[],selected:null,feedbackShown:false,
+  memPhase:'idle',memTimer:null,
+  qTimerRaf:null,qTimerStart:0,qTimerDur:0,qTimeLeft:0,
+  timeBonusEarned:0};
+
+var STORE='neuron_iq_v1';
+function loadHist(){try{return JSON.parse(localStorage.getItem(STORE))||[];}catch(e){return[];}}
+function saveHist(e){var h=loadHist();h.unshift(e);if(h.length>10)h.splice(10);try{localStorage.setItem(STORE,JSON.stringify(h));}catch(x){}}
+
+/* Casebook progress (read by Arcadius Hub via the shared casebook map). */
+var CASEBOOK_ID='iq-test',CASEBOOK_KEY='chinook_casebook_v1';
+function _cbAll(){try{return JSON.parse(localStorage.getItem(CASEBOOK_KEY)||'{}');}catch(e){return{};}}
+function cbSave(patch){
+  var all=_cbAll();
+  var cur=all[CASEBOOK_ID]||{leadsLogged:0,totalLeads:25,falseTrails:0,startedAt:null,solvedAt:null,result:null};
+  all[CASEBOOK_ID]=Object.assign({},cur,patch,{totalLeads:25});
+  try{localStorage.setItem(CASEBOOK_KEY,JSON.stringify(all));}catch(x){}
+}
+function cbStart(){cbSave({leadsLogged:0,falseTrails:0,startedAt:Date.now(),solvedAt:null,result:null});}
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN
+// ══════════════════════════════════════════════════════════════
+function show(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+}
+function stopAllTimers(){
+  if(ST.qTimerRaf){cancelAnimationFrame(ST.qTimerRaf);ST.qTimerRaf=null;}
+  if(ST.memTimer){clearTimeout(ST.memTimer);ST.memTimer=null;}
+}
+
+// ══════════════════════════════════════════════════════════════
+// BEGIN
+// ══════════════════════════════════════════════════════════════
+function beginTest(){
+  stopAllTimers();
+  ST={qi:0,score:0,answers:[],selected:null,feedbackShown:false,
+    memPhase:'idle',memTimer:null,qTimerRaf:null,qTimerStart:0,qTimerDur:0,qTimeLeft:0,timeBonusEarned:0};
+  cbStart();
+  show('game-screen');
+  showModuleBanner(0);
+}
+
+function showModuleBanner(modIdx){
+  var mods=['Pattern Recognition','Verbal Reasoning','Spatial Reasoning','Numerical Logic','Working Memory'];
+  var icons=['🔷','💬','🔄','🔢','🧠'];
+  var descs=[
+    'Find the missing piece in visual patterns and matrices.',
+    'Solve word analogies and identify the odd one out.',
+    'Mentally rotate and reflect shapes.',
+    'Discover the rule in number sequences.',
+    'Memorise sequences and recall them exactly.'
+  ];
+  var html='<div class="module-banner">';
+  html+='<span class="mb-icon">'+icons[modIdx]+'</span>';
+  html+='<div class="mb-num">MODULE '+(modIdx+1)+' OF 5</div>';
+  html+='<div class="mb-title">'+mods[modIdx]+'</div>';
+  html+='<p class="mb-desc">'+descs[modIdx]+'</p>';
+  html+='<button class="btn-module-go" id="btn-module-go">Let\'s Go →</button>';
+  html+='</div>';
+  document.getElementById('q-wrapper').innerHTML=html;
+  document.getElementById('hud-mod').textContent=mods[modIdx];
+  document.getElementById('btn-next').disabled=true;
+  document.getElementById('btn-skip').style.display='none';
+  document.getElementById('btn-module-go').addEventListener('click',function(){renderQ();});
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER QUESTION
+// ══════════════════════════════════════════════════════════════
+var MOD_NAMES=['Pattern Recognition','Verbal Reasoning','Spatial Reasoning','Numerical Logic','Working Memory'];
+
+function renderQ(){
+  var qi=ST.qi, q=QS[qi];
+  ST.selected=null;ST.feedbackShown=false;ST.memPhase='idle';
+
+  // HUD
+  document.getElementById('hud-mod').textContent=q.mod;
+  document.getElementById('hud-score').textContent=ST.score.toLocaleString()+' pts';
+  document.getElementById('hud-q').textContent=(qi+1)+'/'+QS.length;
+  document.getElementById('xp-fill').style.width=Math.round((qi/QS.length)*100)+'%';
+  document.getElementById('btn-next').disabled=true;
+  document.getElementById('btn-next').textContent='Next Question →';
+  document.getElementById('btn-skip').style.display='';
+
+  var dots='';
+  for(var d=0;d<3;d++) dots+='<span class="'+(d<q.w?'on':'')+'"></span>';
+
+  var html='<div class="q-card">';
+  html+='<div class="q-header">';
+  html+='<span class="q-type-badge">'+q.mod+'</span>';
+  html+='<span class="q-diff">'+dots+'</span>';
+  html+='</div>';
+
+  // Timer
+  var timeSecs=q.time||20;
+  html+='<div class="timer-wrap">';
+  html+='<svg class="timer-svg" width="72" height="72" viewBox="0 0 72 72">';
+  html+='<circle class="timer-track" cx="36" cy="36" r="30"/>';
+  html+='<circle class="timer-arc" id="timer-arc" cx="36" cy="36" r="30"/>';
+  html+='</svg>';
+  html+='<div class="timer-num" id="timer-num">'+timeSecs+'</div>';
+  html+='<div class="timer-pts" id="timer-pts">pts available</div>';
+  html+='</div>';
+
+  html+='<div class="q-stem">'+q.stem+'</div>';
+  html+='<div class="q-instr">'+q.instr+'</div>';
+
+  if(q.type==='seq') html+=buildSeq(q);
+  else if(q.type==='matrix') html+=buildMatrix(q);
+  else if(q.type==='analogy') html+=buildAnalogy(q);
+  else if(q.type==='odd') html+=buildOdd(q);
+  else if(q.type==='numseq') html+=buildNumSeq(q);
+  else if(q.type==='spatial') html+=buildSpatial(q);
+  else if(q.type==='memory') html+=buildMemory(q);
+
+  html+='</div>';
+  document.getElementById('q-wrapper').innerHTML=html;
+
+  startQTimer(timeSecs);
+  if(q.type==='memory') startMemPhase(q);
+}
+
+function buildSeq(q){
+  var h='<div class="seq-display">';
+  for(var i=0;i<q.seq.length;i++){
+    if(q.seq[i]==='?') h+='<div class="seq-cell is-q">?</div>';
+    else h+='<div class="seq-cell">'+q.seq[i]+'</div>';
+    if(i<q.seq.length-1) h+='<span class="seq-arrow">›</span>';
+  }
+  h+='</div>';
+  return h+buildShapeOpts(q.opts);
+}
+function buildNumSeq(q){
+  var h='<div class="seq-display">';
+  for(var i=0;i<q.seq.length;i++){
+    if(q.seq[i]==='?') h+='<span class="seq-num is-q">?</span>';
+    else h+='<span class="seq-num">'+q.seq[i]+'</span>';
+    if(i<q.seq.length-1) h+='<span class="seq-arrow" style="margin:0 2px">·</span>';
+  }
+  h+='</div>';
+  return h+buildTextOpts(q.opts);
+}
+function buildMatrix(q){
+  var h='<div class="matrix-display">';
+  for(var i=0;i<q.cells.length;i++){
+    if(q.cells[i]==='?') h+='<div class="mat-cell is-q">?</div>';
+    else h+='<div class="mat-cell">'+q.cells[i]+'</div>';
+  }
+  return h+'</div>'+buildShapeOpts(q.opts);
+}
+function buildAnalogy(q){
+  var h='<div class="analogy-display">'+
+    '<span class="an-word">'+q.pair[0]+'</span>'+
+    '<span class="an-rel">is to</span>'+
+    '<span class="an-word">'+q.pair[1]+'</span>'+
+    '<span class="an-rel">&nbsp;as&nbsp;</span>'+
+    '<span class="an-word">'+q.pair[2]+'</span>'+
+    '<span class="an-rel">is to</span>'+
+    '<span class="an-blank">?</span>'+
+  '</div>';
+  return h+buildTextOpts(q.opts);
+}
+function buildOdd(q){return buildTextOpts(q.opts);}
+function buildSpatial(q){
+  var h='<div class="spatial-display"><div class="sp-label">Original figure</div>';
+  h+='<div class="sp-fig">'+q.orig+'</div></div>';
+  if(typeof q.opts[0]==='string'&&q.opts[0].indexOf('<svg')===0)
+    return h+buildShapeOpts(q.opts);
+  return h+buildTextOpts(q.opts);
+}
+function buildShapeOpts(opts){
+  var h='<div class="opts g4">';
+  var ltrs=['A','B','C','D'];
+  for(var i=0;i<opts.length;i++){
+    h+='<button class="opt" data-idx="'+i+'"><span class="opt-key">'+ltrs[i]+'</span>';
+    h+='<div class="opt-fig">'+opts[i]+'</div>';
+    h+='<span class="opt-check"></span></button>';
+  }
+  return h+'</div>';
+}
+function buildTextOpts(opts){
+  var h='<div class="opts g2">';
+  var ltrs=['A','B','C','D'];
+  for(var i=0;i<opts.length;i++){
+    h+='<button class="opt" data-idx="'+i+'"><span class="opt-key">'+ltrs[i]+'</span>'+opts[i];
+    h+='<span class="opt-check" style="margin-left:auto"></span></button>';
+  }
+  return h+'</div>';
+}
+function buildMemory(q){
+  var h='<div class="mem-box" id="mem-box">';
+  h+='<div class="mem-label" id="mem-label">Memorise — <span id="mem-cd">'+q.memSecs+'</span>s</div>';
+  h+='<div class="mem-items-row" id="mem-items">';
+  for(var i=0;i<q.items.length;i++)
+    h+='<div class="mem-chip" id="mc-'+i+'">'+q.items[i]+'</div>';
+  h+='</div></div>';
+  h+='<div class="recall-area" id="recall-area">';
+  h+='<p>Type the items in order (spaces between them):</p>';
+  h+='<input class="recall-input" id="recall-inp" type="text" autocomplete="off" placeholder="'+q.items.join(' ')+'"/>';
+  h+='</div>';
+  return h;
+}
+
+// ══════════════════════════════════════════════════════════════
+// Q TIMER
+// ══════════════════════════════════════════════════════════════
+function startQTimer(secs){
+  stopAllTimers();
+  ST.qTimerDur=secs;ST.qTimerStart=performance.now();ST.qTimeLeft=secs;
+  var circ=188.5;
+  function tick(now){
+    ST.qTimeLeft=Math.max(0,ST.qTimerDur-(now-ST.qTimerStart)/1000);
+    var frac=ST.qTimeLeft/ST.qTimerDur;
+    var arc=document.getElementById('timer-arc');
+    var num=document.getElementById('timer-num');
+    var pts=document.getElementById('timer-pts');
+    if(arc){
+      arc.style.strokeDashoffset=circ*(1-frac);
+      var col=frac>.5?'#00d4ff':frac>.25?'#ffd166':'#ff4466';
+      arc.style.stroke=col;
+      if(num){num.textContent=Math.ceil(ST.qTimeLeft);num.style.color=col;}
+      var ptsNow=calcTimeBonus();
+      if(pts) pts.textContent='+'+ptsNow+' pts';
+    }
+    if(ST.qTimeLeft<=0){onQTimeout();return;}
+    ST.qTimerRaf=requestAnimationFrame(tick);
+  }
+  ST.qTimerRaf=requestAnimationFrame(tick);
+}
+function stopQTimer(){if(ST.qTimerRaf){cancelAnimationFrame(ST.qTimerRaf);ST.qTimerRaf=null;}}
+function calcTimeBonus(){return Math.floor(ST.qTimeLeft*(QS[ST.qi].w||1)*8);}
+
+function onQTimeout(){
+  if(ST.feedbackShown||ST.memPhase==='show') return;
+  if(ST.memPhase==='recall'){
+    var inp=document.getElementById('recall-inp');
+    if(inp) processMemRecall();
+    return;
+  }
+  // Timed out — reveal correct and penalise
+  stopQTimer();
+  ST.answers.push({qi:ST.qi,chosen:null,correct:false,timeout:true});
+  ST.feedbackShown=true;
+  revealOpts(QS[ST.qi],-1);
+  showQFeedback(QS[ST.qi],false,0,'⏰ Time\'s up! No points awarded.');
+  document.getElementById('btn-next').disabled=false;
+  document.getElementById('btn-skip').style.display='none';
+}
+
+// ══════════════════════════════════════════════════════════════
+// SELECTION (event delegation)
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('click',function(e){
+  var opt=e.target.closest('.opt');
+  if(!opt) return;
+  if(ST.feedbackShown) return;
+  if(ST.memPhase==='show') return;
+  var idx=parseInt(opt.getAttribute('data-idx'));
+  if(isNaN(idx)) return;
+  ST.selected=idx;
+  document.querySelectorAll('.opt').forEach(function(b){b.classList.remove('selected');});
+  opt.classList.add('selected');
+  stopQTimer();
+  var q=QS[ST.qi];
+  var correct=(idx===q.answer);
+  var bonus=calcTimeBonus();
+  var pts=correct?(q.w*100+bonus):0;
+  if(correct) ST.score+=pts;
+  ST.answers.push({qi:ST.qi,chosen:idx,correct:correct,pts:pts});
+  ST.feedbackShown=true;
+  revealOpts(q,idx);
+  showQFeedback(q,correct,pts,null);
+  if(correct) spawnScorePopup('+'+pts, opt);
+  document.getElementById('btn-next').disabled=false;
+  document.getElementById('btn-skip').style.display='none';
+  document.getElementById('hud-score').textContent=ST.score.toLocaleString()+' pts';
+});
+
+function revealOpts(q,chosen){
+  document.querySelectorAll('.opt').forEach(function(b){
+    b.classList.add('locked');
+    var i=parseInt(b.getAttribute('data-idx'));
+    var check=b.querySelector('.opt-check');
+    if(i===q.answer){b.classList.add('correct');if(check)check.textContent='✓';}
+    else if(i===chosen&&chosen!==q.answer){b.classList.add('wrong');if(check)check.textContent='✗';}
+  });
+}
+
+function showQFeedback(q,correct,pts,customMsg){
+  var card=document.querySelector('.q-card');
+  if(!card)return;
+  var fb=document.createElement('div');
+  fb.className='q-feedback '+(correct?'ok':'bad');
+  var ptsStr=pts>0?'<span class="pts-pop ok">+'+pts+' pts</span>':'<span class="pts-pop bad">+0</span>';
+  var icon=correct?'✅':'❌';
+  var title=correct?'Correct!':'Incorrect';
+  if(customMsg){title='⏰ Time\'s up';ptsStr='';}
+  var exp=q.expl||customMsg||'';
+  fb.innerHTML='<div class="fb-row"><span class="fb-icon">'+icon+'</span><span class="fb-title">'+title+'</span>'+ptsStr+'</div>'+
+    '<div class="fb-exp">'+exp+'</div>';
+  card.appendChild(fb);
+}
+
+// ══════════════════════════════════════════════════════════════
+// MEMORY PHASE
+// ══════════════════════════════════════════════════════════════
+function startMemPhase(q){
+  stopQTimer();
+  ST.memPhase='show';
+  document.getElementById('btn-next').disabled=true;
+  document.getElementById('btn-skip').style.display='none';
+  var countdown=q.memSecs;
+  function tick(){
+    countdown--;
+    var el=document.getElementById('mem-cd');
+    if(el) el.textContent=countdown;
+    if(countdown<=0){
+      // Hide chips
+      for(var i=0;i<q.items.length;i++){
+        var chip=document.getElementById('mc-'+i);
+        if(chip) chip.classList.add('hide');
+      }
+      var box=document.getElementById('mem-box');
+      var ra=document.getElementById('recall-area');
+      var lbl=document.getElementById('mem-label');
+      setTimeout(function(){
+        if(box) box.style.display='none';
+        if(ra){ra.style.display='block';}
+        var inp=document.getElementById('recall-inp');
+        if(inp){
+          inp.focus();
+          inp.addEventListener('input',function(){
+            document.getElementById('btn-next').disabled=false;
+          });
+        }
+        ST.memPhase='recall';
+        startQTimer(30);
+      },600);
+    } else {
+      ST.memTimer=setTimeout(tick,1000);
+    }
+  }
+  ST.memTimer=setTimeout(tick,1000);
+}
+
+function processMemRecall(){
+  stopQTimer();
+  if(ST.feedbackShown) return;
+  var q=QS[ST.qi];
+  var inp=document.getElementById('recall-inp');
+  var raw=(inp?inp.value:'').trim().toUpperCase().replace(/,/g,' ').split(/\s+/).filter(Boolean);
+  var expected=q.items.map(function(x){return String(x).toUpperCase();});
+  var correct=raw.length===expected.length&&raw.every(function(v,i){return v===expected[i];});
+  var pts=correct?(q.w*100):0;
+  if(correct) ST.score+=pts;
+  ST.answers.push({qi:ST.qi,chosen:raw.join(' '),correct:correct,pts:pts});
+  ST.feedbackShown=true;
+  var card=document.querySelector('.q-card');
+  if(card){
+    var fb=document.createElement('div');
+    fb.className='q-feedback '+(correct?'ok':'bad');
+    var icon=correct?'✅':'❌';
+    var title=correct?'Perfect recall!':'Incorrect recall';
+    var exp=correct?'You remembered the sequence exactly.':
+      'You entered: <strong>'+(raw.join(' ')||'(nothing)')+'</strong><br>Expected: <strong>'+expected.join(' ')+'</strong>';
+    var ptsStr=pts>0?'<span class="pts-pop ok">+'+pts+' pts</span>':'<span class="pts-pop bad">+0</span>';
+    fb.innerHTML='<div class="fb-row"><span class="fb-icon">'+icon+'</span><span class="fb-title">'+title+'</span>'+ptsStr+'</div>'+
+      '<div class="fb-exp">'+exp+'</div>';
+    card.appendChild(fb);
+  }
+  document.getElementById('btn-next').disabled=false;
+  document.getElementById('hud-score').textContent=ST.score.toLocaleString()+' pts';
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCORE POPUP
+// ══════════════════════════════════════════════════════════════
+function spawnScorePopup(text,nearEl){
+  var popup=document.createElement('div');
+  popup.className='score-popup';
+  popup.textContent=text;
+  popup.style.color='var(--green)';
+  var rect=nearEl?nearEl.getBoundingClientRect():{top:300,left:300};
+  popup.style.left=(rect.left+rect.width/2-20)+'px';
+  popup.style.top=(rect.top+window.scrollY-10)+'px';
+  document.body.appendChild(popup);
+  setTimeout(function(){popup.remove();},1200);
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function nextQ(){
+  var q=QS[ST.qi];
+  if(q.type==='memory'&&ST.memPhase==='recall'&&!ST.feedbackShown){
+    processMemRecall();
+    document.getElementById('btn-next').textContent='Continue →';
+    return;
+  }
+  stopAllTimers();
+  if(!ST.feedbackShown&&!ST.answers.find(function(a){return a.qi===ST.qi;})){
+    ST.answers.push({qi:ST.qi,chosen:null,correct:false,skipped:true});
+  }
+  ST.qi++;
+  if(ST.qi>=QS.length){endTest();return;}
+  // Module boundary?
+  var prev=QS[ST.qi-1],curr=QS[ST.qi];
+  if(prev.mod!==curr.mod){
+    var mIdx=MOD_NAMES.indexOf(curr.mod);
+    showModuleBanner(mIdx);
+  } else {
+    ST.feedbackShown=false;ST.selected=null;ST.memPhase='idle';
+    renderQ();
+  }
+}
+
+function skipQ(){
+  stopAllTimers();
+  ST.answers.push({qi:ST.qi,chosen:null,correct:false,skipped:true});
+  ST.qi++;
+  if(ST.qi>=QS.length){endTest();return;}
+  var prev=QS[ST.qi-1],curr=QS[ST.qi];
+  if(prev.mod!==curr.mod){showModuleBanner(MOD_NAMES.indexOf(curr.mod));}
+  else{ST.feedbackShown=false;ST.selected=null;ST.memPhase='idle';renderQ();}
+}
+
+// ══════════════════════════════════════════════════════════════
+// END TEST + SCORING
+// ══════════════════════════════════════════════════════════════
+function endTest(){
+  stopAllTimers();
+  document.getElementById('xp-fill').style.width='100%';
+
+  // Module scores
+  var mScores={},mMax={};
+  MOD_NAMES.forEach(function(m){mScores[m]=0;mMax[m]=0;});
+  QS.forEach(function(q,i){
+    var mx=q.w*100;mMax[q.mod]+=mx;
+    var ans=ST.answers.find(function(a){return a.qi===i;});
+    if(ans&&ans.correct) mScores[q.mod]+=(ans.pts||mx);
+  });
+
+  var totalEarned=0,totalMax=0;
+  MOD_NAMES.forEach(function(m){totalEarned+=mScores[m];totalMax+=mMax[m];});
+  var pct=totalEarned/totalMax;
+
+  // IQ map (conservative)
+  var iq;
+  if(pct<0.33)      iq=Math.round(72+(pct/0.33)*18);
+  else if(pct<0.50) iq=Math.round(90+((pct-.33)/.17)*10);
+  else if(pct<0.67) iq=Math.round(100+((pct-.50)/.17)*10);
+  else if(pct<0.80) iq=Math.round(110+((pct-.67)/.13)*10);
+  else if(pct<0.92) iq=Math.round(120+((pct-.80)/.12)*10);
+  else              iq=Math.round(130+((pct-.92)/.08)*12);
+
+  var BANDS=[
+    {min:130,label:'Very Superior',col:'#ffd166',pctile:'Top 2%',
+     desc:'Exceptional abstract reasoning and pattern acquisition across all five domains. Performance at this level is rare in the general population.'},
+    {min:120,label:'Superior',col:'#00ff9d',pctile:'Top 9%',
+     desc:'Strong analytical ability and above-average reasoning. Consistently outperforms the majority of the general population.'},
+    {min:110,label:'High Average',col:'#00d4ff',pctile:'Top 25%',
+     desc:'Well-developed reasoning skills across most domains, comfortably above the population mean.'},
+    {min:90, label:'Average',col:'#a78bfa',pctile:'Middle 50%',
+     desc:'Consistent with typical cognitive functioning across the five measured domains.'},
+    {min:80, label:'Low Average',col:'#ff8c42',pctile:'Bottom 25%',
+     desc:'Some domains show solid performance while others present room for development.'},
+    {min:0,  label:'Below Average',col:'#ff4466',pctile:'Bottom 9%',
+     desc:'Difficulty with the reasoning tasks assessed. Consider this a learning baseline and try again.'},
+  ];
+  var band=BANDS.find(function(b){return iq>=b.min;});
+
+  document.getElementById('res-iq').textContent=iq;
+  document.getElementById('res-band').textContent=band.label;
+  document.getElementById('res-band').style.color=band.col;
+  document.getElementById('res-pct').textContent=band.pctile+' · '+Math.round(pct*100)+'% accuracy · '+ST.score.toLocaleString()+' points';
+  document.getElementById('res-desc').textContent=band.desc;
+
+  // Animate gauge
+  var gaugePct=Math.max(0,Math.min(1,(iq-70)/75));
+  setTimeout(function(){
+    var gf=document.getElementById('gauge-fill');
+    if(gf){gf.style.strokeDashoffset=(251.3*(1-gaugePct));gf.style.stroke=band.col;}
+  },300);
+
+  // Breakdown
+  var MOD_ICONS=['🔷','💬','🔄','🔢','🧠'];
+  var bdHtml='';
+  MOD_NAMES.forEach(function(m,mi){
+    var sc=mScores[m]||0,mx=mMax[m]||1;
+    var p=Math.round((sc/mx)*100);
+    var gcol=p>=80?'#00ff9d':p>=60?'#00d4ff':p>=40?'#ffd166':'#ff4466';
+    var glabel=p>=80?'Excellent':p>=60?'Strong':p>=40?'Fair':'Weak';
+    bdHtml+='<div class="bd-row">'+
+      '<span class="bd-icon">'+MOD_ICONS[mi]+'</span>'+
+      '<span class="bd-name">'+m+'</span>'+
+      '<div class="bd-bar-bg"><div class="bd-bar-fill" id="bdf-'+mi+'" style="width:0%;background:'+gcol+'"></div></div>'+
+      '<span class="bd-score">'+p+'%</span>'+
+      '<span class="bd-grade" style="color:'+gcol+';background:'+gcol+'1a">'+glabel+'</span>'+
+    '</div>';
+  });
+  document.getElementById('breakdown').innerHTML=bdHtml;
+  setTimeout(function(){
+    MOD_NAMES.forEach(function(m,mi){
+      var sc=mScores[m]||0,mx=mMax[m]||1;
+      var p=Math.round((sc/mx)*100);
+      var el=document.getElementById('bdf-'+mi);
+      if(el) el.style.width=p+'%';
+    });
+  },400);
+
+  // Review accordion
+  var rvHtml='';
+  QS.forEach(function(q,i){
+    var ans=ST.answers.find(function(a){return a.qi===i;});
+    var cls='skip',label='SKIPPED';
+    if(ans&&ans.correct){cls='ok';label='✓ CORRECT';}
+    else if(ans&&!ans.correct&&!ans.skipped&&!ans.timeout){cls='bad';label='✗ WRONG';}
+    else if(ans&&ans.timeout){cls='bad';label='⏰ TIMEOUT';}
+    rvHtml+='<div class="rv-item" data-qi="'+i+'">'+
+      '<div class="rv-header">'+
+        '<span class="rv-num">'+(i+1)+'</span>'+
+        '<span class="rv-mod">'+q.mod.split(' ')[0]+'</span>'+
+        '<span class="rv-q">'+q.stem+'</span>'+
+        '<span class="rv-badge '+cls+'">'+label+'</span>'+
+        '<span class="rv-expand">▾</span>'+
+      '</div>'+
+      '<div class="rv-body" id="rvb-'+i+'">'+
+        '<div class="rv-exp">'+(q.expl||'No explanation available.')+'</div>'+
+      '</div>'+
+    '</div>';
+  });
+  document.getElementById('review').innerHTML=rvHtml;
+
+  // History
+  var entry={iq:iq,band:band.label,score:ST.score,acc:Math.round(pct*100),date:new Date().toISOString()};
+  saveHist(entry);
+
+  // Casebook record (read by the hub watcher)
+  cbSave({leadsLogged:25,solvedAt:Date.now(),result:iq,band:band.label,accuracy:Math.round(pct*100)});
+  var h=loadHist();
+  var histHtml='';
+  if(!h.length) histHtml='<div class="hist-empty">No history yet.</div>';
+  else h.forEach(function(e,i){
+    var d=new Date(e.date);
+    var ds=d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'2-digit'});
+    histHtml+='<div class="hist-row">'+
+      '<span class="hist-iq">'+e.iq+'</span>'+
+      '<span class="hist-band">'+e.band+'<br><span style="font-size:.72rem;color:var(--text3)">'+e.acc+'% accuracy</span></span>'+
+      '<span class="hist-date">'+ds+'</span>'+
+    '</div>';
+  });
+  document.getElementById('hist').innerHTML=histHtml;
+
+  // Confetti for high scores
+  if(iq>=120) spawnConfetti();
+
+  show('results-screen');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ══════════════════════════════════════════════════════════════
+// CONFETTI
+// ══════════════════════════════════════════════════════════════
+function spawnConfetti(){
+  var cols=['#7c5cfc','#00d4ff','#00ff9d','#ffd166','#ff8c42','#ff4466'];
+  for(var i=0;i<60;i++){
+    setTimeout((function(ci){
+      return function(){
+        var el=document.createElement('div');
+        el.style.cssText='position:fixed;top:-20px;left:'+(Math.random()*100)+'vw;'+
+          'width:'+(6+Math.random()*8)+'px;height:'+(8+Math.random()*12)+'px;'+
+          'background:'+cols[Math.floor(Math.random()*cols.length)]+';'+
+          'border-radius:2px;pointer-events:none;z-index:9999;'+
+          'animation:confetti '+(1.5+Math.random()*2)+'s ease '+(Math.random()*.5)+'s forwards;';
+        document.body.appendChild(el);
+        setTimeout(function(){el.remove();},4000);
+      };
+    })(i), i*40);
+  }
+}
+
+// Review accordion
+document.addEventListener('click',function(e){
+  var hdr=e.target.closest('.rv-header');
+  if(!hdr) return;
+  var item=hdr.closest('.rv-item');
+  var qi=item.getAttribute('data-qi');
+  var body=document.getElementById('rvb-'+qi);
+  var isOpen=item.classList.contains('open');
+  item.classList.toggle('open',!isOpen);
+  if(body) body.classList.toggle('show',!isOpen);
+});
+
+// ══════════════════════════════════════════════════════════════
+// BUTTON WIRING
+// ══════════════════════════════════════════════════════════════
+document.getElementById('btn-start').addEventListener('click',beginTest);
+document.getElementById('btn-next').addEventListener('click',nextQ);
+document.getElementById('btn-skip').addEventListener('click',skipQ);
+document.getElementById('btn-retake').addEventListener('click',beginTest);
+document.getElementById('btn-back-res').addEventListener('click',function(){show('intro-screen');});
+
+// add confetti keyframe
+var style=document.createElement('style');
+style.textContent='@keyframes confetti{0%{transform:translateY(0) rotate(0) scale(1);opacity:1}100%{transform:translateY(105vh) rotate('+720+'deg) scale(.5);opacity:0}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>

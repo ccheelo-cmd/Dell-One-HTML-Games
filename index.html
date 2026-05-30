@@ -713,7 +713,7 @@
     <button class="tab active" data-panel="games">Games</button>
     <button class="tab" data-panel="leaderboard">Leaderboard</button>
     <button class="tab" data-panel="totals">Total Score</button>
-    <button class="tab" data-panel="casebook">Casebook</button>
+    <button class="tab" data-panel="casebook">The Long Game</button>
   </div>
 
   <!-- Games panel -->
@@ -729,8 +729,8 @@
 
     <div class="casebook-section">
       <div class="casebook-head">
-        <div class="casebook-title">The Casebook</div>
-        <div class="casebook-sub">Long-form SQL investigations. One sitting, one solution — race the clock.</div>
+        <div class="casebook-title">The Long Game</div>
+        <div class="casebook-sub">Deeper challenges for one sitting. Climb the boards by time or by score.</div>
       </div>
       <div class="casebook-grid" id="casebook-grid"></div>
     </div>
@@ -796,30 +796,22 @@
   <div class="panel" id="panel-casebook">
     <div style="margin-bottom: 24px; padding: 16px; background: rgba(158,38,28,0.10); border: 1px solid rgba(158,38,28,0.35); border-radius: 8px;">
       <div style="font-size: 13px; color: var(--muted); line-height: 1.6;">
-        <strong style="color: var(--text);">The Casebook</strong> is its own league.
-        Cases are bounded investigations with a single solution — they're <strong>not</strong> in the
-        Total Score table. Ranking here is by <strong>solve time</strong> (faster = better);
-        false trails are shown but don't affect rank. Scores are kept locally per browser.
+        <strong style="color: var(--text);">The Long Game</strong> is its own league.
+        These are bounded challenges — they're <strong>not</strong> in the Total Score table.
+        Ranking depends on the challenge: SQL casefiles rank by solve time (faster = better),
+        the IQ Test ranks by best result. Scores are kept locally per browser.
       </div>
     </div>
     <div class="cb-tabs" id="cb-tabs"></div>
     <div class="lb-controls">
       <div style="color:var(--muted);font-size:13px;letter-spacing:1px;">
-        Fastest solvers per case
+        Best results per challenge
       </div>
-      <button class="clear-btn" id="clear-casebook">Clear Casebook Scores</button>
+      <button class="clear-btn" id="clear-casebook">Clear Scores</button>
     </div>
     <div class="lb-table-wrap">
       <table class="lb-table cb-table">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Player</th>
-            <th>Solve Time</th>
-            <th>False Trails</th>
-            <th>Date</th>
-          </tr>
-        </thead>
+        <thead id="cb-head"></thead>
         <tbody id="cb-body"></tbody>
       </table>
     </div>
@@ -995,6 +987,28 @@ const SVG = {
     <rect x="18" y="62" width="20" height="20" fill="#00ffe5"/>
     <rect x="40" y="62" width="20" height="20" fill="#00ffe5"/>
     <rect x="62" y="62" width="20" height="20" fill="rgba(255,255,255,0.18)"/>
+  </svg>`,
+
+  cellChase: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" stroke="#fff" stroke-width="2.2" fill="none">
+    <rect x="14" y="14" width="22" height="22" rx="3" fill="rgba(255,255,255,0.10)"/>
+    <rect x="40" y="14" width="22" height="22" rx="3" fill="rgba(255,255,255,0.10)"/>
+    <rect x="66" y="14" width="22" height="22" rx="3" fill="rgba(255,255,255,0.10)"/>
+    <rect x="14" y="40" width="22" height="22" rx="3" fill="rgba(255,255,255,0.10)"/>
+    <rect x="40" y="40" width="22" height="22" rx="3" fill="#4be3ff"/>
+    <rect x="66" y="40" width="22" height="22" rx="3" fill="rgba(255,255,255,0.10)"/>
+    <rect x="14" y="66" width="22" height="22" rx="3" fill="rgba(255,255,255,0.10)"/>
+    <rect x="40" y="66" width="22" height="22" rx="3" fill="rgba(255,255,255,0.10)"/>
+    <rect x="66" y="66" width="22" height="22" rx="3" fill="rgba(255,255,255,0.10)"/>
+    <circle cx="51" cy="51" r="6" fill="#fff" stroke="none"/>
+  </svg>`,
+
+  impactRunner: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 78 L40 54 L52 66 L84 28" stroke="#ff66ff" stroke-width="3"/>
+    <circle cx="84" cy="28" r="8" fill="#ffaa00" stroke="#fff" stroke-width="2"/>
+    <circle cx="84" cy="28" r="3" fill="#fff" stroke="none"/>
+    <path d="M22 84 L18 82 L20 78" stroke="#9966ff" stroke-width="2.5"/>
+    <path d="M48 60 L44 62 L46 56" stroke="#9966ff" stroke-width="2.5"/>
+    <path d="M12 90 L20 82 M28 90 L36 82 M44 90 L52 82" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
   </svg>`
 };
 
@@ -1016,6 +1030,20 @@ const GAMES = [
       const score = e.score || 0;                 // 0–10 correct
       return { metric: score * 10, tiebreak: e.timeMs, sig: e.date,
                label: `${score}/10 · ${secs(e.timeMs)}` };
+    }
+  },
+  {
+    id: 'cell', file: 'games/cell-chase.html', name: 'Cell Chase',
+    art: SVG.cellChase, bg: 'linear-gradient(135deg,#4be3ff,#0a3d62)',
+    desc: 'Reflex grid — tap the lit cell before it fades. Survive the rounds, climb the score.',
+    creator: 'Henry',
+    mode: 'session', scoring: 'score',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('cell_chase_v1'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      return { metric: e.score || 0, tiebreak: 0, sig: e.date,
+               label: `${(e.score||0).toLocaleString()} pts · R${e.round||0}` };
     }
   },
   {
@@ -1089,6 +1117,20 @@ const GAMES = [
       const e = arr[0];
       const raw = e.score || 0;
       return { metric: raw, tiebreak: 0, sig: e.ts, label: `${raw.toLocaleString()} · Grade ${e.grade}` };
+    }
+  },
+  {
+    id: 'impact', file: 'games/impact-runner.html', name: 'Impact Runner',
+    art: SVG.impactRunner, bg: 'linear-gradient(135deg,#ff66ff,#1a0033)',
+    desc: 'Last-signal survival shooter — dodge, blast, ride the combos. Outlast the waves for the high score.',
+    creator: 'Kondwani',
+    mode: 'session', scoring: 'score',
+    extract: () => {
+      const arr = safeJson(localStorage.getItem('impact_runner_v1'), []);
+      if (!arr.length) return null;
+      const e = arr[0];
+      return { metric: e.score || 0, tiebreak: 0, sig: e.date,
+               label: `${(e.score||0).toLocaleString()} pts · W${e.wave||0}` };
     }
   },
   {
@@ -1170,7 +1212,30 @@ const CASEBOOK = [
     code: 'CK-404',
     desc: 'A SQL murder mystery. Query the live Chinook database across ten leads to name the killer.',
     creator: 'Emmanuel and Choolwe',
-    estMin: 30
+    estMin: 30,
+    scoring: 'time'  // rank by solve time, lower = better
+  },
+  {
+    id: 'ck-405',
+    file: 'Chinook/database-detective-case-2.html',
+    name: 'Database Detective: Case II',
+    code: 'CK-405',
+    desc: 'A second body, same signature. Edwards is in custody — so who is signing her work? Heavier joins, deeper hierarchy.',
+    creator: 'Emmanuel and Choolwe',
+    estMin: 40,
+    scoring: 'time'
+  },
+  {
+    id: 'iq-test',
+    file: 'casebook/iq-test.html',
+    name: 'IQ Test',
+    code: 'IQ-25',
+    desc: 'A 25-question battery across pattern, verbal, spatial, numerical, and memory reasoning. Best IQ score wins.',
+    creator: 'Enos',
+    estMin: 15,
+    scoring: 'score',                        // rank by best result, higher = better
+    resultLabel: 'IQ',                       // column header / per-row label prefix
+    formatResult: r => 'IQ ' + r             // turn a result value into a label like "IQ 132"
   }
 ];
 
@@ -1595,31 +1660,48 @@ function autoPostCaseSolve(caseDef, rec) {
   if (!name) { toast('⚠ Set your player name to save scores', 'warn'); return; }
 
   const solveTimeMs = (rec.startedAt && rec.solvedAt) ? (rec.solvedAt - rec.startedAt) : 0;
-  if (solveTimeMs <= 0) return;  // bad clock data — don't pollute the board
+  const kind = caseDef.scoring || 'time';
+
+  // For time-ranked cases we need a positive duration; for score-ranked we need a numeric result.
+  if (kind === 'time' && solveTimeMs <= 0) return;
+  if (kind === 'score' && !Number.isFinite(rec.result)) return;
 
   const entry = {
     player: name,
     caseId: caseDef.id,
     caseName: caseDef.name,
+    kind,
     leadsLogged: rec.leadsLogged || 0,
     totalLeads: rec.totalLeads || 0,
     falseTrails: rec.falseTrails || 0,
     solveTimeMs,
+    result: Number.isFinite(rec.result) ? rec.result : null,
+    accuracy: Number.isFinite(rec.accuracy) ? rec.accuracy : null,  // score-kind extra
+    band: rec.band || null,                                          // score-kind extra
     solvedAt: rec.solvedAt,
     ts: Date.now()
   };
 
-  // Keep best (lowest solveTimeMs) per player per case — local only for now.
+  // Keep best per player per case — local only for now.
+  // 'time' kind: lower solveTimeMs wins. 'score' kind: higher result wins.
   const key = name.toLowerCase();
   const idx = CASEBOOK_SCORES.findIndex(s =>
     s.caseId === entry.caseId && s.player.toLowerCase() === key);
-  if (idx === -1) CASEBOOK_SCORES.push(entry);
-  else if (entry.solveTimeMs > 0 && entry.solveTimeMs < CASEBOOK_SCORES[idx].solveTimeMs) {
-    CASEBOOK_SCORES[idx] = entry;
+  if (idx === -1) {
+    CASEBOOK_SCORES.push(entry);
+  } else {
+    const prev = CASEBOOK_SCORES[idx];
+    const better = kind === 'score'
+      ? (entry.result > (prev.result ?? -Infinity))
+      : (entry.solveTimeMs > 0 && entry.solveTimeMs < prev.solveTimeMs);
+    if (better) CASEBOOK_SCORES[idx] = entry;
   }
   saveCasebookScores();
 
-  toast(`✓ ${caseDef.name}: case closed in ${formatDuration(entry.solveTimeMs)}`);
+  const tag = kind === 'score'
+    ? ((caseDef.formatResult ? caseDef.formatResult(entry.result) : entry.result))
+    : formatDuration(entry.solveTimeMs);
+  toast(`✓ ${caseDef.name}: ${tag}`);
   renderCasebook();
   renderCasebookBoard();
 }
@@ -1631,13 +1713,23 @@ function bestForCase(caseId) {
     s.caseId === caseId && s.player.toLowerCase() === name) || null;
 }
 
+function caseBestLabel(caseDef, best) {
+  const kind = caseDef.scoring || 'time';
+  if (kind === 'score') {
+    const v = best.result;
+    if (v == null) return 'Closed';
+    return '✓ Closed · ' + (caseDef.formatResult ? caseDef.formatResult(v) : String(v));
+  }
+  return `✓ Closed · ${formatDuration(best.solveTimeMs)} · ${best.falseTrails} false trail${best.falseTrails===1?'':'s'}`;
+}
+
 function renderCasebook() {
   const grid = $('casebook-grid');
   if (!grid) return;
   grid.innerHTML = CASEBOOK.map(c => {
     const best = bestForCase(c.id);
     const status = best
-      ? `<span class="cb-closed">✓ Closed · ${formatDuration(best.solveTimeMs)} · ${best.falseTrails} false trail${best.falseTrails===1?'':'s'}</span>`
+      ? `<span class="cb-closed">${caseBestLabel(c, best)}</span>`
       : `<span class="cb-open">Open</span>`;
     return `
       <div class="case-card" data-id="${c.id}">
@@ -1705,28 +1797,52 @@ function setupCasebookTabs() {
 function renderCasebookBoard() {
   const active = document.querySelector('.cb-tab.active');
   const caseId = active ? active.dataset.case : (CASEBOOK[0] && CASEBOOK[0].id);
+  const caseDef = CASEBOOK.find(c => c.id === caseId);
+  const thead = $('cb-head');
   const tbody = $('cb-body');
-  if (!tbody) return;
+  if (!tbody || !caseDef) return;
+  const kind = caseDef.scoring || 'time';
+  const metricLabel = kind === 'score' ? (caseDef.resultLabel || 'Result') : 'Solve Time';
+  const secondaryLabel = kind === 'score' ? 'Accuracy' : 'False Trails';
 
-  const rows = CASEBOOK_SCORES
-    .filter(s => s.caseId === caseId && s.solveTimeMs > 0)
+  if (thead) {
+    thead.innerHTML = `<tr>
+      <th>Rank</th><th>Player</th><th>${escapeHtml(metricLabel)}</th>
+      <th>${escapeHtml(secondaryLabel)}</th><th>Date</th>
+    </tr>`;
+  }
+
+  const filtered = CASEBOOK_SCORES.filter(s =>
+    s.caseId === caseId &&
+    (kind === 'score' ? Number.isFinite(s.result) : s.solveTimeMs > 0)
+  );
+  const rows = filtered
     .slice()
-    .sort((a, b) => a.solveTimeMs - b.solveTimeMs)
+    .sort((a, b) => kind === 'score' ? (b.result - a.result) : (a.solveTimeMs - b.solveTimeMs))
     .slice(0, 10);
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No solves yet — open the case file and crack it to land on this board.</td></tr>';
+    const blurb = kind === 'score'
+      ? 'No solves yet — take the test and your result will land on this board.'
+      : 'No solves yet — open the case file and crack it to land on this board.';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${blurb}</td></tr>`;
     return;
   }
 
   tbody.innerHTML = rows.map((r, i) => {
     const rank = i + 1;
     const rankCls = rank <= 3 ? `rank-${rank}` : '';
+    const metricCell = kind === 'score'
+      ? (caseDef.formatResult ? caseDef.formatResult(r.result) : String(r.result))
+      : formatDuration(r.solveTimeMs);
+    const secondaryCell = kind === 'score'
+      ? (Number.isFinite(r.accuracy) ? r.accuracy + '%' : '—')
+      : r.falseTrails;
     return `<tr>
       <td class="rank-cell ${rankCls}">${trophyFor(rank)}</td>
       <td class="player-cell">${escapeHtml(r.player)}</td>
-      <td class="score-cell">${escapeHtml(formatDuration(r.solveTimeMs))}</td>
-      <td>${r.falseTrails}</td>
+      <td class="score-cell">${escapeHtml(String(metricCell))}</td>
+      <td>${secondaryCell}</td>
       <td class="date-cell">${formatDate(r.solvedAt || r.ts)}</td>
     </tr>`;
   }).join('');
@@ -1872,8 +1988,8 @@ function renderTotals() {
 function setupFilter() {
   const tabsContainer = $('lb-tabs');
   const gameColors = {
-    british: '#e040fb', code: '#00bcd4', defuse: '#ff5252', drift: '#5b8cff',
-    reaction: '#ffd54f', pattern: '#00e5ff', probability: '#ffb43c',
+    british: '#e040fb', cell: '#4be3ff', code: '#00bcd4', defuse: '#ff5252', drift: '#5b8cff',
+    reaction: '#ffd54f', pattern: '#00e5ff', impact: '#ff66ff', probability: '#ffb43c',
     stroop: '#ab47bc', symbol: '#c8f564', wordspan: '#7ee8a2'
   };
 
@@ -1949,12 +2065,12 @@ refreshAndRender();
 
 $('clear-casebook').addEventListener('click', () => {
   if (!CASEBOOK_SCORES.length) { toast('Nothing to clear'); return; }
-  if (confirm('Clear ALL casebook scores? Progress inside each case stays intact. This cannot be undone.')) {
+  if (confirm('Clear ALL Long Game scores? Progress inside each challenge stays intact. This cannot be undone.')) {
     CASEBOOK_SCORES = [];
     saveCasebookScores();
     renderCasebookBoard();
     renderCasebook();
-    toast('Casebook cleared');
+    toast('Long Game scores cleared');
   }
 });
 
