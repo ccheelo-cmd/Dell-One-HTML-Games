@@ -198,26 +198,27 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* ── Casebook section (above the games grid) ── */
+  /* ── Long Game section (above the games grid) ── */
+  /* Neutral dark slate so per-card themes can pop. */
   .casebook-section {
     margin: 0 0 32px;
     padding: 20px 22px 22px;
     background:
-      radial-gradient(120% 90% at 50% -10%, rgba(217,164,65,.08), transparent 55%),
-      linear-gradient(160deg, #221813, #14100c 80%);
-    border: 1px solid rgba(158,38,28,0.35);
+      radial-gradient(120% 90% at 50% -10%, rgba(125,108,255,.10), transparent 55%),
+      linear-gradient(160deg, #1a1d28, #0d1018 80%);
+    border: 1px solid rgba(125,108,255,0.28);
     border-radius: 14px;
-    box-shadow: 0 10px 40px -20px rgba(158,38,28,0.55);
+    box-shadow: 0 10px 40px -20px rgba(125,108,255,0.45);
   }
   .casebook-head {
     display: flex; flex-direction: column; gap: 4px;
     margin-bottom: 16px; padding-bottom: 14px;
-    border-bottom: 1px dashed rgba(217,164,65,0.25);
+    border-bottom: 1px dashed rgba(125,108,255,0.20);
   }
   .casebook-title {
     font-family: 'Oswald', 'Segoe UI', sans-serif;
     font-weight: 700; letter-spacing: 4px; text-transform: uppercase;
-    font-size: 18px; color: #d9a441;
+    font-size: 18px; color: #b8a4ff;
   }
   .casebook-sub {
     font-size: 12px; color: var(--muted); letter-spacing: 0.4px;
@@ -227,9 +228,29 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 18px;
   }
+
+  /* Cards are themed per-case via CSS custom properties.
+     Defaults below give the noir/brown look (Database Detective);
+     other cases override these on the .case-card element via inline style. */
   .case-card {
-    background: linear-gradient(160deg, #2a1a14, #1a0f0a);
-    border: 1px solid rgba(217,164,65,0.30);
+    --card-bg: linear-gradient(160deg, #2a1a14, #1a0f0a);
+    --card-border: rgba(217,164,65,0.30);
+    --card-border-hi: #d9a441;
+    --card-shadow: rgba(158,38,28,0.30);
+    --card-stamp: #c0301f;
+    --card-stamp-border: #9e261c;
+    --card-name: #ece1cb;
+    --card-text: rgba(236,225,203,0.75);
+    --card-muted: rgba(236,225,203,0.55);
+    --card-meta: var(--muted);
+    --card-open: #d9a441;
+    --card-closed: #5fb37b;
+    --card-btn: linear-gradient(135deg, #c0301f, #9e261c);
+    --card-btn-text: #f4ecd8;
+    --card-btn-glow: rgba(192,48,31,0.45);
+
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 12px; padding: 18px 20px 16px;
     display: flex; flex-direction: column; gap: 10px;
     position: relative; overflow: hidden;
@@ -237,33 +258,33 @@
   }
   .case-card:hover {
     transform: translateY(-3px);
-    border-color: #d9a441;
-    box-shadow: 0 12px 32px rgba(158,38,28,0.30);
+    border-color: var(--card-border-hi);
+    box-shadow: 0 12px 32px var(--card-shadow);
   }
   .case-stamp {
     align-self: flex-start;
     font-family: 'Oswald', 'Segoe UI', sans-serif;
     font-weight: 700; letter-spacing: 3px; font-size: 10px;
-    text-transform: uppercase; color: #c0301f;
-    border: 2px solid #9e261c; padding: 3px 8px 4px;
+    text-transform: uppercase; color: var(--card-stamp);
+    border: 2px solid var(--card-stamp-border); padding: 3px 8px 4px;
     border-radius: 3px; opacity: 0.85; transform: rotate(-1.5deg);
   }
   .case-name {
     font-family: 'Oswald', 'Segoe UI', sans-serif;
     font-weight: 700; font-size: 22px; line-height: 1.05;
-    letter-spacing: 0.5px; text-transform: uppercase; color: #ece1cb;
+    letter-spacing: 0.5px; text-transform: uppercase; color: var(--card-name);
   }
-  .case-by { font-size: 11px; color: rgba(236,225,203,0.55); letter-spacing: 0.4px; }
-  .case-desc { font-size: 13px; color: rgba(236,225,203,0.75); line-height: 1.5; flex: 1; }
-  .case-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
-  .cb-closed { color: #5fb37b; font-weight: 700; }
-  .cb-open   { color: #d9a441; font-weight: 700; }
+  .case-by { font-size: 11px; color: var(--card-muted); letter-spacing: 0.4px; }
+  .case-desc { font-size: 13px; color: var(--card-text); line-height: 1.5; flex: 1; }
+  .case-meta { font-size: 11px; color: var(--card-meta); letter-spacing: 0.5px; }
+  .cb-closed { color: var(--card-closed); font-weight: 700; }
+  .cb-open   { color: var(--card-open); font-weight: 700; }
   .case-card .play-btn {
-    background: linear-gradient(135deg, #c0301f, #9e261c);
-    color: #f4ecd8;
+    background: var(--card-btn);
+    color: var(--card-btn-text);
     margin-top: 4px;
   }
-  .case-card .play-btn:hover { box-shadow: 0 0 18px rgba(192,48,31,0.45); }
+  .case-card .play-btn:hover { box-shadow: 0 0 18px var(--card-btn-glow); }
 
   .games-section-head {
     font-family: 'Oswald', 'Segoe UI', sans-serif;
@@ -713,7 +734,7 @@
     <button class="tab active" data-panel="games">Games</button>
     <button class="tab" data-panel="leaderboard">Leaderboard</button>
     <button class="tab" data-panel="totals">Total Score</button>
-    <button class="tab" data-panel="casebook">The Long Game</button>
+    <button class="tab" data-panel="casebook">Deep Dives</button>
   </div>
 
   <!-- Games panel -->
@@ -729,8 +750,8 @@
 
     <div class="casebook-section">
       <div class="casebook-head">
-        <div class="casebook-title">The Long Game</div>
-        <div class="casebook-sub">Deeper challenges for one sitting. Climb the boards by time or by score.</div>
+        <div class="casebook-title">Deep Dives</div>
+        <div class="casebook-sub">Bigger puzzles for one sitting. Climb the boards by time or by score.</div>
       </div>
       <div class="casebook-grid" id="casebook-grid"></div>
     </div>
@@ -796,7 +817,7 @@
   <div class="panel" id="panel-casebook">
     <div style="margin-bottom: 24px; padding: 16px; background: rgba(158,38,28,0.10); border: 1px solid rgba(158,38,28,0.35); border-radius: 8px;">
       <div style="font-size: 13px; color: var(--muted); line-height: 1.6;">
-        <strong style="color: var(--text);">The Long Game</strong> is its own league.
+        <strong style="color: var(--text);">Deep Dives</strong> is its own league.
         These are bounded challenges — they're <strong>not</strong> in the Total Score table.
         Ranking depends on the challenge: SQL casefiles rank by solve time (faster = better),
         the IQ Test ranks by best result. Scores are kept locally per browser.
@@ -1220,7 +1241,7 @@ const CASEBOOK = [
     file: 'Chinook/database-detective-case-2.html',
     name: 'Database Detective: Case II',
     code: 'CK-405',
-    desc: 'A second body, same signature. Edwards is in custody — so who is signing her work? Heavier joins, deeper hierarchy.',
+    desc: 'A second body. Same signature on the invoice — and the prime suspect from Case I has an alibi. Heavier joins, deeper hierarchy.',
     creator: 'Emmanuel and Choolwe',
     estMin: 40,
     scoring: 'time'
@@ -1229,13 +1250,30 @@ const CASEBOOK = [
     id: 'iq-test',
     file: 'casebook/iq-test.html',
     name: 'IQ Test',
-    code: 'IQ-25',
     desc: 'A 25-question battery across pattern, verbal, spatial, numerical, and memory reasoning. Best IQ score wins.',
     creator: 'Enos',
     estMin: 15,
-    scoring: 'score',                        // rank by best result, higher = better
-    resultLabel: 'IQ',                       // column header / per-row label prefix
-    formatResult: r => 'IQ ' + r             // turn a result value into a label like "IQ 132"
+    cta: '▶ Begin Test',
+    scoring: 'score',
+    resultLabel: 'IQ',
+    formatResult: r => 'IQ ' + r,
+    theme: {                                  // light-blue cyber palette
+      '--card-bg': 'linear-gradient(160deg, #0f2a3e, #08172a)',
+      '--card-border': 'rgba(120,200,255,0.30)',
+      '--card-border-hi': '#4dabe6',
+      '--card-shadow': 'rgba(77,171,230,0.30)',
+      '--card-stamp': '#4dabe6',
+      '--card-stamp-border': '#2d7fc4',
+      '--card-name': '#e0f0fc',
+      '--card-text': 'rgba(220,234,246,0.78)',
+      '--card-muted': 'rgba(220,234,246,0.55)',
+      '--card-meta': 'rgba(220,234,246,0.60)',
+      '--card-open': '#4dabe6',
+      '--card-closed': '#5fb37b',
+      '--card-btn': 'linear-gradient(135deg, #4dabe6, #2d7fc4)',
+      '--card-btn-text': '#08172a',
+      '--card-btn-glow': 'rgba(77,171,230,0.50)'
+    }
   }
 ];
 
@@ -1723,6 +1761,13 @@ function caseBestLabel(caseDef, best) {
   return `✓ Closed · ${formatDuration(best.solveTimeMs)} · ${best.falseTrails} false trail${best.falseTrails===1?'':'s'}`;
 }
 
+function themeStyleAttr(theme) {
+  if (!theme) return '';
+  return ' style="' + Object.entries(theme)
+    .map(([k, v]) => `${k}:${v}`)
+    .join(';') + '"';
+}
+
 function renderCasebook() {
   const grid = $('casebook-grid');
   if (!grid) return;
@@ -1731,14 +1776,16 @@ function renderCasebook() {
     const status = best
       ? `<span class="cb-closed">${caseBestLabel(c, best)}</span>`
       : `<span class="cb-open">Open</span>`;
+    const stamp = c.code ? `<div class="case-stamp">CASE ${escapeHtml(c.code)}</div>` : '';
+    const cta = c.cta || '▶ Open Case File';
     return `
-      <div class="case-card" data-id="${c.id}">
-        <div class="case-stamp">CASE ${escapeHtml(c.code)}</div>
+      <div class="case-card" data-id="${c.id}"${themeStyleAttr(c.theme)}>
+        ${stamp}
         <div class="case-name">${escapeHtml(c.name)}</div>
         <div class="case-by">by ${escapeHtml(c.creator)}</div>
         <div class="case-desc">${escapeHtml(c.desc)}</div>
         <div class="case-meta">⏱ ~${c.estMin} min · ${status}</div>
-        <button class="play-btn" data-open-case="${c.id}">▶ Open Case File</button>
+        <button class="play-btn" data-open-case="${c.id}">${escapeHtml(cta)}</button>
       </div>
     `;
   }).join('');
@@ -2065,12 +2112,12 @@ refreshAndRender();
 
 $('clear-casebook').addEventListener('click', () => {
   if (!CASEBOOK_SCORES.length) { toast('Nothing to clear'); return; }
-  if (confirm('Clear ALL Long Game scores? Progress inside each challenge stays intact. This cannot be undone.')) {
+  if (confirm('Clear ALL Deep Dives scores? Progress inside each challenge stays intact. This cannot be undone.')) {
     CASEBOOK_SCORES = [];
     saveCasebookScores();
     renderCasebookBoard();
     renderCasebook();
-    toast('Long Game scores cleared');
+    toast('Deep Dives scores cleared');
   }
 });
 
