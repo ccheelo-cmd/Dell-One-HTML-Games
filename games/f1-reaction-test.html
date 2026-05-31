@@ -602,6 +602,8 @@ function lightNext(){
 
 function registerReaction(){
   const rt = Math.round(performance.now() - state.startTime);
+  // Sub-100ms is humanly impossible without pre-empting — treat as a false start (FIA threshold)
+  if(rt < 100){ earlyClick(); return; }
   state.times.push(rt);
   state.phase='done';
   playGoodResult(rt);
@@ -701,9 +703,10 @@ function showSessionEnd(){
   setBtn('NEW SESSION','');
   state.phase='idle';
 
-  // Save
+  // Save — avg is the headline score
   saveHistory({avg,best,worst,rounds:valid.length,early:state.earlyCount,diff:state.diff,ts:Date.now()});
   renderHistory();
+  showResult(avg); // replace last-lap result with session average
   document.getElementById('settings-panel').style.display='flex';
   document.getElementById('scale-bar').style.display='block';
   document.getElementById('rounds-row').style.display='none';
@@ -751,16 +754,17 @@ function renderHistory(){
   if(!all.length){ el.innerHTML='<div class="hist-empty">No laps recorded yet.</div>'; return; }
   const diffLabel={easy:'Safety Car',med:'Race Pace',hard:'Q3 Lap'};
   el.innerHTML=all.map(s=>{
-    const r=getRating(s.best);
+    const displayMs = s.avg || s.best; // avg is headline; fall back to best for old records
+    const r=getRating(displayMs);
     const d=new Date(s.ts).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
     return `<div class="hist-item">
       <div>
-        <div class="hist-time" style="color:${r.color}">${s.best} ms</div>
+        <div class="hist-time" style="color:${r.color}">${displayMs} ms avg</div>
         <div class="hist-meta">${diffLabel[s.diff]||s.diff} · ${s.rounds} laps · ${d}</div>
       </div>
       <div style="text-align:right">
         <div class="hist-tag" style="background:${r.bg};color:${r.color};border:1px solid ${r.color}40">${r.label}</div>
-        <div class="hist-meta" style="margin-top:4px">avg ${s.avg} ms</div>
+        <div class="hist-meta" style="margin-top:4px">best ${s.best} ms</div>
       </div>
     </div>`;
   }).join('');

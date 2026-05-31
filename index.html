@@ -787,7 +787,7 @@
     /* Casebook grid: 3 compact cards per row */
     .casebook-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .casebook-section { padding: 12px 12px 14px; }
-    .case-card { padding: 10px 8px 10px; gap: 6px; border-radius: 8px; justify-content: space-between; }
+    .case-card { padding: 10px 8px 10px; gap: 6px; border-radius: 8px; justify-content: space-between; align-items: center; text-align: center; }
     .case-name { font-size: 11px; letter-spacing: 0; line-height: 1.2; text-transform: none; }
     .case-by, .case-desc, .case-meta, .desktop-badge { display: none; }
     .case-stamp { font-size: 8px; padding: 2px 5px 3px; letter-spacing: 1.5px; }
@@ -1245,8 +1245,8 @@ const GAMES = [
       const arr = safeJson(localStorage.getItem('f1_reaction_v1'), []);
       if (!arr.length) return null;
       const e = arr[0];
-      const best = e.best || 9999;
-      return { metric: 100, tiebreak: best, sig: e.ts, label: `${best}ms` };
+      const ms = e.avg || e.best || 9999; // avg is the headline; fall back for old records
+      return { metric: 100, tiebreak: ms, sig: e.ts, label: `${ms}ms avg` };
     }
   },
   {
