@@ -30,6 +30,7 @@ The hub has **two sections**:
 │   └── CHINOOK-SUPABASE-WORKLOG.md  (DB setup history — in docs-archive/)
 ├── sql/
 │   ├── supabase-setup.sql           (creates the scores table + submit_score RPC)
+│   ├── casebook-setup.sql           (creates casebook_solves table + submit_casebook_solve RPC)
 │   └── delete-dual-ship-scores.sql  (one-off cleanup)
 ├── docs-archive/                    (historical notes, kept for reference)
 └── CLAUDE.md                        (this file)
@@ -58,7 +59,7 @@ The hub treats each game as a black box. The contract is the `GAMES` array in [i
   - `metric` — primary ranking number, higher = better. `'score'` games → raw score; `'time'` games → accuracy 0–100.
   - `tiebreak` — secondary, lower = better. Only meaningful for `'time'` games (ms); `'score'` games pass `0`.
   - `sig` — unique id for this run (timestamp/hash). The watcher only posts when `sig` changes vs. the baseline captured on iframe open.
-  - `label` — human-readable readout (`8/10 · 12.3s`, `142ms`, `3,400 pts`). Shown on the per-game board.
+  - `label` — human-readable readout (`8/10 · 12.3s`, `142ms avg`, `3,400 pts`). Shown on the per-game board.
 - **`mode`** — `'session'` (poll localStorage; works for games that persist) or `'dom'` (poll iframe DOM; used by Dual-Ship Pilot reading `#bestVal`).
 - **`art`** — inline SVG string for the card thumbnail.
 - **`bg`** — CSS background for the thumbnail (gradient string).
@@ -72,7 +73,7 @@ Scores live in the in-memory `SCORES` cache (read via `loadScores()`). Player na
 
 ## Architecture: Deep Dives (long-form challenges)
 
-Long-form challenges that don't fit the arcade model — they take a single sitting and have a single verdict. Defined in the `CASEBOOK` array in [index.html](index.html). Has its own watcher, leaderboard tab, and persistence (no Supabase yet — **local-only**).
+Long-form challenges that don't fit the arcade model — they take a single sitting and have a single verdict. Defined in the `CASEBOOK` array in [index.html](index.html). Has its own watcher, leaderboard tab, and shared Supabase backend (`casebook_solves` table).
 
 ```js
 { id, file, name, code?, desc, creator, estMin,
@@ -101,32 +102,57 @@ localStorage['chinook_casebook_v1'][caseId] = {
 }
 ```
 
-The hub's `startWatchingCase` / `tryCaptureCase` polls this every `POLL_INTERVAL_MS` while a case overlay is open and posts a new entry when `solvedAt` changes. `autoPostCaseSolve` keeps one best row per `(player, caseId)` in `localStorage['hub_casebook_scores_v1']`.
+The hub's `startWatchingCase` / `tryCaptureCase` polls this every `POLL_INTERVAL_MS` while a case overlay is open and calls `autoPostCaseSolve` when `solvedAt` changes. In remote mode this posts to Supabase via `submit_casebook_solve()`; in local-only mode it writes to `localStorage['hub_casebook_scores_v1']`.
 
-## Shared leaderboard (Supabase) — for arcade games only
+## Shared leaderboard (Supabase)
 
-The arcade scores can run in two modes, chosen at load by the `REMOTE` flag (computed from `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants near the top of the `<script>`):
+Both boards run in two modes, chosen at load by the `REMOTE` flag (computed from `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants near the top of the `<script>`):
 
-- **Local-only** (placeholder keys) — `SCORES` is read from `localStorage['hub_scores_v1']`. Games work offline.
-- **Remote** (real keys) — `SCORES` is fetched from a Supabase `scores` table via PostgREST. Writes go through a guarded `submit_score()` RPC, never a direct table write.
+- **Local-only** (placeholder keys) — scores read from localStorage. Everything works offline.
+- **Remote** (real keys) — scores fetched from Supabase via PostgREST. Writes go through guarded RPCs, never direct table writes.
 
-[sql/supabase-setup.sql](sql/supabase-setup.sql) enforces server-side: one best row per `(player_key, game_id)` (case-insensitive); higher `metric` always wins, ties broken by lower `tiebreak` for `kind='time'`; server-set `created_at`; RLS allows `select` with the anon key but **no** client insert/update/delete.
+### Arcade games — `scores` table
 
-Resetting the board is an admin `truncate public.scores;` in Supabase's SQL editor.
+[sql/supabase-setup.sql](sql/supabase-setup.sql) enforces server-side: one best row per `(player_key, game_id)` (case-insensitive); higher `metric` always wins, ties broken by lower `tiebreak` for `kind='time'`; RLS allows `select` with the anon key but **no** client insert/update/delete.
 
-Functions: `syncScores()` (pull), `postRemoteScore()` (RPC write), `refreshAndRender()` (sync + re-render). In remote mode, boards re-pull on tab switch and every 20s while open; the "Clear All" button is relabeled "↻ Refresh".
+Functions: `syncScores()` (pull), `postRemoteScore()` (RPC write), `refreshAndRender()` (sync + re-render).
 
-**Deep Dives scores are local-only.** A Supabase table (`casebook_solves` or similar) is a future addition.
+Reset a game's board: `DELETE FROM public.scores WHERE game_id = 'your-id';`
 
-### One-time Supabase setup (arcade games only)
+### Deep Dives — `casebook_solves` table
 
-1. **https://supabase.com** → New project (free tier is fine). Save the DB password.
-2. **SQL Editor** → paste & run [sql/supabase-setup.sql](sql/supabase-setup.sql). Creates the `scores` table + `submit_score()` RPC + RLS.
-3. **Project Settings → API** → copy *Project URL* and *anon public* key (NOT the service_role key).
-4. Paste both into the `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants in [index.html](index.html). Save.
-5. (Optional) Push to GitHub Pages so the team uses one URL.
+[sql/casebook-setup.sql](sql/casebook-setup.sql) enforces: one best row per `(player_key, case_id)`; time cases keep lowest `solve_time_ms`, score cases keep highest `result`; same RLS pattern.
 
-The anon key is safe to embed — its only superpower is `select` and calling `submit_score()`.
+Functions: `syncCasebookScores()` (pull), `postRemoteCaseSolve()` (RPC write), `refreshAndRenderCasebook()` (sync + re-render). Deep Dives board re-pulls on tab switch and every 20s while open; "Clear Scores" button is relabeled "↻ Refresh" in remote mode.
+
+### One-time Supabase setup
+
+1. **https://supabase.com** → New project (free tier). Save the DB password.
+2. **SQL Editor** → paste & run [sql/supabase-setup.sql](sql/supabase-setup.sql).
+3. **SQL Editor** → paste & run [sql/casebook-setup.sql](sql/casebook-setup.sql).
+4. **Project Settings → API** → copy *Project URL* and *anon public* key (NOT the service_role key).
+5. Paste both into the `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants in [index.html](index.html). Save.
+6. (Optional) Push to GitHub Pages so the team uses one URL.
+
+The anon key is safe to embed — its only superpowers are `select` and calling the two submit RPCs.
+
+## Mobile support
+
+The hub and all playable games are mobile-adapted. Two games require a keyboard and show a full-screen "use desktop" overlay on screens narrower than 768px:
+
+- `games/dual-ship-pilot.html` — two simultaneous keyboard inputs
+- `games/impact-runner.html` — WASD + arrow key shooter
+
+Both Database Detective cases (`Chinook/chinook-case-file.html`, `Chinook/database-detective-case-2.html`) also show the overlay because they require typing SQL.
+
+These four are tracked in `DESKTOP_ONLY_GAMES` and `DESKTOP_ONLY_CASES` sets in [index.html](index.html), which adds a "🖥 Keyboard required" badge to their hub cards.
+
+**Key mobile CSS patterns used throughout** (preserve when editing):
+- `touch-action: manipulation` on all interactive elements (removes 300ms tap delay)
+- `-webkit-tap-highlight-color: transparent` (suppresses tap flash)
+- `min-height: 44px` on buttons (Apple/Google minimum touch target)
+- `env(safe-area-inset-*)` padding on containers (notch/home-bar clearance)
+- Hub cards: 3-column grid on ≤600px with `justify-content: space-between` to pin play buttons to the bottom of each card
 
 ## The Chinook database (Database Detective)
 
@@ -138,7 +164,7 @@ The SQL murder mystery casefiles (CK-404, CK-405, and any future Database Detect
 - **Read endpoint:** `POST /rest/v1/rpc/run_sql` with `{"query": "SELECT ..."}` (only `SELECT`/`WITH`, no semicolons, 1000-row cap, 8s timeout).
 - **Schema:** identifiers are PascalCase and **double-quoted**: `"Customer"`, `"FirstName"`. Postgres folds unquoted identifiers to lowercase, so unquoted queries fail.
 
-The Database Detective HTML files include a client-side `rewriteSQL()` that recognises the Chinook schema dictionary and auto-quotes bare identifiers, so players can type natural SQL (`SELECT firstname FROM customer`) and the rewriter sends the quoted form. They also have an autocomplete popup (keywords + tables + columns).
+The Database Detective HTML files include a client-side `rewriteSQL()` that recognises the Chinook schema dictionary and auto-quotes bare identifiers. They also have an autocomplete popup (keywords + tables + columns).
 
 **Chinook schema** (11 tables, ~16,420 rows): Album, Artist, Customer, Employee, Genre, Invoice, InvoiceLine, MediaType, Playlist, PlaylistTrack, Track. Full column list lives in the schema dictionary inside each Database Detective HTML.
 
@@ -151,75 +177,43 @@ curl -s -X POST "https://loivcffoynagskjhgips.supabase.co/rest/v1/rpc/run_sql" \
   -d '{"query": "SELECT \"FirstName\" FROM \"Customer\" LIMIT 3"}'
 ```
 
-(Get `SB_ANON` from any of the Chinook HTML files.)
+DB setup history is in [docs-archive/CHINOOK-SUPABASE-WORKLOG.md](docs-archive/CHINOOK-SUPABASE-WORKLOG.md).
 
-DB setup history (how the Chinook data was loaded into Supabase, the `run_sql` RPC definition, RLS choices) is in [docs-archive/CHINOOK-SUPABASE-WORKLOG.md](docs-archive/CHINOOK-SUPABASE-WORKLOG.md).
+## Game-specific notes
 
-## Dual-Ship Pilot: progressive difficulty
+### Dual-Ship Pilot (`drift`)
+Progressive difficulty — baseSpeed 2.2 (3.5 for medium start), `speed = baseSpeed + (baseSpeed * 0.0008) * frame` capped at 7.5. Spawn interval tightens from 70 down to 30.
+Reset scores: `DELETE FROM public.scores WHERE game_id = 'drift';`
 
-Dual-Ship Pilot (`drift`) progressively accelerates instead of having difficulty levels:
-- baseSpeed 2.2 by default, 3.5 if "Start at Medium Speed" is selected
-- `speed = baseSpeed + (baseSpeed * 0.0008) * frame`, capped at 7.5
-- Spawn interval tightens from 70 (or 55 for medium start) down to a minimum of 30
-- Reset scores: `delete from public.scores where game_id = 'drift';`
+### F1 Reaction Test (`reaction`)
+- **Anti-mash rule:** any reaction under 100ms triggers a false-start penalty (FIA threshold — sub-100ms is physically impossible without pre-empting the lights).
+- **Scoring:** the leaderboard tiebreak is the **session average** across all valid laps, not the single best lap. The `extract()` reads `e.avg` (falls back to `e.best` for pre-change records).
+- Reset scores: `DELETE FROM public.scores WHERE game_id = 'reaction';`
 
 ## Adding a new arcade game
 
 1. **Create the HTML** in [games/](games/) (kebab-case filename). Inline CSS/JS, no external deps.
-2. **Persist a best score** to localStorage on game-over so the hub can read it:
-   ```js
-   localStorage.setItem('my_game_v1', JSON.stringify([{ score: 150, date: Date.now() }]));
-   ```
-3. **Register in `GAMES[]`** in [index.html](index.html) (alphabetical by `name`):
-   ```js
-   {
-     id: 'my-game', file: 'games/memory-tiles.html', name: 'Memory Tiles',
-     art: SVG.yourGameIcon, bg: 'linear-gradient(135deg,#00bcd4,#3f51b5)',
-     desc: 'Match pairs of tiles. Speed wins.',
-     creator: 'Your Name',
-     mode: 'session', scoring: 'score',
-     extract: () => {
-       const arr = safeJson(localStorage.getItem('my_game_v1'), []);
-       if (!arr.length) return null;
-       const e = arr[0];
-       return { metric: e.score || 0, tiebreak: 0, sig: e.date,
-                label: `${(e.score||0).toLocaleString()} pts` };
-     }
-   }
-   ```
-4. **Add an SVG icon** to the `SVG` object near the top of [index.html](index.html) (100×100 viewBox), reference as `art: SVG.yourGameIcon`.
-5. **Add a color** to the `gameColors` map in `setupFilter()` (for the leaderboard tab tint).
-6. **Test:** serve via `python -m http.server 8000`, play, confirm the score appears.
+2. **Persist a best score** to localStorage on game-over so the hub can read it.
+3. **Register in `GAMES[]`** in [index.html](index.html) (alphabetical by `name`).
+4. **Add an SVG icon** to the `SVG` object (100×100 viewBox).
+5. **Add a color** to the `gameColors` map in `setupFilter()`.
+6. **Mobile:** add `touch-action: manipulation`, `min-height: 44px` on buttons, and responsive layout. If the game requires a keyboard, add it to `DESKTOP_ONLY_GAMES` and add the `__mobile_gate` overlay (copy from `dual-ship-pilot.html`).
+7. **Test:** serve via `python -m http.server 8000`, play, confirm score appears.
 
-The hub auto-detects new games — **no database changes needed** for the shared board. New `game_id`s are accepted by `submit_score()` automatically.
+No database changes needed — `submit_score()` accepts new `game_id`s automatically.
 
 ## Adding a new Deep Dives entry
 
-1. **Create the HTML** somewhere appropriate: `casebook/` for standalone challenges, `Chinook/` for Database Detective cases (since they share the Chinook DB).
-2. **Persist progress** to `localStorage['chinook_casebook_v1']` keyed by your `id`. Set `startedAt` when the player begins an attempt, then update `leadsLogged` / `falseTrails` as they play, and write `solvedAt` (plus `result` for score-kind cases) on completion. See `chinook-case-file.html`'s `saveCaseRec`/`startNewAttempt` for the pattern.
-3. **Register in `CASEBOOK[]`** in [index.html](index.html):
-   ```js
-   {
-     id: 'my-dive', file: 'casebook/my-dive.html', name: 'My Deep Dive',
-     code: 'MD-001',                     // omit to hide the stamp
-     desc: 'Short hook for the card.',
-     creator: 'Your Name',
-     estMin: 20,
-     cta: '▶ Begin Challenge',           // omit for default "▶ Open Case File"
-     scoring: 'time',                    // or 'score'
-     // For scoring:'score' only:
-     // resultLabel: 'IQ',
-     // formatResult: r => 'IQ ' + r,
-     // theme: { '--card-bg': '...', '--card-border': '...', ... }  // omit for noir default
-   }
-   ```
-4. **Test** in a browser and verify the card appears, the watcher posts on completion, and the leaderboard headers swap correctly (score vs. time).
+1. **Create the HTML** in `casebook/` or `Chinook/`. Persist progress to `localStorage['chinook_casebook_v1'][id]`.
+2. **Register in `CASEBOOK[]`** in [index.html](index.html).
+3. **Mobile:** if it requires a keyboard (e.g. a SQL terminal), add it to `DESKTOP_ONLY_CASES` and add the `__mobile_gate` overlay (copy from `chinook-case-file.html`).
+4. **Test** the card, watcher, and leaderboard headers.
+
+No database changes needed — `submit_casebook_solve()` accepts new `case_id`s automatically.
 
 ### Adding a Database Detective case (Case III+)
 
-Easiest path: **copy** [Chinook/database-detective-case-2.html](Chinook/database-detective-case-2.html) and modify the `SPINE` array, `CASE_ID`, case number, in-fiction copy, and the killer reveal at the end. Reuse the SQL terminal, auto-quoter, autocomplete, and persistence code verbatim.
-
-Every canonical answer **must be verified against the live DB** via the `run_sql` RPC before shipping. False-trail branches (the dead-end flavor) don't need verification — they're just prose.
+Copy [Chinook/database-detective-case-2.html](Chinook/database-detective-case-2.html) and modify the `SPINE` array, `CASE_ID`, case number, in-fiction copy, and the killer reveal. Reuse the SQL terminal, auto-quoter, autocomplete, and persistence code verbatim. Every canonical answer **must be verified against the live DB** via `run_sql` before shipping.
 
 ## Intentionally excluded from the hub
 
@@ -228,18 +222,18 @@ In [games/](games/) but **not** in `GAMES[]`:
 - `Wildlife Shot - Henry.html` — personality quiz, no skill metric.
 - `curiosity-codex.html` — fact-reaction logger, no score.
 - `focus_tracker_pro.html` — self-rated Pomodoro, trivially gameable.
-- `reaction_time_tester.html` — superseded by `f1-reaction-test.html`. Different localStorage key (`reflex_history_v2` vs `f1_reaction_v1`).
+- `reaction_time_tester.html` — superseded by `f1-reaction-test.html`.
 
 Don't add these back without revisiting why.
 
 ## Conventions
 
-- **One game = one HTML file.** No external assets, no shared CSS/JS. Self-contained is the whole point.
-- **Filenames are kebab-case.** Display names live in `GAMES[].name` / `CASEBOOK[].name`, not in filenames.
-- **localStorage keys are per-game and arbitrary** (`f1_reaction_v1`, `stroop_history_v1`, `cell_chase_v1`, …). Read the game's source — don't assume a convention.
-- **History array order varies:** some games `unshift` (newest first, `[0]`), others `push` (newest last, `[arr.length - 1]`). Check before writing an `extract()`.
-- **Alphabetical order in `GAMES[]`** by display name. Deep Dives in `CASEBOOK[]` are in insertion order.
-- **Don't commit secrets.** The two anon keys in the source are public-safe by design. The service_role key, DB passwords, and any private credentials must never be committed.
+- **One game = one HTML file.** No external assets, no shared CSS/JS.
+- **Filenames are kebab-case.** Display names live in `GAMES[].name` / `CASEBOOK[].name`.
+- **localStorage keys are per-game and arbitrary.** Read the game's source — don't assume a convention.
+- **History array order varies:** some games `unshift` (newest first), others `push` (newest last). Check before writing an `extract()`.
+- **Alphabetical order in `GAMES[]`** by display name. `CASEBOOK[]` is in insertion order.
+- **Don't commit secrets.** The two anon keys in the source are public-safe by design.
 
 ## Working with this repo
 
