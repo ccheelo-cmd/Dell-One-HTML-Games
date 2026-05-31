@@ -1484,6 +1484,68 @@ async function refreshAndRender() {
   renderGames();
 }
 
+// ── Casebook remote sync ──────────────────────────────────────────────────
+
+async function syncCasebookScores() {
+  if (!REMOTE) {
+    CASEBOOK_SCORES = safeJson(localStorage.getItem(LS_CASEBOOK_SCORES), []);
+    return;
+  }
+  try {
+    const res = await fetch(
+      REST_BASE() + '/casebook_solves?select=player,case_id,case_name,kind,solve_time_ms,result,accuracy,band,false_trails,leads_logged,total_leads,solved_at,created_at',
+      { headers: REST_HEADERS() }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    CASEBOOK_SCORES = rows.map(r => ({
+      player:       r.player,
+      caseId:       r.case_id,
+      caseName:     r.case_name,
+      kind:         r.kind,
+      solveTimeMs:  r.solve_time_ms,
+      result:       r.result,
+      accuracy:     r.accuracy,
+      band:         r.band,
+      falseTrails:  r.false_trails,
+      leadsLogged:  r.leads_logged,
+      totalLeads:   r.total_leads,
+      solvedAt:     r.solved_at,
+      ts:           Date.parse(r.created_at)
+    }));
+  } catch (e) {
+    if (!remoteWarned) { toast('⚠ Can\'t reach the Deep Dives board', 'warn'); remoteWarned = true; }
+  }
+}
+
+async function postRemoteCaseSolve(entry) {
+  const res = await fetch(REST_BASE() + '/rpc/submit_casebook_solve', {
+    method: 'POST',
+    headers: REST_HEADERS(),
+    body: JSON.stringify({
+      p_player:        entry.player,
+      p_case_id:       entry.caseId,
+      p_case_name:     entry.caseName,
+      p_kind:          entry.kind,
+      p_solve_time_ms: entry.solveTimeMs,
+      p_result:        entry.result,
+      p_accuracy:      entry.accuracy,
+      p_band:          entry.band,
+      p_false_trails:  entry.falseTrails,
+      p_leads_logged:  entry.leadsLogged,
+      p_total_leads:   entry.totalLeads,
+      p_solved_at:     entry.solvedAt
+    })
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
+}
+
+async function refreshAndRenderCasebook() {
+  await syncCasebookScores();
+  renderCasebook();
+  renderCasebookBoard();
+}
+
 /* ════════════════════════════════════════════════════════════════════
    TOAST
    ════════════════════════════════════════════════════════════════════ */
@@ -1849,8 +1911,20 @@ function autoPostCaseSolve(caseDef, rec) {
     ts: Date.now()
   };
 
-  // Keep best per player per case — local only for now.
-  // 'time' kind: lower solveTimeMs wins. 'score' kind: higher result wins.
+  const tag = kind === 'score'
+    ? (caseDef.formatResult ? caseDef.formatResult(entry.result) : entry.result)
+    : formatDuration(entry.solveTimeMs);
+
+  if (REMOTE) {
+    // Post to Supabase, then pull the authoritative board back.
+    postRemoteCaseSolve(entry)
+      .then(() => refreshAndRenderCasebook())
+      .catch(() => toast('⚠ Could not save to shared board', 'warn'));
+    toast(`✓ ${caseDef.name}: ${tag}`);
+    return;
+  }
+
+  // Local-only path — keep best per player per case in localStorage.
   const key = name.toLowerCase();
   const idx = CASEBOOK_SCORES.findIndex(s =>
     s.caseId === entry.caseId && s.player.toLowerCase() === key);
@@ -1864,10 +1938,6 @@ function autoPostCaseSolve(caseDef, rec) {
     if (better) CASEBOOK_SCORES[idx] = entry;
   }
   saveCasebookScores();
-
-  const tag = kind === 'score'
-    ? ((caseDef.formatResult ? caseDef.formatResult(entry.result) : entry.result))
-    : formatDuration(entry.solveTimeMs);
   toast(`✓ ${caseDef.name}: ${tag}`);
   renderCasebook();
   renderCasebookBoard();
@@ -2041,7 +2111,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     $('panel-' + tab.dataset.panel).classList.add('active');
     if (tab.dataset.panel === 'casebook') {
-      renderCasebookBoard();
+      if (REMOTE) refreshAndRenderCasebook(); else renderCasebookBoard();
     } else if (REMOTE) {
       // Re-pull the shared board so you see teammates' latest scores.
       refreshAndRender();
@@ -2242,27 +2312,37 @@ renderTotals();
 renderCasebook();
 renderCasebookBoard();
 
-// First load of the shared board (or localStorage in local-only mode).
+// First load of both boards.
 refreshAndRender();
+refreshAndRenderCasebook();
 
-$('clear-casebook').addEventListener('click', () => {
-  if (!CASEBOOK_SCORES.length) { toast('Nothing to clear'); return; }
-  if (confirm('Clear ALL Deep Dives scores? Progress inside each challenge stays intact. This cannot be undone.')) {
-    CASEBOOK_SCORES = [];
-    saveCasebookScores();
-    renderCasebookBoard();
-    renderCasebook();
-    toast('Deep Dives scores cleared');
-  }
-});
+const clearCasebookBtn = $('clear-casebook');
+if (REMOTE) {
+  clearCasebookBtn.textContent = '↻ Refresh';
+  clearCasebookBtn.style.borderColor = 'var(--border-hi)';
+  clearCasebookBtn.style.color = 'var(--muted)';
+  clearCasebookBtn.addEventListener('click', () => refreshAndRenderCasebook());
+} else {
+  clearCasebookBtn.addEventListener('click', () => {
+    if (!CASEBOOK_SCORES.length) { toast('Nothing to clear'); return; }
+    if (confirm('Clear ALL Deep Dives scores? Progress inside each challenge stays intact. This cannot be undone.')) {
+      CASEBOOK_SCORES = [];
+      saveCasebookScores();
+      renderCasebookBoard();
+      renderCasebook();
+      toast('Deep Dives scores cleared');
+    }
+  });
+}
 
-// In remote mode, keep the open board fresh so the competition feels live.
+// In remote mode, keep both boards fresh while their tabs are open.
 if (REMOTE) {
   setInterval(() => {
-    if (overlay.classList.contains('open')) return; // don't fight the in-game watcher
+    if (overlay.classList.contains('open')) return;
     const active = document.querySelector('.tab.active');
     const panel = active ? active.dataset.panel : '';
     if (panel === 'leaderboard' || panel === 'totals') refreshAndRender();
+    if (panel === 'casebook') refreshAndRenderCasebook();
   }, 20000);
 }
 
