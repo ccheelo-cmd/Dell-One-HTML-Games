@@ -774,12 +774,15 @@
       white-space: nowrap;
     }
 
-    /* Game grid: single column (already set, tighten card) */
-    .game-grid { grid-template-columns: 1fr; gap: 12px; }
-    .game-card { border-radius: 12px; }
-    .game-thumb { height: 100px; }
-    .game-body { padding: 12px 14px 14px; gap: 8px; }
-    .game-name { font-size: 15px; }
+    /* Game grid: 3 compact cards per row */
+    .game-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .game-card { border-radius: 10px; }
+    .game-thumb { height: 72px; }
+    .game-thumb .art { width: 52px; height: 52px; }
+    .game-body { padding: 8px 8px 10px; gap: 6px; }
+    .game-name { font-size: 10px; letter-spacing: 0; line-height: 1.2; }
+    .game-creator, .game-desc, .best-score, .auto-indicator, .desktop-badge { display: none; }
+    .game-card .play-btn { padding: 7px 4px; font-size: 9px; letter-spacing: 0.5px; min-height: 36px; }
 
     /* Casebook grid: 3 compact cards per row */
     .casebook-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
