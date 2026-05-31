@@ -77,6 +77,16 @@
 </style>
 </head>
 <body>
+
+<!-- Mobile gate: keyboard controls required -->
+<div id="__mobile_gate" style="display:none;position:fixed;inset:0;z-index:99999;background:#0b1020;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px 32px;text-align:center;font-family:system-ui,-apple-system,sans-serif;">
+  <div style="font-size:56px;line-height:1;">🖥️</div>
+  <div style="font-size:22px;font-weight:800;color:#e6e9f2;letter-spacing:0.5px;">Keyboard Required</div>
+  <div style="font-size:15px;color:#9aa3b2;max-width:300px;line-height:1.7;">Dual Drift controls two ships at once using keyboard keys — it needs a laptop or desktop to play.</div>
+  <div style="font-size:13px;color:#5b8cff;margin-top:4px;">Head back to the hub on a bigger screen.</div>
+</div>
+<script>(function(){var g=document.getElementById('__mobile_gate');function c(){var m=window.innerWidth<768;g.style.display=m?'flex':'none';document.body.style.overflow=m?'hidden':'';}c();window.addEventListener('resize',c);})();</script>
+
 <div id="app">
   <h1>
     <span>Dual Drift</span>

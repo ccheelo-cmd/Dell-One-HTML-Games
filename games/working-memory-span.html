@@ -806,14 +806,154 @@
   .btn-stay:active { transform: scale(0.95); }
   .btn-stay:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  /* ── Mobile touch & accessibility improvements ──────────────────── */
+
+  /* Remove 300ms tap delay and suppress default tap flash on all interactives */
+  button, input, label, .toggle-track, .bank-btn, .seg button, .stepper button,
+  .btn, #home-btn, #history-toggle, #quit-confirm-btn, #quit-cancel-btn,
+  .btn-quit, .btn-stay {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Safe-area padding for notched / home-indicator devices */
+  body {
+    padding-left:  max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(48px, env(safe-area-inset-bottom));
+  }
+
+  /* Toast: allow wrapping on narrow screens */
+  #toast { white-space: normal; text-align: center; max-width: calc(100vw - 40px); }
+
   /* ── Responsive tweaks ──────────────────────────────────────────── */
-  @media (max-width: 420px) {
-    .control-row { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .seg button { padding: 5px 8px; font-size: 11px; }
-    .fb-given { display: none; }
+
+  /* Ensure word-bank buttons always meet 44px touch target */
+  .bank-btn {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  /* Stepper buttons: enlarge to 44px touch target */
+  .stepper button {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Seg buttons: ensure minimum 44px touch target height */
+  .seg button {
+    min-height: 44px;
+    padding: 10px 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Submit word button: ensure 44px minimum height */
+  #submit-word-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Skip button: already full-width, ensure adequate height */
+  #skip-btn {
+    min-height: 44px;
+  }
+
+  /* Home button: ensure 44px touch target */
+  #home-btn {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  @media (max-width: 480px) {
+    /* Stack control rows on mobile */
+    .control-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+
+    /* Seg controls take full width and wrap on mobile */
+    .seg {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .seg button {
+      flex: 1;
+      min-width: 0;
+      font-size: 12px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+
+    /* Word category: 2×2 grid on mobile (4 buttons) */
+    [aria-label="Category"] {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    [aria-label="Category"] button {
+      flex: none;
+    }
+
+    /* Recall slots: allow narrower slots on very small screens */
+    .recall-slot {
+      min-width: 60px;
+      height: 44px;
+      font-size: 13px;
+    }
+
+    /* Text recall: stack input and button */
     #text-recall-wrap { flex-direction: column; }
-    #submit-word-btn { padding: 12px; }
+    #submit-word-btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+    }
+
+    /* Hide secondary column in feedback (but keep target + icon) */
+    .fb-given { display: none; }
+
+    /* History table: hide less-important columns, allow scroll */
+    #history-table { font-size: 11px; }
+    #history-table th, #history-table td { padding: 6px 6px; }
+    /* Hide the Mode and Category columns on very small screens */
+    #history-table th:nth-child(4),
+    #history-table td:nth-child(4),
+    #history-table th:nth-child(5),
+    #history-table td:nth-child(5) { display: none; }
+
+    /* History table wrapper: allow horizontal scroll as fallback */
+    #history-content { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Modal actions: stack on mobile */
     .modal-actions { flex-direction: column-reverse; }
+
+    /* Session meta pills: smaller and wrap */
+    #session-meta { gap: 8px; }
+    .meta-pill { font-size: 10px; padding: 3px 9px; }
+
+    /* Arena: reduce min-height on mobile to leave more room for recall UI */
+    .arena { min-height: 180px; padding: 20px 16px; }
+
+    /* Recall remaining label font */
+    .recall-label { font-size: 13px; }
+
+    /* Results hero: adjust padding */
+    .results-hero { padding: 20px 0 14px; }
+
+    /* Button row on results screen */
+    .row { flex-wrap: wrap; }
+    .row .btn-primary { min-width: 0; }
+    .row .btn-ghost { flex: 1; }
+
+    /* Word bank: allow buttons to be a bit narrower but always full tap target */
+    #word-bank { gap: 6px; }
+    .bank-btn { font-size: 12px; padding: 10px 12px; }
+  }
+
+  @media (max-width: 360px) {
+    /* Extra-narrow phones */
+    .seg button { font-size: 11px; padding: 10px 6px; }
+    .recall-slot { min-width: 50px; font-size: 12px; }
+    .bank-btn { font-size: 11px; padding: 10px 10px; }
   }
 </style>
 </head>

@@ -96,6 +96,16 @@
 </style>
 </head>
 <body>
+
+<!-- Mobile gate: keyboard + mouse controls required -->
+<div id="__mobile_gate" style="display:none;position:fixed;inset:0;z-index:99999;background:#000;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px 32px;text-align:center;font-family:'Courier New',monospace;">
+  <div style="font-size:56px;line-height:1;">🖥️</div>
+  <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:2px;text-transform:uppercase;">Desktop Required</div>
+  <div style="font-size:14px;color:rgba(200,150,255,0.8);max-width:300px;line-height:1.8;letter-spacing:1px;">Impact Runner uses keyboard and mouse controls — grab a laptop or desktop to fly this mission.</div>
+  <div style="font-size:12px;color:rgba(150,100,200,0.6);letter-spacing:2px;margin-top:4px;">RETURN TO HUB ON A LARGER SCREEN</div>
+</div>
+<script>(function(){var g=document.getElementById('__mobile_gate');function c(){var m=window.innerWidth<768;g.style.display=m?'flex':'none';document.body.style.overflow=m?'hidden':'';}c();window.addEventListener('resize',c);})();</script>
+
 <canvas id="c"></canvas>
 
 <!-- HUD -->

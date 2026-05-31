@@ -27,15 +27,19 @@ body {
   font-family: 'Nunito', sans-serif;
   color: var(--text);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px;
+  padding: clamp(12px, 3vw, 24px);
+  padding-left: max(clamp(12px, 3vw, 24px), env(safe-area-inset-left));
+  padding-right: max(clamp(12px, 3vw, 24px), env(safe-area-inset-right));
+  padding-bottom: max(clamp(12px, 3vw, 24px), env(safe-area-inset-bottom));
+  padding-top: max(clamp(12px, 3vw, 24px), env(safe-area-inset-top));
 }
 
 .app {
   background: linear-gradient(145deg, #2a1a4e, #1f1240);
   border-radius: 22px;
-  padding: 36px 36px 30px;
+  padding: 36px clamp(18px, 5vw, 36px) 30px;
   max-width: 640px;
   width: 100%;
   box-shadow: 0 20px 60px rgba(224, 64, 251, 0.25), 0 0 0 1px rgba(224, 64, 251, 0.18);
@@ -64,7 +68,7 @@ body {
 
 .header h1 {
   font-family: 'Fredoka One', cursive;
-  font-size: 40px;
+  font-size: clamp(28px, 9vw, 40px);
   background: linear-gradient(135deg, #e040fb, #ff69b4);
   -webkit-background-clip: text;
   background-clip: text;
@@ -97,6 +101,7 @@ body {
   letter-spacing: 2px;
   font-weight: 700;
   margin-bottom: 10px;
+  /* decorative uppercase label — small size is intentional */
 }
 
 .difficulty-buttons {
@@ -108,6 +113,7 @@ body {
 
 .difficulty-btn {
   padding: 14px 18px;
+  min-height: 44px;
   background: rgba(255,255,255,0.04);
   border: 2px solid rgba(224, 64, 251, 0.18);
   border-radius: 12px;
@@ -116,6 +122,8 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .difficulty-btn:hover {
@@ -135,7 +143,7 @@ body {
 }
 
 .difficulty-btn .d-desc {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
   margin-top: 4px;
   font-weight: 400;
@@ -143,6 +151,7 @@ body {
 
 .info-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   margin-bottom: 22px;
 }
@@ -167,6 +176,7 @@ body {
 .primary-btn {
   width: 100%;
   padding: 18px;
+  min-height: 44px;
   background: linear-gradient(135deg, #e040fb, #ff69b4);
   color: white;
   border: none;
@@ -177,6 +187,8 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 8px 20px rgba(224, 64, 251, 0.4);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .primary-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(224, 64, 251, 0.55); }
@@ -202,18 +214,18 @@ body {
   background: rgba(255,255,255,0.03);
   border-radius: 8px;
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .history-item .h-meta { color: var(--text); }
-.history-item .h-diff { color: var(--muted); font-size: 11px; margin-left: 6px; }
+.history-item .h-diff { color: var(--muted); font-size: 12px; margin-left: 6px; }
 .history-item .score  { color: var(--accent-light); font-weight: 700; }
 
 .history-empty {
   color: var(--muted);
   font-style: italic;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
   padding: 18px;
 }
 
@@ -222,14 +234,17 @@ body {
   background: transparent;
   border: 1px solid rgba(179, 157, 219, 0.3);
   color: var(--muted);
-  padding: 6px 14px;
+  padding: 10px 16px;
+  min-height: 44px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
   font-family: 'Nunito', sans-serif;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .clear-btn:hover { border-color: var(--accent-light); color: var(--accent-light); }
@@ -272,16 +287,18 @@ body {
 
 .phrase-display .phrase {
   font-family: 'Fredoka One', cursive;
-  font-size: 36px;
+  font-size: clamp(24px, 6vw, 36px);
   color: var(--text);
   letter-spacing: 1px;
   word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .choices { display: grid; gap: 11px; }
 
 .choice-btn {
   padding: 15px 18px;
+  min-height: 44px;
   background: rgba(255,255,255,0.04);
   border: 2px solid rgba(179, 157, 219, 0.28);
   border-radius: 12px;
@@ -292,6 +309,8 @@ body {
   cursor: pointer;
   transition: all 0.18s;
   text-align: left;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .choice-btn:hover:not(:disabled) {
@@ -352,7 +371,7 @@ body {
 }
 
 .feedback .explanation {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text);
   opacity: 0.92;
   font-weight: 400;
@@ -363,7 +382,7 @@ body {
 
 .gameover-final .big-score {
   font-family: 'Fredoka One', cursive;
-  font-size: 92px;
+  font-size: clamp(64px, 22vw, 92px);
   background: linear-gradient(135deg, #e040fb, #ff69b4);
   -webkit-background-clip: text;
   background-clip: text;
@@ -389,6 +408,7 @@ body {
 
 .breakdown {
   display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   margin-bottom: 22px;
 }
@@ -429,6 +449,7 @@ body {
 
 .mode-card {
   padding: 18px 14px;
+  min-height: 44px;
   background: rgba(255,255,255,0.04);
   border: 2px solid rgba(224, 64, 251, 0.18);
   border-radius: 14px;
@@ -437,6 +458,8 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   text-align: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mode-card:hover {
@@ -465,9 +488,9 @@ body {
 }
 
 .mode-card .mode-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
-  line-height: 1.35;
+  line-height: 1.4;
   font-weight: 400;
 }
 
@@ -481,16 +504,19 @@ body {
 
 .timer-pill {
   padding: 12px 8px;
+  min-height: 44px;
   background: rgba(255,255,255,0.04);
   border: 2px solid rgba(179, 157, 219, 0.25);
   border-radius: 999px;
   color: var(--text);
   font-family: 'Nunito', sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.18s;
   text-align: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .timer-pill:hover {
@@ -562,7 +588,7 @@ body {
 /* ===== Hint text under primary button ===== */
 .start-hint {
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 8px;
   font-style: italic;
@@ -582,6 +608,29 @@ body {
   .info-row, .breakdown { flex-direction: column; }
   .mode-cards { grid-template-columns: 1fr; }
   .timer-pills { grid-template-columns: 1fr; }
+}
+
+/* ===== Extra-narrow phones (≤ 400px) ===== */
+@media (max-width: 400px) {
+  .app {
+    padding: 20px 16px 18px;
+    border-radius: 16px;
+  }
+  .header h1 { font-size: 28px; }
+  .header .tagline { font-size: 11px; letter-spacing: 2px; }
+  .phrase-display { padding: 24px 14px; }
+  .phrase-display .phrase {
+    font-size: clamp(20px, 7vw, 28px);
+  }
+  .gameover-final .big-score { font-size: clamp(56px, 18vw, 72px); }
+  .gameover-final .verdict { font-size: 18px; }
+  .info-pill .value { font-size: 20px; }
+  .stat .stat-value { font-size: 26px; }
+  .choice-btn { font-size: 14px; padding: 13px 14px; }
+  .choice-btn.meaning { font-size: 13px; }
+  .feedback .verdict { font-size: 18px; }
+  .difficulty-btn .d-name { font-size: 15px; }
+  .difficulty-btn .d-desc { font-size: 13px; }
 }
 </style>
 </head>

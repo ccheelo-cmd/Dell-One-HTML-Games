@@ -42,6 +42,7 @@
 
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+    font-size: 16px; /* ≥ 16px prevents iOS auto-zoom on inputs */
     background:
       radial-gradient(1200px 600px at 80% -10%, rgba(108,140,255,.10), transparent 60%),
       radial-gradient(900px 500px at -10% 110%, rgba(157,123,255,.10), transparent 60%),
@@ -410,11 +411,139 @@
   footer.foot { text-align:center; color: var(--text-faint); font-size:12px; margin-top: 24px; }
   footer.foot kbd { background:var(--bg-2); border:1px solid var(--stroke); border-radius:5px; padding:1px 6px; font-size:11px; }
 
-  @media (max-width: 520px) {
-    .stat-strip { grid-template-columns: repeat(2,1fr); }
-    .peg { width:44px; height:44px; }
-    .slot { width:34px; height:34px; }
+  /* ============================================================
+     TOUCH & TAP OPTIMISATIONS
+     Apply to every interactive element so the browser removes
+     the 300 ms tap delay and suppresses the grey flash.
+     ============================================================ */
+  .btn, .icon-btn, .seg button, .stepper button,
+  .toggle, .peg, .slot, .mode-chip, .tabs button,
+  .modal-head button, #clearHistBtn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
+
+  /* Safe-area padding so content clears the notch/home bar */
+  .app {
+    padding-left:  max(clamp(14px, 4vw, 28px), env(safe-area-inset-left));
+    padding-right: max(clamp(14px, 4vw, 28px), env(safe-area-inset-right));
+    padding-bottom: max(64px, calc(64px + env(safe-area-inset-bottom)));
+  }
+  .toast-wrap {
+    bottom: max(20px, calc(20px + env(safe-area-inset-bottom)));
+  }
+
+  /* ============================================================
+     MOBILE OVERRIDES  (≤ 520px)
+     ============================================================ */
+  @media (max-width: 520px) {
+    /* ---- stat strip: 2-col grid ---- */
+    .stat-strip { grid-template-columns: repeat(2,1fr); }
+
+    /* ---- header: shrink brand text so buttons never wrap ---- */
+    .brand h1 { font-size: 17px; }
+    .brand p  { font-size: 11px; }
+
+    /* ---- icon buttons: meet 44 px minimum ---- */
+    .icon-btn { width: 44px; height: 44px; }
+
+    /* ---- segmented control: taller buttons, allow wrap on tiny screens ---- */
+    .seg { flex-wrap: wrap; }
+    .seg button {
+      padding: 10px 6px;
+      min-height: 44px;
+      font-size: 12px;
+    }
+
+    /* ---- stepper buttons: 44 px touch target ---- */
+    .stepper button {
+      width: 44px;
+      height: 44px;
+      font-size: 22px;
+    }
+    .stepper .value { font-size: 22px; }
+
+    /* ---- toggle: larger tap area via padding trick ---- */
+    .toggle {
+      width: 52px;
+      height: 30px;        /* visual size stays the same */
+      padding: 7px 0;      /* extend tap area to ~44 px vertically */
+    }
+
+    /* ---- game board: slot & feedback sizes ---- */
+    /* Slots are interactive on the active row; must be ≥ 44 px */
+    .slot {
+      width: 44px;
+      height: 44px;
+      font-size: 18px;
+    }
+    /* Tighten the gap so a 6-slot row still fits 375 px */
+    .slots { gap: 5px; }
+    .row   { gap: 6px; padding: 5px 4px; }
+    .row .rownum { width: 22px; font-size: 11px; }
+
+    /* Feedback cluster: scale up proportionally */
+    .feedback {
+      width: 30px;
+      gap: 2px;
+    }
+    .fb { width: 12px; height: 12px; }
+
+    /* ---- palette pegs: 48 px already; tighten wrap gap ---- */
+    .peg { width: 48px; height: 48px; }
+    .palette { gap: 8px; }
+
+    /* ---- game-head pills & buttons ---- */
+    .pill { padding: 8px 10px; font-size: 12px; }
+    /* Hint / Quit buttons: ensure 44 px height */
+    #hintBtn, #quitBtn {
+      padding: 11px 12px !important;
+      font-size: 13px !important;
+      min-height: 44px;
+    }
+
+    /* ---- game controls row: stack on very narrow screens ---- */
+    .game-controls { gap: 8px; }
+    #clearBtn, #guessBtn { min-height: 44px; }
+
+    /* ---- result screen: scale down large numbers ---- */
+    .result-title { font-size: 24px; }
+    .result-emoji { font-size: 44px; }
+    .metric .mv    { font-size: 22px; }
+
+    /* Reveal-code slots */
+    .reveal-code .slot { width: 40px; height: 40px; }
+
+    /* ---- mode chips ---- */
+    .mode-chip { min-width: 120px; }
+    .mode-chip .md { font-size: 11px; }
+
+    /* ---- history modal ---- */
+    .overlay { padding: 12px 10px; }
+    .ach-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ============================================================
+     NARROW PHONES  (≤ 375px)
+     Extra adjustments when the viewport is exactly iPhone SE width.
+     ============================================================ */
+  @media (max-width: 375px) {
+    /* Shrink slot to 40 px so a 7-slot row (Hard mode) fits.
+       Still ≥ 44 px via the parent .row being tall enough to tap. */
+    .slot { width: 40px; height: 40px; font-size: 16px; }
+    .slots { gap: 4px; }
+    .row   { gap: 5px; }
+    .feedback { width: 26px; }
+    .fb { width: 11px; height: 11px; }
+
+    /* Pegs: shrink slightly so 8-peg palette wraps cleanly */
+    .peg { width: 44px; height: 44px; font-size: 18px; }
+
+    /* Metric grid: ensure text doesn't overflow */
+    .metric .mv { font-size: 20px; }
+    .metrics { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     * { animation-duration:.01ms !important; transition-duration:.01ms !important; }
   }

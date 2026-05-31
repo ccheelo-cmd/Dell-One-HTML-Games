@@ -29,6 +29,8 @@
     min-height:100vh;
     letter-spacing:.2px;
     -webkit-font-smoothing:none;
+    -webkit-text-size-adjust:100%;
+    overflow-x:hidden;
   }
   /* CRT vignette + scanlines, restrained */
   body::before{
@@ -40,7 +42,14 @@
     background:repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0px, rgba(0,0,0,.16) 1px, transparent 1px, transparent 3px);
     opacity:.55;mix-blend-mode:multiply;
   }
-  .wrap{max-width:780px;margin:0 auto;padding:30px 20px 70px;position:relative;z-index:1;}
+  .wrap{
+    max-width:780px;margin:0 auto;
+    padding:30px 20px 70px;
+    padding-left:max(20px, env(safe-area-inset-left));
+    padding-right:max(20px, env(safe-area-inset-right));
+    padding-bottom:max(70px, calc(70px + env(safe-area-inset-bottom)));
+    position:relative;z-index:1;
+  }
 
   /* ---- type ---- */
   h1{
@@ -60,9 +69,10 @@
      color:var(--amber-dim);margin:0 0 8px;}
   .seg{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;}
   .seg button{
-    flex:1 1 auto;min-width:64px;background:transparent;color:var(--amber);
+    flex:1 1 auto;min-width:64px;min-height:44px;background:transparent;color:var(--amber);
     border:1px solid var(--line-strong);padding:11px 10px;font:inherit;font-size:15px;
     cursor:pointer;letter-spacing:1px;transition:background .12s,color .12s;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
   }
   .seg button:hover{background:rgba(255,180,60,.12);}
   .seg button[aria-pressed="true"]{background:var(--amber);color:#000;font-weight:700;text-shadow:none;}
@@ -70,6 +80,7 @@
     background:transparent;color:var(--amber);border:1px solid var(--amber);
     padding:14px 22px;font:inherit;font-size:16px;letter-spacing:2px;text-transform:uppercase;
     cursor:pointer;transition:background .12s,color .12s;text-shadow:var(--glow);
+    min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
   }
   .btn:hover{background:var(--amber);color:#000;text-shadow:none;}
   .btn.big{width:100%;margin-top:8px;font-size:18px;padding:16px;}
@@ -83,10 +94,10 @@
   @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 
   /* ---- history ---- */
-  .hist-head{display:flex;justify-content:space-between;align-items:center;}
-  .hist-row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;
+  .hist-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;}
+  .hist-row{display:grid;grid-template-columns:1fr auto auto auto;gap:6px 10px;
      padding:8px 0;border-bottom:1px dotted var(--line);font-size:13px;}
-  .hist-row .hdate{color:var(--amber-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hist-row .hdate{color:var(--amber-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
   .hist-row b{color:var(--amber);}
   .hist-row.head{color:var(--amber-faint);border-bottom:1px solid var(--line);
      text-transform:uppercase;font-size:11px;letter-spacing:1px;}
@@ -107,13 +118,14 @@
     border:1px solid var(--line-strong);padding:18px 18px 18px 60px;margin-bottom:14px;
     position:relative;cursor:pointer;font:inherit;color:var(--amber);
     transition:background .12s,border-color .12s;
+    min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
   }
   .opt:hover:not(.locked){background:rgba(255,180,60,.1);}
   .opt .badge{position:absolute;left:14px;top:50%;transform:translateY(-50%);
      width:30px;height:30px;border:1px solid var(--amber);display:flex;align-items:center;
      justify-content:center;font-weight:700;font-size:16px;}
-  .opt .stmt{font-size:16px;line-height:1.4;}
-  .opt .pct{display:none;font-size:30px;font-weight:700;margin-top:10px;letter-spacing:1px;
+  .opt .stmt{font-size:clamp(14px,3.8vw,16px);line-height:1.5;word-break:break-word;}
+  .opt .pct{display:none;font-size:clamp(22px,6vw,30px);font-weight:700;margin-top:10px;letter-spacing:1px;
      font-variant-numeric:tabular-nums;}
   .opt.revealed .pct{display:block;}
   .opt.locked{cursor:default;}
@@ -139,8 +151,9 @@
   .score-big{font-size:clamp(48px,12vw,84px);font-weight:700;line-height:1;text-shadow:var(--glow);
      font-variant-numeric:tabular-nums;}
   .score-line{color:var(--amber-dim);font-size:14px;letter-spacing:2px;text-transform:uppercase;margin-top:6px;}
-  .stats{display:flex;gap:26px;flex-wrap:wrap;margin:20px 0 6px;}
-  .stat .n{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .stats{display:flex;gap:16px 26px;flex-wrap:wrap;margin:20px 0 6px;}
+  .stat{min-width:80px;}
+  .stat .n{font-size:clamp(22px,6vw,30px);font-weight:700;font-variant-numeric:tabular-nums;}
   .stat .l{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--amber-dim);}
   .catbar{margin:10px 0;}
   .catbar .top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;}
@@ -156,6 +169,39 @@
   .insight b{color:var(--amber);}
   .kbd-hint{color:var(--amber-faint);font-size:12px;margin-top:18px;letter-spacing:1px;}
   .foot{color:var(--amber-faint);font-size:11px;margin-top:40px;letter-spacing:1px;}
+
+  /* ---- mobile overrides ---- */
+  @media (max-width:480px){
+    /* tighten outer padding on small phones */
+    .wrap{padding-top:20px;}
+
+    /* panel inner padding */
+    .panel{padding:14px;}
+
+    /* option buttons: more vertical breathing room, slightly tighter left indent */
+    .opt{padding:16px 14px 16px 52px;}
+    .opt .badge{left:10px;width:28px;height:28px;font-size:15px;}
+
+    /* score big fits narrow screen */
+    .score-big{font-size:clamp(40px,14vw,84px);}
+
+    /* category bar labels don't clip */
+    .catbar .top{flex-wrap:wrap;gap:2px;}
+    .catbar .top .nm{font-size:11px;}
+
+    /* insight box */
+    .insight{padding:12px;font-size:14px;}
+
+    /* btn-row stacks on very narrow */
+    .btn-row{flex-direction:column;}
+    .btn-row .btn{flex:none;width:100%;}
+
+    /* history table: reduce font to keep all 4 columns visible */
+    .hist-row{font-size:12px;gap:4px 8px;}
+
+    /* explain text readable at 14px min */
+    .explain{font-size:14px;}
+  }
 </style>
 </head>
 <body class="crt">

@@ -302,12 +302,123 @@ body{display:flex;flex-direction:column;align-items:center;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes confetti{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(120vh) rotate(720deg);opacity:0}}
 
-/* Responsive */
+/* ══════════════════════════════
+   MOBILE / TOUCH
+══════════════════════════════ */
+
+/* Touch optimisation on all interactive controls */
+button, .opt, .rv-header, .btn-module-go {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Minimum 44px touch targets on option buttons */
+.opt {
+  min-height: 44px;
+}
+
+/* Notched-device safe-area insets */
+.q-nav {
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+#intro-screen {
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+#results-screen {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+
+/* Gauge must not overflow narrow viewports */
+.iq-gauge {
+  width: min(300px, 100%);
+}
+/* Override the inline width/height attributes on the SVG element */
+.iq-gauge svg {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* ── 500px breakpoint (existing, extended) ── */
 @media(max-width:500px){
   .opts.g4{grid-template-columns:1fr 1fr;}
   .matrix-display{grid-template-columns:repeat(3,60px);}
   .mat-cell{width:60px;height:60px;}
   .mat-cell svg{width:44px;height:44px;}
+}
+
+/* ── 375px — core narrow-phone fixes ── */
+@media(max-width:430px){
+
+  /* Prevent the screen from adding extra side padding beyond the root 20px */
+  .screen { padding-left: 12px; padding-right: 12px; }
+  #intro-screen { padding-left: 16px; padding-right: 16px; }
+
+  /* Increase minimum readable font sizes */
+  .q-instr  { font-size: .875rem; }   /* was .8rem ≈ 12.8px → now 14px */
+  .hud-mod  { font-size: .75rem;  }   /* was .65rem ≈ 10.4px → now 12px */
+  .hud-q    { font-size: .75rem;  }   /* was .7rem            → now 12px */
+  .fb-exp   { font-size: .875rem; }   /* was .8rem            → now 14px */
+  .rv-exp   { font-size: .875rem; }   /* was .8rem            → now 14px */
+  .q-stem   { font-size: 1.1rem;  }   /* slight reduction to avoid wrapping */
+  .mb-title { font-size: 1.8rem;  }
+
+  /* Shape option grids: 4-col SVG options → 2×2, shape opt-fig scales with cell */
+  .opts.g4 { grid-template-columns: 1fr 1fr; }
+  .opt-fig  { width: 44px; height: 44px; }
+  .opt-fig svg { width: 36px; height: 36px; }
+
+  /* Text option grid: already 2-col, but make opts fully block on very narrow */
+  .opts.g2 { grid-template-columns: 1fr; }
+
+  /* Sequence display: wrap cells, make cells slightly smaller so 6 fit */
+  .seq-display { gap: 6px; padding: 12px; }
+  .seq-cell { width: 48px; height: 48px; }
+  .seq-cell svg { width: 34px; height: 34px; }
+
+  /* Matrix: fit 3 columns inside the card without overflow */
+  .matrix-display {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    width: 100%;
+  }
+  .mat-cell {
+    width: 100%;        /* fill the 1fr column */
+    aspect-ratio: 1;
+    height: auto;
+  }
+  .mat-cell svg { width: 80%; height: 80%; }
+
+  /* Spatial original figure: fluid width */
+  .sp-fig { width: 100%; max-width: 120px; height: auto; aspect-ratio: 1; }
+  .sp-fig svg { width: 80%; height: 80%; }
+
+  /* Analogy display: ensure long words wrap sensibly */
+  .analogy-display { flex-wrap: wrap; gap: 6px; padding: 12px 14px; }
+  .an-word { font-size: 1.1rem; }
+
+  /* Module breakdown: shrink fixed-width name column */
+  .bd-name { width: 110px; font-size: .78rem; }
+  .bd-grade { display: none; } /* hide grade badge on very narrow, bar+% is enough */
+
+  /* Results buttons: stack vertically */
+  .res-btns { flex-direction: column; }
+  .btn-back-res { text-align: center; }
+
+  /* Stats row: slightly smaller pills so all three fit */
+  .stats-row { gap: 8px; }
+  .stat-pill .sn { font-size: 1.25rem; }
+  .stat-pill .sl { font-size: .68rem; }
+
+  /* Memory recall input: larger for thumb keyboard */
+  .recall-input { font-size: 1.1rem; padding: 14px 12px; }
+
+  /* Bottom nav bar: full-width with safe-area */
+  .q-nav { padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+  .btn-skip-q { padding: 12px 14px; font-size: .8rem; }
+  .btn-next-q { padding: 13px 10px; font-size: .85rem; }
+
+  /* HUD: tighten gap so score + q counter fit */
+  .game-hud { gap: 8px; padding: 10px 12px; }
 }
 </style>
 </head>

@@ -30,10 +30,15 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--sans);
+    font-size: clamp(14px, 3.5vw, 16px);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* safe area for notched devices */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   /* scanline overlay */
@@ -49,21 +54,23 @@
   header {
     width: 100%;
     max-width: 820px;
-    padding: 28px 24px 0;
+    padding: 28px 16px 0;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
     display: flex;
     align-items: baseline;
     gap: 14px;
   }
   header h1 {
     font-family: var(--mono);
-    font-size: 1.05rem;
+    font-size: clamp(0.85rem, 3.5vw, 1.05rem);
     color: var(--accent);
     letter-spacing: 3px;
     text-transform: uppercase;
   }
   header span {
     font-family: var(--mono);
-    font-size: 0.7rem;
+    font-size: clamp(0.65rem, 2.5vw, 0.7rem);
     color: var(--muted);
     letter-spacing: 2px;
   }
@@ -71,7 +78,10 @@
   main {
     width: 100%;
     max-width: 820px;
-    padding: 20px 24px 40px;
+    padding: 20px 16px 40px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(40px, env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -116,13 +126,15 @@
     border: 1px solid var(--border);
     border-radius: 3px;
     color: var(--text);
-    padding: 8px 10px;
+    padding: 10px 10px;
+    min-height: 44px;
     font-family: var(--mono);
-    font-size: 0.85rem;
+    font-size: clamp(0.82rem, 3vw, 0.85rem);
     outline: none;
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
+    touch-action: manipulation;
   }
   .ctrl-group select:focus { border-color: var(--accent); }
   .range-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -138,14 +150,17 @@
   .btn {
     font-family: var(--sans);
     font-weight: 700;
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 3.5vw, 1rem);
     letter-spacing: 3px;
     text-transform: uppercase;
     padding: 14px 28px;
+    min-height: 44px;
     border: none;
     border-radius: 3px;
     cursor: pointer;
     transition: filter .15s, transform .1s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .btn:active { transform: scale(0.97); }
   .btn-primary {
@@ -157,16 +172,18 @@
     background: transparent;
     color: var(--accent);
     border: 1px solid var(--accent);
-    font-size: 0.85rem;
-    padding: 10px 20px;
+    font-size: clamp(0.82rem, 3vw, 0.85rem);
+    padding: 12px 20px;
+    min-height: 44px;
   }
   .btn-ghost:hover { background: rgba(0,229,255,0.07); }
   .btn-danger {
     background: transparent;
     color: var(--fail);
     border: 1px solid var(--fail);
-    font-size: 0.8rem;
-    padding: 8px 16px;
+    font-size: clamp(0.78rem, 2.8vw, 0.8rem);
+    padding: 10px 16px;
+    min-height: 44px;
     letter-spacing: 2px;
   }
   .btn-danger:hover { background: rgba(255,61,113,0.08); }
@@ -228,6 +245,8 @@
     display: grid;
     gap: 6px;
     user-select: none;
+    /* prevent grid from causing horizontal scroll */
+    max-width: 100%;
   }
 
   .cell {
@@ -236,6 +255,8 @@
     transition: background .12s, transform .1s, box-shadow .12s;
     position: relative;
     overflow: hidden;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .cell::after {
     content: '';
@@ -392,27 +413,36 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  .history-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .history-table {
     width: 100%;
+    min-width: 340px;
     border-collapse: collapse;
     font-family: var(--mono);
-    font-size: 0.78rem;
+    font-size: clamp(0.72rem, 2.5vw, 0.78rem);
   }
   .history-table th {
     text-align: left;
     color: var(--muted);
-    font-size: 0.6rem;
+    font-size: clamp(0.58rem, 2vw, 0.6rem);
     letter-spacing: 2px;
     text-transform: uppercase;
     padding: 0 8px 8px;
     border-bottom: 1px solid var(--border);
+    white-space: nowrap;
   }
   .history-table td {
     padding: 7px 8px;
     border-bottom: 1px solid #0e1319;
     color: var(--text);
+    white-space: nowrap;
   }
   .history-table tr:last-child td { border-bottom: none; }
   .tag {
@@ -464,6 +494,17 @@
     .controls-grid { grid-template-columns: 1fr; }
     .status-bar { flex-wrap: wrap; }
     .stat-cell { min-width: 50%; border-bottom: 1px solid var(--border); }
+  }
+
+  @media (max-width: 420px) {
+    .card { padding: 16px; }
+    .result-actions { flex-direction: column; align-items: stretch; }
+    .result-actions .btn { text-align: center; }
+    /* phase label + dots row — allow wrap on very small screens */
+    .arena-wrap > div:first-child {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   }
 </style>
 </head>
@@ -545,14 +586,14 @@
       </div>
     </div>
 
-    <button class="btn btn-primary" id="btn-start" style="align-self:flex-start">START TEST</button>
+    <button class="btn btn-primary" id="btn-start" style="align-self:flex-start; min-width: min(200px, 100%)">START TEST</button>
 
     <div class="card" id="history-card">
       <div class="history-header">
         <div class="card-title" style="margin:0">Session History</div>
         <button class="btn btn-danger" id="btn-clear-history">CLEAR</button>
       </div>
-      <div id="history-body"></div>
+      <div class="history-scroll"><div id="history-body"></div></div>
     </div>
   </div>
 
@@ -717,7 +758,13 @@ function stopCountdown() {
 // ─── Grid rendering ──────────────────────────────────────────────────────────
 function buildGrid(size) {
   const container = document.getElementById('grid-container');
-  const cellPx = Math.min(Math.floor((Math.min(window.innerWidth, 820) - 100) / size), 80);
+  // Available width: viewport minus main padding (32px) minus a small buffer (8px)
+  // Gap between cells is 6px, total gap space = (size - 1) * 6
+  const sidePad = 32 + 8; // 16px each side + buffer
+  const gapTotal = (size - 1) * 6;
+  const availableWidth = Math.min(window.innerWidth, 820) - sidePad - gapTotal;
+  // Each cell gets an equal share; cap at 80px desktop max, floor at 44px for touch
+  const cellPx = Math.max(44, Math.min(Math.floor(availableWidth / size), 80));
   container.style.gridTemplateColumns = `repeat(${size}, ${cellPx}px)`;
   container.innerHTML = '';
   for (let i = 0; i < size * size; i++) {

@@ -394,9 +394,28 @@
     text-transform: uppercase;
     cursor: pointer;
     transition: all 0.15s;
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .play-btn:hover { box-shadow: 0 0 18px rgba(0,255,229,0.4); transform: scale(1.02); }
   .play-btn:active { transform: scale(0.98); }
+
+  /* Desktop-only badge — visible on all screens so players know upfront */
+  .desktop-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--neon-4);
+    background: rgba(255,216,77,0.10);
+    border: 1px solid rgba(255,216,77,0.30);
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
 
   .auto-indicator {
     display: flex;
@@ -702,12 +721,100 @@
     margin-top: 40px;
   }
 
+  /* ── Global touch improvements ── */
+  .tab, .lb-tab, .overlay-btn, .clear-btn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { scroll-snap-align: start; }
+  .overlay-btn { min-height: 40px; }
+  #toast {
+    bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  }
+
+  /* ── Mobile breakpoint ── */
   @media (max-width: 600px) {
+    .app {
+      padding: 20px 16px max(48px, env(safe-area-inset-bottom, 48px));
+      padding-left: max(16px, env(safe-area-inset-left, 16px));
+      padding-right: max(16px, env(safe-area-inset-right, 16px));
+    }
+
+    /* Header: stack brand above player box */
+    header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .brand h1 { font-size: 18px; }
+    .brand .tagline { font-size: 10px; }
+    .player-box {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .player-box input { width: auto; flex: 1; min-width: 0; }
+
+    /* Tabs: full width, scrollable */
+    .tabs { width: 100%; }
+    .tab { padding: 10px 14px; font-size: 12px; }
+
+    /* Game grid: single column (already set, tighten card) */
+    .game-grid { grid-template-columns: 1fr; gap: 12px; }
+    .game-card { border-radius: 12px; }
+    .game-thumb { height: 100px; }
+    .game-body { padding: 12px 14px 14px; gap: 8px; }
+    .game-name { font-size: 15px; }
+
+    /* Casebook grid: single column */
+    .casebook-grid { grid-template-columns: 1fr; gap: 12px; }
+    .casebook-section { padding: 14px 14px 16px; }
+    .case-name { font-size: 18px; }
+
+    /* Overlay: full screen on mobile */
+    .overlay { padding: 0; }
+    .overlay-frame {
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+    }
+    .overlay-bar {
+      padding: 8px max(10px, env(safe-area-inset-left, 10px));
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    .overlay-title { font-size: 13px; }
+    .overlay-watch { display: none; }
+    .overlay-btn { padding: 6px 10px; font-size: 11px; }
+
+    /* Leaderboard: scrollable table, hide date column */
+    .lb-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .lb-table { min-width: 340px; }
     .lb-table th:nth-child(5),
     .lb-table td:nth-child(5) { display: none; }
-    .brand h1 { font-size: 18px; }
-    .player-box input { width: 100px; }
-    .game-grid { grid-template-columns: 1fr; }
+    .lb-table th { padding: 10px 12px; }
+    .lb-table td { padding: 10px 12px; font-size: 13px; }
+
+    /* Info banner */
+    .info-banner { font-size: 11px; padding: 8px 12px; }
+
+    /* Totals panel explanation block */
+    #panel-totals > div:first-child { padding: 12px; font-size: 12px; }
+
+    /* Toast: safe area bottom */
+    #toast {
+      width: calc(100vw - 32px);
+      text-align: center;
+      font-size: 12px;
+    }
   }
 </style>
 </head>
@@ -1526,12 +1633,17 @@ function bestForGame(gameId) {
   return mine.reduce((a, b) => (isBetterRun(b, a, kind) ? b : a));
 }
 
+const DESKTOP_ONLY_GAMES = new Set(['drift', 'impact']);
+
 function renderGames() {
   const grid = $('game-grid');
   grid.innerHTML = GAMES.map(g => {
     const best = bestForGame(g.id);
     const bestHtml = best
       ? `<div class="best-score">Your best: <strong>${escapeHtml(best.label || String(best.metric))}</strong></div>`
+      : '';
+    const desktopBadge = DESKTOP_ONLY_GAMES.has(g.id)
+      ? `<div class="desktop-badge">🖥 Keyboard required</div>`
       : '';
     return `
       <div class="game-card" data-id="${g.id}">
@@ -1543,6 +1655,7 @@ function renderGames() {
           <div class="game-creator">by ${escapeHtml(g.creator)}</div>
           <div class="game-desc">${escapeHtml(g.desc)}</div>
           ${bestHtml}
+          ${desktopBadge}
           <div class="auto-indicator">Auto-capture enabled</div>
           <button class="play-btn" data-play="${g.id}">▶ Play</button>
         </div>
@@ -1768,6 +1881,8 @@ function themeStyleAttr(theme) {
     .join(';') + '"';
 }
 
+const DESKTOP_ONLY_CASES = new Set(['ck-404', 'ck-405']);
+
 function renderCasebook() {
   const grid = $('casebook-grid');
   if (!grid) return;
@@ -1778,6 +1893,9 @@ function renderCasebook() {
       : `<span class="cb-open">Open</span>`;
     const stamp = c.code ? `<div class="case-stamp">CASE ${escapeHtml(c.code)}</div>` : '';
     const cta = c.cta || '▶ Open Case File';
+    const desktopBadge = DESKTOP_ONLY_CASES.has(c.id)
+      ? `<div class="desktop-badge">🖥 Keyboard required</div>`
+      : '';
     return `
       <div class="case-card" data-id="${c.id}"${themeStyleAttr(c.theme)}>
         ${stamp}
@@ -1785,6 +1903,7 @@ function renderCasebook() {
         <div class="case-by">by ${escapeHtml(c.creator)}</div>
         <div class="case-desc">${escapeHtml(c.desc)}</div>
         <div class="case-meta">⏱ ~${c.estMin} min · ${status}</div>
+        ${desktopBadge}
         <button class="play-btn" data-open-case="${c.id}">${escapeHtml(cta)}</button>
       </div>
     `;

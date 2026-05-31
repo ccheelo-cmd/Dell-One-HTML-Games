@@ -30,7 +30,7 @@
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html { font-size: 16px; }
+  html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 
   body {
     background: var(--bg);
@@ -41,6 +41,9 @@
     flex-direction: column;
     align-items: center;
     padding: 24px 16px 48px;
+    padding-left:  max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(48px, env(safe-area-inset-bottom));
     line-height: 1.5;
   }
 
@@ -132,7 +135,7 @@
 
   .control-group label {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: clamp(0.72rem, 2vw, 0.72rem);
     letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--muted);
@@ -152,6 +155,9 @@
     transition: border-color var(--transition);
     appearance: none;
     -webkit-appearance: none;
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .control-group select:focus,
@@ -179,6 +185,7 @@
     -webkit-appearance: auto;
     appearance: auto;
     accent-color: var(--accent);
+    touch-action: manipulation;
   }
 
   /* =============================================
@@ -200,6 +207,9 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     padding: 10px 20px;
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   button:active { transform: scale(0.97); }
@@ -254,11 +264,13 @@
     font-family: var(--font-mono);
     font-size: 0.78rem;
     color: var(--muted);
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .status-bar span { color: var(--text); }
 
-  .status-item { display: flex; gap: 8px; align-items: center; }
+  .status-item { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
 
   /* Progress dots */
   .progress-dots {
@@ -290,9 +302,9 @@
     align-items: center;
     justify-content: center;
     gap: 16px;
-    padding: 24px;
+    padding: 20px 14px;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .stage-label {
@@ -320,14 +332,16 @@
   /* Sequence mini-track (shown during recall) */
   .sequence-track {
     display: flex;
-    gap: 10px;
+    gap: 6px;
     flex-wrap: wrap;
     justify-content: center;
+    width: 100%;
   }
 
   .seq-slot {
     width: 44px;
     height: 44px;
+    min-width: 36px;
     border-radius: 8px;
     border: 1px solid var(--border);
     display: flex;
@@ -335,6 +349,7 @@
     justify-content: center;
     font-size: 1.3rem;
     transition: background 200ms, border-color 200ms;
+    flex-shrink: 1;
   }
 
   .seq-slot.revealed  { background: var(--surface); border-color: var(--border-hi); }
@@ -356,12 +371,15 @@
     color: var(--text);
     font-size: 1.5rem;
     padding: 14px 6px;
+    min-height: 52px;
     transition: background var(--transition), border-color var(--transition), transform 80ms ease;
     display: flex;
     align-items: center;
     justify-content: center;
     letter-spacing: 0;
     text-transform: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .sym-btn:hover:not(:disabled) {
@@ -419,7 +437,7 @@
   /* Phase message */
   .phase-msg {
     font-family: var(--font-mono);
-    font-size: 0.85rem;
+    font-size: clamp(0.82rem, 2.5vw, 0.85rem);
     color: var(--muted);
     text-align: center;
   }
@@ -479,7 +497,7 @@
     border-left: 3px solid var(--accent);
     border-radius: 0 8px 8px 0;
     padding: 12px 16px;
-    font-size: 0.9rem;
+    font-size: clamp(0.875rem, 2.5vw, 0.9rem);
     color: var(--text);
     margin-bottom: 18px;
     font-style: italic;
@@ -523,10 +541,12 @@
     padding: 10px 14px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     transition: border-color var(--transition);
+    min-width: 0;
+    overflow: hidden;
   }
 
   .history-item:hover { border-color: var(--border-hi); }
@@ -586,10 +606,55 @@
   /* =============================================
      RESPONSIVE
   ============================================= */
-  @media (max-width: 420px) {
+
+  /* Collapse controls to single column on phones */
+  @media (max-width: 480px) {
     .controls-grid { grid-template-columns: 1fr; }
-    .result-grid   { grid-template-columns: 1fr 1fr; }
-    .sym-btn       { font-size: 1.2rem; padding: 12px 4px; }
+  }
+
+  /* Narrow phones (≤ 400px) */
+  @media (max-width: 400px) {
+    .result-grid { grid-template-columns: 1fr 1fr; }
+
+    /* Keep sym-btn large enough to tap — never shrink below 48px height */
+    .sym-btn {
+      font-size: 1.3rem;
+      padding: 12px 4px;
+      min-height: 52px;
+    }
+
+    /* Tighten card padding to reclaim horizontal space */
+    .card { padding: 14px 12px; }
+
+    /* Compact history rows */
+    .history-item { padding: 8px 10px; gap: 8px; font-size: 0.72rem; }
+    .hi-diff { display: none; } /* drop least-important column on very small screens */
+
+    /* Shrink sequence slots slightly but keep them square and readable */
+    .seq-slot { width: 38px; height: 38px; font-size: 1.1rem; min-width: 32px; }
+
+    /* Give the stage a bit more vertical room */
+    .sequence-stage { min-height: 160px; padding: 16px 10px; }
+
+    /* Status items font */
+    .status-bar { font-size: 0.72rem; }
+  }
+
+  /* Symbol grid: force max 4 columns on mobile so buttons aren't too small */
+  @media (max-width: 480px) {
+    .symbol-grid {
+      /* Override any JS-set inline style for 5-col layout */
+      grid-template-columns: repeat(4, 1fr) !important;
+    }
+  }
+
+  /* Very narrow (≤ 360px): 3 cols is safer */
+  @media (max-width: 360px) {
+    .symbol-grid {
+      grid-template-columns: repeat(3, 1fr) !important;
+    }
+    .btn-row { flex-direction: column; }
+    .btn-primary, .btn-ghost { min-width: 0; width: 100%; text-align: center; justify-content: center; }
   }
 </style>
 </head>
@@ -680,7 +745,7 @@
       <!-- Recall view: show slots to fill -->
       <div id="view-recall" class="hidden" style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%">
         <div class="sequence-track" id="recall-track"></div>
-        <div class="timer-bar-wrap" style="width:100%;max-width:360px">
+        <div class="timer-bar-wrap" style="width:100%">
           <div class="timer-bar" id="timer-bar"></div>
         </div>
         <div class="phase-msg">Tap the symbols in the correct order</div>
