@@ -763,9 +763,16 @@
     }
     .player-box input { width: auto; flex: 1; min-width: 0; }
 
-    /* Tabs: full width, scrollable */
-    .tabs { width: 100%; }
-    .tab { padding: 10px 14px; font-size: 12px; }
+    /* Tabs: divide width equally so all 4 fit without overflow */
+    .tabs { width: 100%; border-radius: 8px; }
+    .tab {
+      flex: 1;
+      padding: 9px 4px;
+      font-size: 9px;
+      letter-spacing: 0.6px;
+      text-align: center;
+      white-space: nowrap;
+    }
 
     /* Game grid: single column (already set, tighten card) */
     .game-grid { grid-template-columns: 1fr; gap: 12px; }
@@ -774,10 +781,16 @@
     .game-body { padding: 12px 14px 14px; gap: 8px; }
     .game-name { font-size: 15px; }
 
-    /* Casebook grid: single column */
-    .casebook-grid { grid-template-columns: 1fr; gap: 12px; }
-    .casebook-section { padding: 14px 14px 16px; }
-    .case-name { font-size: 18px; }
+    /* Casebook grid: 3 compact cards per row */
+    .casebook-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .casebook-section { padding: 12px 12px 14px; }
+    .case-card { padding: 10px 8px 10px; gap: 6px; border-radius: 8px; }
+    .case-name { font-size: 11px; letter-spacing: 0; line-height: 1.2; text-transform: none; }
+    .case-by, .case-desc, .case-meta, .desktop-badge { display: none; }
+    .case-stamp { font-size: 8px; padding: 2px 5px 3px; letter-spacing: 1.5px; }
+    .case-card .play-btn { padding: 7px 4px; font-size: 9px; letter-spacing: 0.5px; min-height: 36px; }
+    .casebook-title { font-size: 14px; letter-spacing: 2px; }
+    .casebook-sub { font-size: 11px; }
 
     /* Overlay: full screen on mobile */
     .overlay { padding: 0; }
