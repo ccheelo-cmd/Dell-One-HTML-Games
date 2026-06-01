@@ -126,6 +126,7 @@
   </div>
   <div class="hud-right" style="align-items:flex-end">
     <div class="hud-score">SCORE<br><span id="score-val">000000</span></div>
+    <div class="hud-weapon" id="dist-display" style="color:rgba(120,200,255,0.8)">↗ 0 KLICKS</div>
     <div class="hud-weapon" id="weapon-display">▸ PLASMA CANNON</div>
     <div class="hud-weapon" id="mode-display" style="color:rgba(100,255,200,0.7)"></div>
   </div>
@@ -168,7 +169,9 @@ window.addEventListener('resize', resize);
 // ═══════════════════════════════════════════════════════════
 const GS = {
   state: 'title',   // title | playing | paused | gameover | waveintro | boss | upgrade
-  score: 0,
+  score: 0,         // total = killScore + distance flown
+  killScore: 0,     // points from enemy ships shot down (combo-multiplied)
+  distance: 0,      // klicks flown forward through the run
   combo: 0,
   comboTimer: 0,
   wave: 1,
@@ -1808,14 +1811,29 @@ function checkCollisions() {
 // ═══════════════════════════════════════════════════════════
 //  SCORE & HUD
 // ═══════════════════════════════════════════════════════════
+// The runner is always flying forward — distance accrues every frame the
+// ship is alive and in motion. Score = ships shot down + distance travelled.
+const FORWARD_SPEED = 60;   // klicks (= score points) gained per second of flight
+
+function recomputeScore() {
+  GS.score = GS.killScore + Math.floor(GS.distance);
+  document.getElementById('score-val').textContent = String(GS.score).padStart(6,'0');
+  const dd = document.getElementById('dist-display');
+  if (dd) dd.textContent = '↗ ' + Math.floor(GS.distance).toLocaleString() + ' KLICKS';
+}
+
+// Called once per frame while flying — converts elapsed flight time into distance.
+function addDistance(gdt) {
+  GS.distance += FORWARD_SPEED * gdt;
+  recomputeScore();
+}
+
 function addScore(pts) {
   GS.combo++;
   GS.comboTimer = 3;
   const mult = Math.min(GS.combo, 10);
-  GS.score += pts * mult;
-
-  const sv = document.getElementById('score-val');
-  sv.textContent = String(GS.score).padStart(6,'0');
+  GS.killScore += pts * mult;
+  recomputeScore();
 
   if (GS.combo >= 3) {
     const cd = document.getElementById('combo-display');
@@ -2042,15 +2060,16 @@ function drawGameOver(dt) {
   ctx.font = '10px Courier New';
   ctx.letterSpacing = '5px';
   ctx.shadowBlur = 8; ctx.shadowColor = PAL.purple;
-  ctx.fillText('WAVE ' + GS.wave + '  ·  SCORE: ' + GS.score, W/2, H/2);
-  ctx.fillText('ENTITIES DESTROYED: ' + GS.permanentKills, W/2, H/2 + 25);
+  ctx.fillText('WAVE ' + GS.wave + '  ·  SCORE: ' + GS.score.toLocaleString(), W/2, H/2);
+  ctx.fillText('DISTANCE FLOWN: ' + Math.floor(GS.distance).toLocaleString() + ' KLICKS  (+' + Math.floor(GS.distance).toLocaleString() + ')', W/2, H/2 + 22);
+  ctx.fillText('SHIPS SHOT DOWN: ' + GS.permanentKills + '  (+' + GS.killScore.toLocaleString() + ')', W/2, H/2 + 42);
 
   if (GS.score > GS.highScore) {
     GS.highScore = GS.score;
     ctx.fillStyle = PAL.gold;
     ctx.font = 'bold 10px Courier New';
     ctx.shadowColor = PAL.gold;
-    ctx.fillText('⬡  NEW HIGH SCORE  ⬡', W/2, H/2 + 55);
+    ctx.fillText('⬡  NEW HIGH SCORE  ⬡', W/2, H/2 + 68);
   }
 
   if (Math.floor(t*2)%2===0) {
@@ -2193,8 +2212,10 @@ function drawMeteors() {
 // ═══════════════════════════════════════════════════════════
 function startGame() {
   GS.state = 'playing';
-  GS.score = 0; GS.combo = 0; GS.wave = 1; GS.kills = 0; GS.time = 0;
+  GS.score = 0; GS.killScore = 0; GS.distance = 0;
+  GS.combo = 0; GS.wave = 1; GS.kills = 0; GS.time = 0;
   GS.shake = 0; GS.slowTime = 1;
+  recomputeScore();
   PLAYER.init();
   enemies.length = 0;
   bullets.length = 0;
@@ -2213,7 +2234,8 @@ function gameOver() {
     const k = 'impact_runner_v1';
     let h = JSON.parse(localStorage.getItem(k) || '[]');
     if (!Array.isArray(h)) h = [];
-    h.unshift({ score: GS.score, wave: GS.wave, kills: GS.kills, date: Date.now() });
+    h.unshift({ score: GS.score, killScore: GS.killScore, distance: Math.floor(GS.distance),
+                wave: GS.wave, kills: GS.permanentKills, date: Date.now() });
     if (h.length > 20) h.length = 20;
     localStorage.setItem(k, JSON.stringify(h));
   } catch (_) {}
@@ -2407,6 +2429,11 @@ function loop(ts) {
       currentBoss = null;
     }
     updateHUD();
+  }
+
+  // Distance flown — accrues while the runner is alive and pushing forward
+  if ((GS.state === 'playing' || GS.state === 'boss') && !PLAYER.dead) {
+    addDistance(gdt);
   }
 
   // Draw order
