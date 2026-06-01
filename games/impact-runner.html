@@ -124,6 +124,10 @@
       <div class="hud-bar"><div class="hud-bar-fill" id="shield-fill" style="width:0%"></div></div>
     </div>
   </div>
+  <div class="hud-center" style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center">
+    <div class="hud-score" style="font-size:10px">WAVE <span id="wave-val" style="font-size:20px;color:#fff">1</span></div>
+    <div class="hud-weapon" id="wave-timer" style="color:rgba(120,255,200,0.9);font-size:16px;letter-spacing:2px">0:30</div>
+  </div>
   <div class="hud-right" style="align-items:flex-end">
     <div class="hud-score">SCORE<br><span id="score-val">000000</span></div>
     <div class="hud-weapon" id="dist-display" style="color:rgba(120,200,255,0.8)">↗ 0 KLICKS</div>
@@ -131,6 +135,9 @@
     <div class="hud-weapon" id="mode-display" style="color:rgba(100,255,200,0.7)"></div>
   </div>
 </div>
+
+<!-- Quit: banks the current score and ends the run -->
+<button id="quit-btn" title="Quit and record your score" style="display:none;position:fixed;bottom:20px;left:20px;z-index:30;align-items:center;justify-content:center;gap:6px;pointer-events:auto;background:rgba(40,0,24,0.65);border:1px solid rgba(255,80,110,0.55);color:#ff7799;font-family:'Courier New',monospace;font-size:11px;letter-spacing:3px;padding:10px 18px;border-radius:6px;cursor:pointer;text-transform:uppercase;min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">⏻ QUIT</button>
 
 <div id="combo-display">COMBO ×<span id="combo-val">0</span></div>
 <div id="message-display" id="msg"></div>
@@ -168,13 +175,15 @@ window.addEventListener('resize', resize);
 //  GAME STATE
 // ═══════════════════════════════════════════════════════════
 const GS = {
-  state: 'title',   // title | playing | paused | gameover | waveintro | boss | upgrade
+  state: 'title',   // title | countdown | playing | paused | gameover
   score: 0,         // total = killScore + distance flown
   killScore: 0,     // points from enemy ships shot down (combo-multiplied)
   distance: 0,      // klicks flown forward through the run
   combo: 0,
   comboTimer: 0,
   wave: 1,
+  waveTimer: 0,     // seconds left to survive in the current wave
+  countdown: 0,     // 3..0 pre-wave countdown
   kills: 0,
   time: 0,
   shake: 0,
@@ -182,11 +191,12 @@ const GS = {
   shakeY: 0,
   slowTime: 1,
   slowTimer: 0,
-  waveIntroTimer: 0,
-  upgrades: { speed:0, fireRate:0, damage:0, shield:0, energy:0, hull:0 },
   permanentKills: 0,
   highScore: 0,
 };
+
+// Each wave is a fixed window of pure survival; clearing it advances the wave.
+const WAVE_DURATION = 30;   // seconds of survival per wave
 
 // ═══════════════════════════════════════════════════════════
 //  INPUT
@@ -460,6 +470,11 @@ const BG = {
 const WEAPONS = ['PLASMA','RAILGUN','DRONE SWARM','GRAVITY PULSE'];
 const WCOLORS = [PAL.plasma, PAL.rail, PAL.drone, PAL.pulse];
 
+// Energy is the firing reserve: each shot drains it, and it recharges between bursts.
+// Heavier weapons cost more per shot. Index matches the weapon id.
+const FIRE_COST = [5, 20, 4, 16];   // plasma, railgun, drone (per drone shot), gravity pulse
+const ENERGY_REGEN = 26;            // energy/sec recharge
+
 const PLAYER = {
   x: 0, y: 0,
   vx: 0, vy: 0,
@@ -517,7 +532,7 @@ const PLAYER = {
 
   update(dt) {
     if (this.dead) { this.respawning -= dt; return; }
-    const spd = 220 * (1 + GS.upgrades.speed*0.15);
+    const spd = 220;
     const isBoosting = KEYS['ShiftLeft'] || KEYS['ShiftRight'];
 
     // Input
@@ -590,22 +605,18 @@ const PLAYER = {
     this.x = clamp(this.x, this.w/2, W*0.5);
     this.y = clamp(this.y, this.h, H - this.h);
 
-    // Energy regen
-    this.energy = Math.min(this.maxEnergy, this.energy + (12 + GS.upgrades.energy*3) * dt);
+    // Energy regen — energy IS the firing reserve, so it recharges between bursts
+    this.energy = Math.min(this.maxEnergy, this.energy + ENERGY_REGEN * dt);
 
-    // Fire
+    // Fire — every shot draws from the energy bar; empty bar = no fire (drones auto-fire below)
     this.fireTimer -= dt * GS.slowTime;
-    const fr = this.fireRate - GS.upgrades.fireRate * 0.015;
-    if ((KEYS['Space'] || KEYS['KeyZ']) && this.fireTimer <= 0 && !this.overheated) {
+    const fr = this.fireRate;
+    const cost = FIRE_COST[this.weapon];
+    if ((KEYS['Space'] || KEYS['KeyZ']) && this.fireTimer <= 0 && this.weapon !== 2 && this.energy >= cost) {
       this.fireTimer = fr;
+      this.energy -= cost;
       this._fire();
-      this.heat += 0.12;
     }
-
-    // Heat management
-    if (!(KEYS['Space'] || KEYS['KeyZ'])) this.heat = Math.max(0, this.heat - 0.4*dt);
-    if (this.heat >= 1) { this.overheated = true; this.heat = 1; }
-    if (this.overheated && this.heat <= 0.1) this.overheated = false;
 
     // Weapon switch
     if (justPressed('Digit1')) this._setWeapon(0);
@@ -622,13 +633,14 @@ const PLAYER = {
         d.x = this.x + Math.cos(d.angle) * d.r;
         d.y = this.y + Math.sin(d.angle) * d.r;
         d.fireTimer -= dt;
-        if (d.fireTimer <= 0) {
+        if (d.fireTimer <= 0 && this.energy >= FIRE_COST[2]) {
           d.fireTimer = 0.6;
           const target = nearestEnemy(d.x, d.y);
           if (target) {
+            this.energy -= FIRE_COST[2];
             const a = Math.atan2(target.y - d.y, target.x - d.x);
             bullets.push({ x:d.x, y:d.y, vx:Math.cos(a)*500, vy:Math.sin(a)*500,
-              w:6, h:6, color:PAL.drone, dmg:8+GS.upgrades.damage*2, team:'player',
+              w:6, h:6, color:PAL.drone, dmg:8, team:'player',
               life:1.5, glow:true });
           }
         }
@@ -651,11 +663,10 @@ const PLAYER = {
   _setWeapon(n) {
     this.weapon = n;
     document.getElementById('weapon-display').textContent = '▸ ' + WEAPONS[n];
-    this.heat = 0; this.overheated = false;
   },
 
   _fire() {
-    const dmg = 15 + GS.upgrades.damage * 4;
+    const dmg = 15;
     const w = this.weapon;
     const cx = this.x + this.w*0.5;
     const cy = this.y;
@@ -671,12 +682,9 @@ const PLAYER = {
         color:PAL.rail, size:rnd(2,5), life:0.3, vxMin:-1,vxMax:1, vyMin:-3,vyMax:3 });
       GS.shake = 4;
     } else if (w === 2) { // Drone - handled above
-    } else if (w === 3) { // Gravity pulse
-      if (this.energy >= 15) {
-        this.energy -= 15;
-        bullets.push({ x:cx, y:cy, vx:250, vy:0, w:40, h:40, color:PAL.pulse,
-          dmg:dmg*0.5, team:'player', life:1.8, glow:true, pulse:true, r:40 });
-      }
+    } else if (w === 3) { // Gravity pulse (energy already drawn by the fire gate)
+      bullets.push({ x:cx, y:cy, vx:250, vy:0, w:40, h:40, color:PAL.pulse,
+        dmg:dmg*0.5, team:'player', life:1.8, glow:true, pulse:true, r:40 });
     }
   },
 
@@ -976,6 +984,10 @@ class Enemy {
         this.size = 40;
         break;
     }
+    // Higher waves field tougher ships — hull scales up, approach speed creeps faster.
+    const k = 1 + (GS.wave - 1) * 0.14;
+    this.hp = this.maxHp = Math.round(this.maxHp * k);
+    this.vx *= 1 + (GS.wave - 1) * 0.04;
   }
 
   update(dt) {
@@ -1450,7 +1462,7 @@ class Boss {
     }
     addScore(5000 * GS.wave);
     showMessage('ENTITY DESTROYED');
-    setTimeout(() => nextWave(), 3000);
+    setTimeout(() => startCountdown(GS.wave + 1), 3000);
   }
 
   draw() {
@@ -1696,59 +1708,53 @@ class Boss {
 let currentBoss = null;
 
 // ═══════════════════════════════════════════════════════════
-//  WAVE SYSTEM
+//  WAVE SYSTEM — timed survival, no bosses, no upgrades
+//  Each wave is WAVE_DURATION seconds of survival. Difficulty scales with
+//  the wave number: enemies spawn faster, hit harder, and the roster of
+//  ship types widens as you climb.
 // ═══════════════════════════════════════════════════════════
-const WAVE_DEFS = [
-  { enemies:['scout','scout','scout','swarm','swarm'], boss:null, name:'OUTER COLONIES', subtitle:'MARS HIGHWAY Ω' },
-  { enemies:['scout','fighter','fighter','swarm','swarm','swarm'], boss:'serpent', name:'IRON CORRIDOR', subtitle:'ABANDONED MEGASTRUCTURE α-7' },
-  { enemies:['fighter','fighter','tank','swarm','horror'], boss:'whale', name:'DEEP VOID', subtitle:'SECTOR ZERO — COSMIC ANOMALY' },
-  { enemies:['tank','tank','horror','horror','swarm','swarm','fighter'], boss:'core', name:'THE MACHINE WAR', subtitle:'ROGUE AI TERRITORY — OVERSEER CLASS' },
-  { enemies:['horror','horror','tank','tank','swarm','swarm','swarm','fighter','fighter'], boss:'serpent', name:'LAST SIGNAL', subtitle:'EARTH REMAINS — FINAL TRANSMISSION' },
+const ZONES = [
+  { name:'OUTER COLONIES',   subtitle:'MARS HIGHWAY Ω' },
+  { name:'IRON CORRIDOR',    subtitle:'ABANDONED MEGASTRUCTURE α-7' },
+  { name:'DEEP VOID',        subtitle:'SECTOR ZERO — COSMIC ANOMALY' },
+  { name:'THE MACHINE WAR',  subtitle:'ROGUE AI TERRITORY — OVERSEER CLASS' },
+  { name:'LAST SIGNAL',      subtitle:'EARTH REMAINS — FINAL TRANSMISSION' },
 ];
 
 let enemySpawnTimer = 0;
-let enemySpawnQueue = [];
-let bossSpawned = false;
-let waveComplete = false;
+let currentZoneText = '';
 
-function startWave(n) {
+// Roster of enemy types available at a given wave — widens as you climb.
+function wavePool(n) {
+  const pool = ['scout','swarm'];
+  if (n >= 2) pool.push('scout','fighter');
+  if (n >= 3) pool.push('fighter','tank');
+  if (n >= 4) pool.push('tank','horror');
+  if (n >= 5) pool.push('horror','swarm');
+  return pool;
+}
+
+// Seconds between spawns — tightens with the wave number, floored so it stays playable.
+function waveSpawnGap(n) {
+  return clamp(1.5 - (n - 1) * 0.13, 0.32, 1.5);
+}
+
+// Begin the 3-second pre-wave countdown, then hand off to the survival timer.
+function startCountdown(n) {
   GS.wave = n;
   GS.kills = 0;
   enemies.length = 0;
   bullets.length = 0;
   particles.length = 0;
   currentBoss = null;
-  bossSpawned = false;
-  waveComplete = false;
+  enemySpawnTimer = 0.6;
 
-  const def = WAVE_DEFS[(n-1) % WAVE_DEFS.length];
-  // Build spawn queue with repeats
-  enemySpawnQueue = [];
-  const count = def.enemies.length + Math.floor(n*1.5);
-  for (let i=0;i<count;i++) {
-    enemySpawnQueue.push(def.enemies[i % def.enemies.length]);
-  }
-  // shuffle
-  for (let i=enemySpawnQueue.length-1;i>0;i--) {
-    const j = Math.floor(Math.random()*(i+1));
-    [enemySpawnQueue[i],enemySpawnQueue[j]] = [enemySpawnQueue[j],enemySpawnQueue[i]];
-  }
-  enemySpawnTimer = 1.5;
+  const z = ZONES[(n - 1) % ZONES.length];
+  currentZoneText = z.name + ' — ' + z.subtitle;
 
-  // Wave intro
-  GS.state = 'waveintro';
-  GS.waveIntroTimer = 2.5;
-  const wd = document.getElementById('wave-display');
-  document.getElementById('wave-title').textContent = 'WAVE ' + n;
-  document.getElementById('wave-subtitle').textContent = def.name + ' — ' + def.subtitle;
-  wd.style.opacity = '1';
-  wd.style.transition = 'opacity 0.5s';
-  setTimeout(() => { wd.style.opacity = '0'; GS.state = 'playing'; }, 2200);
-}
-
-function nextWave() {
-  GS.state = 'waveintro';
-  setTimeout(() => startWave(GS.wave + 1), 1000);
+  GS.state = 'countdown';
+  GS.countdown = 3;
+  document.getElementById('wave-display').style.opacity = '0';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1848,11 +1854,17 @@ function updateHUD() {
   document.getElementById('energy-fill').style.width = (PLAYER.energy/PLAYER.maxEnergy*100)+'%';
   document.getElementById('shield-fill').style.width = (PLAYER.shield/PLAYER.maxShield*100)+'%';
 
+  document.getElementById('wave-val').textContent = GS.wave;
+  const secs = clamp(Math.ceil(GS.waveTimer), 0, WAVE_DURATION);
+  const wt = document.getElementById('wave-timer');
+  wt.textContent = '0:' + String(secs).padStart(2,'0');
+  wt.style.color = secs <= 5 ? 'rgba(255,90,90,0.95)' : 'rgba(120,255,200,0.9)';
+
   const md = document.getElementById('mode-display');
   const modes = [];
   if (PLAYER.bulletTime) modes.push('◈ BULLET TIME');
   if (PLAYER.shieldActive) modes.push('◈ SHIELD');
-  if (PLAYER.overheated) modes.push('⚠ OVERHEAT');
+  if (PLAYER.energy < FIRE_COST[PLAYER.weapon]) modes.push('⚠ LOW ENERGY');
   md.textContent = modes.join('  ');
 }
 
@@ -1865,73 +1877,50 @@ function showMessage(txt) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  UPGRADE SCREEN
+//  PRE-WAVE COUNTDOWN OVERLAY (3 · 2 · 1)
 // ═══════════════════════════════════════════════════════════
-function drawUpgradeScreen() {
-  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+function drawCountdownOverlay() {
+  ctx.save();
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.fillRect(0,0,W,H);
 
-  ctx.save();
+  // Wave banner
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 11px Courier New';
+  ctx.font = 'bold 40px Courier New';
+  ctx.letterSpacing = '10px';
+  ctx.shadowBlur = 30; ctx.shadowColor = PAL.purple;
+  ctx.fillText('WAVE ' + GS.wave, W/2, H/2 - 80);
+
+  ctx.fillStyle = 'rgba(200,150,255,0.85)';
+  ctx.font = '12px Courier New';
   ctx.letterSpacing = '6px';
-  ctx.textAlign = 'center';
-  ctx.shadowBlur = 20; ctx.shadowColor = PAL.purple;
-  ctx.fillText('UPGRADE SYSTEM', W/2, H/2 - 160);
+  ctx.shadowBlur = 8;
+  ctx.fillText(currentZoneText, W/2, H/2 - 50);
 
-  const ups = [
-    {key:'speed',    label:'VELOCITY',   col:'#00d4ff'},
-    {key:'fireRate', label:'FIRE RATE',  col:'#ffdd00'},
-    {key:'damage',   label:'DAMAGE',     col:'#ff4466'},
-    {key:'shield',   label:'SHIELD',     col:'#00ffcc'},
-    {key:'energy',   label:'ENERGY',     col:'#cc44ff'},
-    {key:'hull',     label:'HULL REGEN', col:'#ff8844'},
-  ];
-
-  ups.forEach((u,i) => {
-    const col = i%3, row = Math.floor(i/3);
-    const x = W/2 - 230 + col*230;
-    const y = H/2 - 100 + row*130;
-    const lvl = GS.upgrades[u.key];
-
-    ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    ctx.strokeStyle = u.col;
-    ctx.lineWidth = 1;
-    roundRect(x-90, y-30, 180, 100);
-    ctx.fillStyle = u.col;
-    ctx.shadowBlur = 10; ctx.shadowColor = u.col;
-    ctx.font = 'bold 9px Courier New';
-    ctx.fillText(u.label, x, y);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '8px Courier New';
-    ctx.fillText('LEVEL ' + lvl + '/5', x, y+18);
-    // Bars
-    for (let j=0;j<5;j++) {
-      const bx = x - 45 + j*22;
-      ctx.fillStyle = j < lvl ? u.col : 'rgba(255,255,255,0.1)';
-      ctx.fillRect(bx, y+30, 16, 8);
-    }
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '8px Courier New';
-    ctx.fillText(`[${i+1}] UPGRADE`, x, y+56);
-  });
-
-  ctx.fillStyle = 'rgba(200,160,255,0.7)';
-  ctx.font = '9px Courier New';
-  ctx.fillText('PRESS [1-6] TO UPGRADE  ·  [ENTER] TO CONTINUE', W/2, H/2 + 175);
+  // Big pulsing countdown digit
+  const n = Math.max(1, Math.ceil(GS.countdown));
+  const frac = GS.countdown - Math.floor(GS.countdown);      // 1→0 across each second
+  const scale = 1 + (1 - frac) * 0.4;
+  ctx.save();
+  ctx.translate(W/2, H/2 + 40);
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = clamp(frac * 1.4, 0, 1);
+  ctx.fillStyle = PAL.gold;
+  ctx.font = 'bold 120px Courier New';
+  ctx.letterSpacing = '0px';
+  ctx.shadowBlur = 40; ctx.shadowColor = PAL.gold;
+  ctx.fillText(String(n), 0, 40);
   ctx.restore();
 
-  // Handle upgrade input
-  for (let i=0;i<ups.length;i++) {
-    if (justPressed('Digit'+(i+1))) {
-      if (GS.upgrades[ups[i].key] < 5) GS.upgrades[ups[i].key]++;
-    }
-  }
-  if (justPressed('Enter') || justPressed('KeyR')) {
-    GS.state = 'playing';
-    startWave(GS.wave);
-  }
+  ctx.fillStyle = 'rgba(120,255,200,0.8)';
+  ctx.font = '11px Courier New';
+  ctx.letterSpacing = '5px';
+  ctx.shadowBlur = 0;
+  ctx.fillText('SURVIVE ' + WAVE_DURATION + ' SECONDS', W/2, H/2 + 130);
+
+  ctx.restore();
 }
 
 function roundRect(x,y,w,h,r=8) {
@@ -2025,8 +2014,10 @@ function drawTitleScreen(dt) {
   ctx.fillStyle = 'rgba(120,100,160,0.6)';
   ctx.font = '8px Courier New';
   ctx.letterSpacing = '2px';
-  const ctrl = 'ARROWS/WASD: MOVE  ·  SPACE: FIRE  ·  SHIFT: BOOST  ·  Q: BULLET TIME  ·  E: SHIELD  ·  1-4/TAB: WEAPON  ·  P: PAUSE';
-  ctx.fillText(ctrl, W/2, H - 30);
+  const ctrl = 'ARROWS/WASD: MOVE  ·  SPACE: FIRE (DRAINS ENERGY)  ·  SHIFT: BOOST  ·  Q: BULLET TIME  ·  E: SHIELD  ·  1-4/TAB: WEAPON  ·  P: PAUSE';
+  ctx.fillText(ctrl, W/2, H - 42);
+  ctx.fillStyle = 'rgba(120,255,200,0.55)';
+  ctx.fillText('SURVIVE EACH 30-SECOND WAVE — HULL HITS 0 OR YOU QUIT, RUN ENDS & SCORE IS BANKED', W/2, H - 26);
 
   ctx.restore();
 
@@ -2082,10 +2073,6 @@ function drawGameOver(dt) {
   ctx.restore();
 
   if (justPressed('Enter')) {
-    GS.state = 'playing';
-    GS.score = 0;
-    GS.permanentKills = 0;
-    GS.upgrades = { speed:0, fireRate:0, damage:0, shield:0, energy:0, hull:0 };
     startGame();
   }
 }
@@ -2107,12 +2094,13 @@ function drawPauseScreen() {
   ctx.font = '9px Courier New';
   ctx.letterSpacing = '4px';
   ctx.shadowBlur = 0;
-  ctx.fillText('[P] RESUME  ·  [R] RESTART  ·  [ENTER] CONTINUE', W/2, H/2 + 30);
-  ctx.fillText('WAVE ' + GS.wave + '  ·  SCORE: ' + GS.score, W/2, H/2 + 60);
+  ctx.fillText('[P] RESUME  ·  [R] RESTART  ·  [Q]/QUIT BUTTON: QUIT & SAVE', W/2, H/2 + 30);
+  ctx.fillText('WAVE ' + GS.wave + '  ·  SCORE: ' + GS.score.toLocaleString(), W/2, H/2 + 60);
   ctx.restore();
 
   if (justPressed('KeyP') || justPressed('Escape')) GS.state = 'playing';
-  if (justPressed('KeyR')) { GS.state = 'playing'; startGame(); }
+  if (justPressed('KeyR')) startGame();
+  if (justPressed('KeyQ')) quitGame();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2211,10 +2199,10 @@ function drawMeteors() {
 //  GAME LIFECYCLE
 // ═══════════════════════════════════════════════════════════
 function startGame() {
-  GS.state = 'playing';
   GS.score = 0; GS.killScore = 0; GS.distance = 0;
-  GS.combo = 0; GS.wave = 1; GS.kills = 0; GS.time = 0;
+  GS.combo = 0; GS.wave = 1; GS.kills = 0; GS.permanentKills = 0; GS.time = 0;
   GS.shake = 0; GS.slowTime = 1;
+  scoreRecorded = false;
   recomputeScore();
   PLAYER.init();
   enemies.length = 0;
@@ -2223,13 +2211,15 @@ function startGame() {
   meteors.length = 0;
   currentBoss = null;
   document.getElementById('boss-bar').style.opacity = '0';
+  document.getElementById('quit-btn').style.display = 'flex';
   BG.init();
-  startWave(1);
+  startCountdown(1);   // 3-2-1 before wave 1
 }
 
-function gameOver() {
-  GS.state = 'gameover';
-  document.getElementById('boss-bar').style.opacity = '0';
+let scoreRecorded = false;
+function recordScore() {
+  if (scoreRecorded) return;       // never double-record a single run
+  scoreRecorded = true;
   try {
     const k = 'impact_runner_v1';
     let h = JSON.parse(localStorage.getItem(k) || '[]');
@@ -2239,6 +2229,19 @@ function gameOver() {
     if (h.length > 20) h.length = 20;
     localStorage.setItem(k, JSON.stringify(h));
   } catch (_) {}
+}
+
+function gameOver() {
+  GS.state = 'gameover';
+  document.getElementById('boss-bar').style.opacity = '0';
+  document.getElementById('quit-btn').style.display = 'none';
+  recordScore();
+}
+
+// Player-initiated quit — banks the current score, then ends the run.
+function quitGame() {
+  if (GS.state === 'gameover' || GS.state === 'title') return;
+  gameOver();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2303,15 +2306,27 @@ function loop(ts) {
     return;
   }
 
-  if (GS.state === 'upgrade') {
+  if (GS.state === 'countdown') {
+    BG.update(dt * 0.3);
     BG.draw();
-    drawUpgradeScreen();
+    drawMeteors();
+    for (const e of enemies) e.draw();
+    PLAYER.draw();
+    drawParticles();
+    GS.countdown -= dt;
+    drawCountdownOverlay();
+    if (GS.countdown <= 0) {
+      GS.state = 'playing';
+      GS.waveTimer = WAVE_DURATION;
+      enemySpawnTimer = 0.3;
+    }
     ctx.restore();
+    drawMinimap();
     return;
   }
 
-  // PLAYING / WAVEINTRO
-  const gdt = (GS.state === 'waveintro') ? dt*0.1 : dt * GS.slowTime;
+  // PLAYING
+  const gdt = dt * GS.slowTime;
 
   BG.update(gdt);
   BG.draw();
@@ -2332,34 +2347,28 @@ function loop(ts) {
   if (GS.state === 'playing') {
     PLAYER.update(dt);
 
-    // Spawn enemies
-    if (enemySpawnQueue.length > 0) {
-      enemySpawnTimer -= dt;
-      if (enemySpawnTimer <= 0) {
-        const type = enemySpawnQueue.shift();
-        const e = new Enemy(type, W + rnd(20,150), rnd(50, H-50));
-        enemies.push(e);
-        const minGap = type==='horror'?4:type==='tank'?3:type==='swarm'?0.6:1.8;
-        enemySpawnTimer = rnd(minGap, minGap*1.8);
+    // Survival timer — clearing it advances to the next (harder) wave
+    if (!PLAYER.dead) {
+      GS.waveTimer -= dt;
+      if (GS.waveTimer <= 0) {
+        startCountdown(GS.wave + 1);
       }
     }
 
-    // Spawn boss when enemies depleted
-    if (enemySpawnQueue.length === 0 && !bossSpawned) {
-      const aliveCount = enemies.filter(e=>!e.dead).length;
-      if (aliveCount === 0) {
-        bossSpawned = true;
-        const def = WAVE_DEFS[(GS.wave-1) % WAVE_DEFS.length];
-        if (def.boss) {
-          currentBoss = new Boss(def.boss);
-          GS.state = 'boss';
-          showMessage('WARNING — COSMIC ENTITY DETECTED');
-        } else {
-          // No boss — go to upgrade
-          setTimeout(() => {
-            GS.state = 'upgrade';
-          }, 1500);
+    // Continuous spawning — rate and roster scale with the wave number
+    if (!PLAYER.dead) {
+      enemySpawnTimer -= dt;
+      if (enemySpawnTimer <= 0) {
+        const pool = wavePool(GS.wave);
+        const type = pool[Math.floor(Math.random() * pool.length)];
+        enemies.push(new Enemy(type, W + rnd(20,150), rnd(50, H-50)));
+        // From wave 4 on, occasionally spawn a second ship in the same beat
+        if (GS.wave >= 4 && Math.random() < 0.35) {
+          const t2 = pool[Math.floor(Math.random() * pool.length)];
+          enemies.push(new Enemy(t2, W + rnd(60,220), rnd(50, H-50)));
         }
+        const gap = waveSpawnGap(GS.wave);
+        enemySpawnTimer = rnd(gap, gap * 1.5);
       }
     }
 
@@ -2373,11 +2382,6 @@ function loop(ts) {
     updateBullets(dt);
     updateParticles(dt);
     checkCollisions();
-
-    // Hull regen
-    if (GS.upgrades.hull > 0) {
-      PLAYER.hp = Math.min(PLAYER.maxHp, PLAYER.hp + GS.upgrades.hull * 1.5 * dt);
-    }
 
     // Combo decay
     if (GS.comboTimer > 0) {
@@ -2407,33 +2411,10 @@ function loop(ts) {
       if (GS.slowTimer <= 0) { GS.slowTime = 1; }
     }
 
+    // Distance flown — accrues while the runner is alive and pushing forward
+    if (!PLAYER.dead) addDistance(gdt);
+
     updateHUD();
-  }
-
-  if (GS.state === 'boss') {
-    PLAYER.update(dt);
-    if (currentBoss) currentBoss.update(dt * GS.slowTime);
-    for (const e of enemies) e.update(dt * GS.slowTime);
-    for (let i=enemies.length-1;i>=0;i--) if(enemies[i].dead) enemies.splice(i,1);
-    updateBullets(dt);
-    updateParticles(dt);
-    checkCollisions();
-
-    if (GS.upgrades.hull > 0) PLAYER.hp = Math.min(PLAYER.maxHp, PLAYER.hp + GS.upgrades.hull * 1.5 * dt);
-    if (GS.comboTimer > 0) { GS.comboTimer -= dt; if (GS.comboTimer <= 0) GS.combo = 0; }
-    if (msgTimer > 0) { msgTimer -= dt; if (msgTimer <= 0) document.getElementById('message-display').style.opacity='0'; }
-    if (GS.slowTimer > 0) { GS.slowTimer -= dt; if (GS.slowTimer <= 0) GS.slowTime = 1; }
-
-    if (currentBoss && currentBoss.dead) {
-      GS.state = 'upgrade';
-      currentBoss = null;
-    }
-    updateHUD();
-  }
-
-  // Distance flown — accrues while the runner is alive and pushing forward
-  if ((GS.state === 'playing' || GS.state === 'boss') && !PLAYER.dead) {
-    addDistance(gdt);
   }
 
   // Draw order
@@ -2476,6 +2457,8 @@ function loop(ts) {
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
+document.getElementById('quit-btn').addEventListener('click', quitGame);
+
 BG.init();
 PLAYER.init();
 GS.state = 'title';
